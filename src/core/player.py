@@ -15,7 +15,8 @@ class Player:
     Methods:
       - load(path) -> bool
       - play()
-      - pause(), unpause(), stop()
+      - stop()
+      - is_busy()
       - play_playlist(list_of_paths)
       - stop_playlist()
       - get_pos()

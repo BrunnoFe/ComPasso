@@ -58,12 +58,15 @@ class ExperimentRunner:
         if self._running:
             experiment_logger.logger.warning("Experimento já está em execução.")
             return
+        if self._thread is not None and self._thread.is_alive():
+            experiment_logger.logger.warning("Sessão anterior ainda finalizando; aguarde um instante.")
+            return
         files = list(self.ctx.music_files or [])
         if not files:
             experiment_logger.logger.warning("Nenhum arquivo de música para iniciar o experimento.")
             return
         self._order = random.sample(files, len(files))
-        self._stop_event.clear()
+        self._stop_event.clear() #limpa o evento de parada antes de iniciar
         self._continue_event.clear()
         self._running = True
         experiment_logger.logger.info(f"Iniciando experimento com {len(self._order)} faixa(s) (ordem aleatória).")
@@ -145,7 +148,13 @@ class ExperimentRunner:
             return
 
         # 3) início da música
-        self.ctx.player.load(path)
+        if not self.ctx.player.load(path):
+            experiment_logger.logger.error(f"Falha ao carregar áudio; pulando faixa: {path}")
+            self._post_status(f"Falha ao carregar '{name}'; pulando faixa.")
+            recorder.stop()
+            recorder.finalize()
+            self._recorder = None
+            return
         ts_start = local_clock()
         recorder.add_marker("music_start", ts_start, music_file=name, fator=fator)
         self.ctx.player.play()

@@ -30,7 +30,7 @@ def build_output_basename(ctx) -> str:
     nome = _sanitize(ctx.nome)
     idade = _sanitize(ctx.idade)
     genero = _sanitize(ctx.genero)
-    return f"{nome}_{idade}_{genero}_{suffix}"
+    return f"{nome}_{idade}_{genero}_{suffix}" #
 
 
 class LSLRecorder:
@@ -91,7 +91,7 @@ class LSLRecorder:
         except Exception as e:
             recorder_logger.logger.warning(f"Falha ao drenar o buffer do inlet: {e}")
 
-    def add_marker(self, name: str, lsl_time: float, music_file: str = None, fator: str = None) -> None:
+    def add_marker(self, name: str, lsl_time: float, music_file: str, fator: str) -> None:
         """Registra um marcador de evento a ser anexado à amostra mais próxima.
 
         Thread-safe. O marcador será anexado à primeira amostra cujo timestamp LSL

@@ -157,11 +157,11 @@ class UpRightMidFrame(ctk.CTkFrame):
             show_message("Erro", f"{erro_msg}: {e}")
 
     def load_music_folder(self):
-        self._pick_path(lambda: filedialog.askdirectory(title="Selecione uma pasta contendo os arquivos de música", initialdir="."),
+        self._pick_path(lambda: filedialog.askdirectory(title="Selecione uma pasta contendo os arquivos de música", initialdir=str(get_data_dir().parent)),
                         self.music_file_folder_var, "music_folder", "Erro ao carregar pasta com as músicas")
 
     def load_conditions_file(self):
-        self._pick_path(lambda: filedialog.askopenfilename(title="Selecione um arquivo excel contendo as condições ou fatores das músicas", initialdir=".", filetypes=[("Excel files", "*.xlsx *.xls")]),
+        self._pick_path(lambda: filedialog.askopenfilename(title="Selecione um arquivo excel contendo as condições ou fatores das músicas", initialdir=str(get_data_dir().parent), filetypes=[("Excel files", "*.xlsx *.xls")]),
                         self.conditions_file_var, "conditions_file", "Erro ao carregar arquivo com as condições")
 
     def _choose_save_directory(self):
@@ -170,53 +170,79 @@ class UpRightMidFrame(ctk.CTkFrame):
 
     def check_music_file_infos(self):
         """Aguarda a seleção da pasta de músicas, do Excel de condições e do diretório de
-        saída, reverificando a cada 100 ms; quando tudo está pronto, dispara a varredura."""
-        if not self.music_file_folder_var.get() or self.music_file_folder_var.get() == "Pasta contendo os arquivos de música":
+        saída, reverificando a cada 100 ms; dispara a varredura quando tudo está pronto e
+        enquanto o mapeamento ainda não foi concluído (permite refazer ao corrigir a seleção).
+
+        As StringVars são lidas aqui (thread da GUI) e passadas por valor para os workers —
+        nunca acessar widgets/vars Tk fora da thread principal.
+        """
+        folder = self.music_file_folder_var.get()
+        cond = self.conditions_file_var.get()
+        save = self.salvar_arquivos_var.get()
+
+        if not folder or folder == "Pasta contendo os arquivos de música":
             self.ctx.status_text.set("Selecione a pasta contendo os arquivos de música.")
             self.after(100, self.check_music_file_infos)
             return
-        elif not self.conditions_file_var.get() or self.conditions_file_var.get() == "Excel contendo as condições ou fatores das músicas":
+        elif not cond or cond == "Excel contendo as condições ou fatores das músicas":
             self.ctx.status_text.set("Selecione o arquivo excel contendo as condições ou fatores das músicas.")
             self.after(100, self.check_music_file_infos)
             return
-        elif not self.salvar_arquivos_var.get() or self.salvar_arquivos_var.get() == "Diretório para salvar os dados":
+        elif not save or save == "Diretório para salvar os dados":
             self.ctx.status_text.set("Selecione o diretório para salvar os dados.")
             self.after(100, self.check_music_file_infos)
             return
-        else:
-            self.ctx.run_async(self.get_musics_from_folder)
-            self.ctx.status_text.set("Arquivos de música e pasta de salvamento selecionados! Tudo certo.")
 
-    def get_musics_from_folder(self):
+        # tudo selecionado; mapeia (uma vez por combinação) enquanto ainda não houver mapeamento
+        if not self.ctx.music_condition_mapping:
+            sig = (folder, cond)
+            if sig != getattr(self, "_last_scan_sig", None) and not getattr(self, "_scan_in_progress", False):
+                self._last_scan_sig = sig
+                self._scan_in_progress = True
+                self.ctx.status_text.set("Arquivos selecionados! Verificando condições...")
+                self.ctx.run_async(lambda: self.get_musics_from_folder(folder, cond))
+            self.after(100, self.check_music_file_infos)
+
+    def get_musics_from_folder(self, folder: str, cond_path: str):
         """Varre a pasta de músicas (thread de trabalho) e dispara o casamento de condições."""
         try:
-            music_files = scan_music_files(self.music_file_folder_var.get())
+            music_files = scan_music_files(folder)
         except FileNotFoundError as e:
+            self._scan_in_progress = False
             self.ctx.run_after(lambda: show_message("Erro", f"Pasta de músicas não encontrada: {e}.\nPor favor, verifique o caminho e tente novamente."))
+            return
+
+        if not music_files:
+            self._scan_in_progress = False
+            self.ctx.run_after(lambda: self.ctx.status_text.set("Nenhum arquivo de áudio (.mp3/.wav/.ogg) na pasta selecionada."))
+            gui_logger.logger.warning("Pasta selecionada não contém arquivos de áudio.")
             return
 
         self.ctx.music_files = music_files
         self.ctx.run_after(lambda: self.ctx.status_text.set("Arquivos de música encontrados! Verificando condições..."))
-        self.ctx.run_async(lambda: self.match_condition_with_music_file(music_files))
+        self.match_condition_with_music_file(music_files, cond_path)
 
-    def match_condition_with_music_file(self, music_files: list):
+    def match_condition_with_music_file(self, music_files: list, cond_path: str):
         """Casa cada música com seu fator (thread de trabalho) e grava o mapeamento no contexto."""
-        cond_path = self.conditions_file_var.get()
         try:
             mapping = match_conditions(music_files, cond_path)
         except FileNotFoundError:
+            self._scan_in_progress = False
             self.ctx.run_after(lambda: show_message("Erro", f"Arquivo de condições não encontrado: {cond_path}.\nPor favor, verifique o arquivo e tente novamente."))
             return
         except MissingConditionError as e:
+            self._scan_in_progress = False
             self.ctx.run_after(lambda n=e.music_name: show_message("Atenção", f"Nenhuma condição encontrada para {n} no arquivo de condições.\nEssa música será ignorada durante o experimento.", icon="warning"))
             return
 
         if mapping is None:
+            self._scan_in_progress = False
             self.ctx.run_after(lambda: self.ctx.status_text.set("Nenhuma condição encontrada para as músicas selecionadas."))
             gui_logger.logger.warning("Nenhuma condição encontrada para as músicas selecionadas.")
             return
 
         self.ctx.music_condition_mapping = mapping
+        self._scan_in_progress = False
         self.ctx.run_after(lambda: self.ctx.status_text.set("Mapemento de músicas para condições realizado com sucesso!"))
         gui_logger.logger.info("Mapemento de músicas e condições realizado com sucesso!")
 
@@ -272,7 +298,9 @@ class DownMidFrame(ctk.CTkFrame):
     def _on_volume_change(self, value):
         try:
             self.ctx.volume_text.set(f"Volume: {int(float(value))}%")
-            set_master_volume(int(value))
+            if not set_master_volume(int(value)) and not getattr(self, "_volume_warned", False):
+                self._volume_warned = True
+                self.ctx.status_text.set("Controle de volume do sistema indisponível.")
         except Exception:
             pass
 
@@ -281,7 +309,8 @@ class DownMidFrame(ctk.CTkFrame):
         pos = 0.0
         length = 0.0
         try:
-            if player:
+            # só mostra posição/duração reais enquanto há reprodução; ocioso = 00:00
+            if player and player.is_busy():
                 pos = float(player.get_pos() or 0.0)
                 length = float(player.get_length() or 0.0)
         except Exception:

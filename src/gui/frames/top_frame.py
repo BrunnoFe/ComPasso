@@ -92,10 +92,11 @@ class UpFrame(ctk.CTkFrame):
         return connectar_bitalino(mac_addr=mac_addr)
 
     def _handle_connection_result(self, bitalino):
-        """Trata o resultado da conexão: `str` é erro; caso contrário é o inlet."""
-        if isinstance(bitalino, str):
+        """Trata o resultado da conexão: `str`/`Exception` é erro; caso contrário é o inlet."""
+        if isinstance(bitalino, (str, Exception)):
             self.button_conect_bitalino.configure(state="normal")
-            show_message("Erro na conexão", bitalino, icon="warning")
+            msg = bitalino if isinstance(bitalino, str) else f"Erro inesperado ao conectar: {bitalino}"
+            show_message("Erro na conexão", msg, icon="warning")
         else:
             self.ctx.bitalino = bitalino
             self.ctx.mac_addr = self.mac_addr

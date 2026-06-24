@@ -48,11 +48,11 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
                 bitalino_inlet.pull_sample(timeout=1)
                 connection_logger.logger.info('Conexão bem-sucedida ao Bitalino. Stream conectada ao OpenSignals.')
                 return bitalino_inlet
-            except:
+            except Exception:
                 msg: str = 'Conexão estabelecida, mas não foi possível puxar amostras do Bitalino. Verifique se o compartilhamento pelo "Lab Streaming Layer" está ativo no OpenSignals.'
                 connection_logger.logger.error(msg=msg)
                 return msg
-        except:
+        except Exception:
             msg: str = 'Não foi possível conectar ao Bitalino. Verifique se ele está conectado corretamente ao computador ou se o compartilhamento pelo "Lab Streaming Layer" está ativo no OpenSignals.'
             connection_logger.logger.error(msg=msg)
             return msg
