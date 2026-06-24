@@ -1,3 +1,5 @@
+import CTkMessagebox
+
 from . import gui_logger
 
 def set_window_grid(master):
@@ -72,4 +74,12 @@ def set_grids(ctk_object, rows_conf: dict[int,list[int]], column_conf: dict[int,
             for column in column:
                 ctk_object.grid_columnconfigure(column, weight=weight)
     gui_logger.logger.info(f"Configurações de colunas aplicadas: {column_conf}.")
-    
+
+"""def _msgbox(self, title: str, message: str, icon: str = "cancel"):
+    Exibe uma CTkMessagebox padronizada. Deve ser chamada na thread da GUI
+    (use `self.ctx.post(...)` quando vier de uma thread de trabalho).
+    CTkMessagebox(title=title, message=message, icon=icon, option_1="OK",
+                    fg_color=ROSA, bg_color=AZUL, text_color=CINZA, button_color=AZUL_CLARO, button_hover_color=AMARELO,
+                    font=BASE_FONT_MIN, border_color=AZUL, border_width=BORDER_WIDTH, title_color=CINZA,
+                    button_text_color=CINZA, corner_radius=CORNER, sound=True,
+                    width=500, height=300)"""

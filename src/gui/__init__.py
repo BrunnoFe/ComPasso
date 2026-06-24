@@ -1,8 +1,9 @@
 from src.utils import SetLogger
 
-gui_logger = SetLogger(logfilepath=r'logs\gui.log', namelogger='guiLogger')
+gui_logger = SetLogger(category='gui', namelogger='guiLogger')
 
-from .gui_configs import set_window_grid, set_window_configs, set_grids
+from .guiconfigs import set_window_grid, set_window_configs, set_grids
+from .context import AppContext
 from .main import Compasso
 
 __all__ = [
@@ -10,5 +11,6 @@ __all__ = [
     'set_window_grid',
     'set_window_configs',
     'set_grids',
+    'AppContext',
     'Compasso'
 ]

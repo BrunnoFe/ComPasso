@@ -37,12 +37,12 @@ class Player:
             try:
                 pygame.mixer.init()
             except Exception as e:
-                self.logger.warning(f'pygame.mixer.init() failed: {e}')
+                player_logger.logger.warning(f'pygame.mixer.init() failed: {e}')
 
     def load(self, path: str) -> bool:
         """Load a single audio file. Returns True on success."""
         if pygame is None:
-            self.logger.error('pygame not available — install pygame to enable audio playback')
+            player_logger.logger.error('pygame not available — install pygame to enable audio playback')
             return False
 
         try:
@@ -98,6 +98,16 @@ class Player:
         """Return current track length in seconds if known, else 0.0."""
         return float(self._current_length or 0.0)
 
+    def is_busy(self) -> bool:
+        """Retorna True enquanto o mixer estiver realmente reproduzindo áudio.
+
+        Diferente de `is_playing()`, reflete o estado real do pygame e fica False
+        automaticamente quando a faixa termina sozinha."""
+        try:
+            return bool(pygame.mixer.music.get_busy())
+        except Exception:
+            return False
+
     def is_playing(self) -> bool:
         return bool(self._playing and not self._paused)
 
@@ -110,8 +120,20 @@ class Player:
         self._playlist_loaded = bool(self._playlist)
         self._current_index = 0 if self._playlist else None
 
-    def play_playlist(self, paths: list, start_index: int = 0) -> None:
-        """Play a list of audio files sequentially in a background thread."""
+    def play_playlist(self, paths: list, start_index: int = 0,
+                      on_track_start=None, on_finished=None) -> None:
+        """Play a list of audio files sequentially in a background thread.
+
+        :param paths: lista de caminhos de áudio.
+        :param start_index: índice inicial da playlist.
+        :param on_track_start: callback opcional `on_track_start(idx, path)` chamado no
+            início de cada faixa, a partir da thread da playlist.
+        :param on_finished: callback opcional `on_finished(finished_naturally)` chamado
+            ao terminar (naturalmente ou por stop), a partir da thread da playlist.
+
+        Observação: os callbacks rodam na thread da playlist — quem consome deve
+        repassar para a thread da GUI (ex.: `AppContext.post`) antes de tocar widgets.
+        """
         if pygame is None:
             player_logger.logger.error('pygame not available — install pygame to enable audio playback')
             return
@@ -125,10 +147,11 @@ class Player:
 
         self._playlist = paths
         self._stop_event.clear()
-        self._playlist_thread = threading.Thread(target=self._playlist_worker, args=(start_index,), daemon=True)
+        self._playlist_thread = threading.Thread(
+            target=self._playlist_worker, args=(start_index, on_track_start, on_finished), daemon=True)
         self._playlist_thread.start()
 
-    def _playlist_worker(self, start_index: int = 0):
+    def _playlist_worker(self, start_index: int = 0, on_track_start=None, on_finished=None):
         player_logger.logger.info(f'Starting playlist with {len(self._playlist)} tracks (start_index={start_index})')
         finished_naturally = True
         for idx in range(start_index, len(self._playlist)):
@@ -141,6 +164,11 @@ class Player:
             if not ok:
                 player_logger.logger.error(f'Skipping track due to load failure: {path}')
                 continue
+            if on_track_start is not None:
+                try:
+                    on_track_start(idx, path)
+                except Exception as e:
+                    player_logger.logger.error(f'on_track_start callback error: {e}')
             try:
                 pygame.mixer.music.play()
                 self._playing = True
@@ -161,6 +189,11 @@ class Player:
         if finished_naturally:
             self._current_index = 0
         player_logger.logger.info('Playlist finished or stopped')
+        if on_finished is not None:
+            try:
+                on_finished(finished_naturally)
+            except Exception as e:
+                player_logger.logger.error(f'on_finished callback error: {e}')
 
     def stop_playlist(self):
         """Para a playlist em execução, preservando a lista carregada para permitir nova reprodução."""

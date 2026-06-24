@@ -3,7 +3,7 @@ import sys
 from src.gui import Compasso
 from src.utils import SetLogger
 
-main_logger = SetLogger(logfilepath=r'logs\main.log', namelogger='mainLogger')
+main_logger = SetLogger(category='main', namelogger='mainLogger')
 
 def main():
     main_logger.logger.info("=========================================")
