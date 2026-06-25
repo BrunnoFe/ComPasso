@@ -63,7 +63,6 @@ class AppContext:
         self.time_begin_text = ctk.StringVar(value="00:00")
         self.time_end_text = ctk.StringVar(value="00:00")
         self.music_counter = ctk.StringVar(value="Música: 0 de 0")
-        self.pausa_counter = ctk.StringVar(value="Pausa: 0 de 0")
         self.ruido_counter = ctk.StringVar(value="Ruído: 0 de 0")
 
         gui_logger.logger.info("AppContext inicializado.")

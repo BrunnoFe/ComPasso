@@ -9,7 +9,7 @@ from ..theme import (AZUL, AZUL_CLARO, ROSA, CINZA, AMARELO, AMARELO_ESC, TRANSP
                      BASE_FONT, BORDER_WIDTH, BORDER_WIDTH_INSIDE, CORNER, NSE)
 from ..widgets import show_message, styled_label, styled_button, styled_entry
 from src.core import (scan_music_files, match_conditions, MissingConditionError,
-                      set_master_volume)
+                      set_system_volume)
 from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir
 
 
@@ -103,7 +103,7 @@ class UpRightMidFrame(ctk.CTkFrame):
 
     def __init__(self, master, ctx):
         super().__init__(master, corner_radius=CORNER, border_width=BORDER_WIDTH_INSIDE, bg_color=ROSA, fg_color=AZUL_CLARO, border_color=AZUL, background_corner_colors=(ROSA, ROSA, ROSA, ROSA))
-        set_grids(self, rows_conf={1: [0, 1, 2, 3]}, column_conf={1: [0, 2], 3: [1]}, grid_column=1, padx=20, pady=20)
+        set_grids(self, rows_conf={1: [0, 1, 2]}, column_conf={1: [0, 2], 3: [1]}, grid_column=1, padx=20, pady=20)
 
         self.ctx = ctx
 
@@ -139,9 +139,6 @@ class UpRightMidFrame(ctk.CTkFrame):
 
         self.salvar_arquivos_button = styled_button(self, text="Escolher", width=80, bg_color=AZUL_CLARO, fg_color=ROSA, command=self._choose_save_directory)
         self.salvar_arquivos_button.grid(row=2, column=2, padx=15, pady=15, sticky=ctk.W)
-
-        self.files_infos_label = styled_label(self, textvariable=self.ctx.status_text, font=BASE_FONT)
-        self.files_infos_label.grid(row=3, column=0, columnspan=3, padx=15, pady=15, sticky=ctk.NS)
 
     def _pick_path(self, dialog, var, ctx_attr: str, erro_msg: str):
         """Abre um diálogo de seleção e, se um caminho válido for escolhido, atualiza a
@@ -296,13 +293,28 @@ class DownMidFrame(ctk.CTkFrame):
             pass
 
     def _on_volume_change(self, value):
+        """Atualiza o rótulo imediatamente e aplica o volume com debounce.
+
+        O comando do slider dispara a cada passo; aplicar `set_system_volume` em todos
+        eles geraria muitos subprocessos (osascript/amixer). Por isso, agenda-se a
+        aplicação ~150 ms após o último movimento, cancelando a anterior."""
         try:
-            self.ctx.volume_text.set(f"Volume: {int(float(value))}%")
-            if not set_master_volume(int(value)) and not getattr(self, "_volume_warned", False):
-                self._volume_warned = True
-                self.ctx.status_text.set("Controle de volume do sistema indisponível.")
+            vol = int(float(value))
+            self.ctx.volume_text.set(f"Volume: {vol}%")
+            self._pending_volume = vol
+            pending = getattr(self, "_volume_after_id", None)
+            if pending is not None:
+                self.after_cancel(pending)
+            self._volume_after_id = self.after(150, self._apply_pending_volume)
         except Exception:
             pass
+
+    def _apply_pending_volume(self):
+        """Aplica o último volume solicitado (chamado pelo debounce na thread da GUI)."""
+        self._volume_after_id = None
+        if not set_system_volume(self._pending_volume) and not getattr(self, "_volume_warned", False):
+            self._volume_warned = True
+            self.ctx.status_text.set("Controle de volume do sistema indisponível.")
 
     def _update_progress(self):
         player = self.ctx.player

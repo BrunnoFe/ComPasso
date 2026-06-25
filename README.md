@@ -26,15 +26,16 @@ compartilhando **o mesmo relógio**, garantindo sincronia precisa entre o áudio
 
 ## Requisitos
 
-- **Windows 10/11** (o controle de volume e a conexão Bluetooth são otimizados para Windows).
+- **Windows 10/11, macOS ou Linux** (o controle de volume do sistema é multiplataforma).
 - **Python 3.12+**.
-- **BITalino** emparelhado via Bluetooth.
 - **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado**
   (veja [Antes de abrir o programa](#antes-de-abrir-o-programa)).
-- **Bluetooth ligado** no computador.
+- **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals (LSL ativo).
 
 As dependências Python estão em [`requirements.txt`](requirements.txt) (CustomTkinter,
-pygame-ce, pylsl, bleak, pandas, openpyxl, pillow, entre outras).
+pygame-ce, pylsl, pandas, openpyxl, pillow, entre outras). Funciona em **Windows, macOS e Linux**;
+o controle de volume do sistema usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux
+(macOS/Linux usam ferramentas nativas, sem dependências extras).
 
 ---
 
@@ -44,7 +45,7 @@ pygame-ce, pylsl, bleak, pandas, openpyxl, pillow, entre outras).
 # 1. Crie e ative um ambiente virtual
 python -m venv venv
 venv\Scripts\activate          # Windows
-# source venv/bin/activate     # Linux/Mac
+# source venv/bin/activate     # macOS/Linux
 
 # 2. Instale as dependências
 pip install -r requirements.txt
@@ -62,10 +63,9 @@ via Lab Streaming Layer. Faça isto **antes** de iniciar o Compasso:
 3. Ative a opção **Lab Streaming Layer (LSL)**.
 4. Coloque o dispositivo em modo de aquisição/streaming (botão de *play* do OpenSignals),
    de forma que o BITalino esteja transmitindo amostras.
-5. Garanta que o **Bluetooth do computador esteja ligado**.
 
-> Sem o LSL ativo, o Compasso até localiza o dispositivo no escaneamento, mas a conexão
-> falha com uma mensagem de erro.
+> Sem o LSL ativo e transmitindo, a conexão do Compasso falha com uma mensagem de erro
+> (timeout de ~2 s ao procurar a stream).
 
 ---
 
@@ -85,23 +85,22 @@ experimental. Ela **precisa** conter exatamente estas duas colunas:
 | Coluna   | Descrição                                                                 |
 |----------|---------------------------------------------------------------------------|
 | `musica` | Nome do arquivo de áudio **com a extensão** (ex.: `faixa_01.mp3`).        |
-| `fator`  | Condição daquela faixa (ex.: `musica`, `pausa`, `ruido`, ou seus rótulos).|
+| `fator`  | Condição daquela faixa (ex.: `musica`, `ruido`, ou seus rótulos).         |
 
 Exemplo:
 
 | musica          | fator   |
 |-----------------|---------|
 | faixa_01.mp3    | musica  |
-| silencio_01.wav | pausa   |
 | branco_01.wav   | ruido   |
 
 > **Importante:**
 > O valor da coluna `musica` deve **bater exatamente** com o nome do arquivo na pasta.
 > Se uma música não tiver linha correspondente, o programa avisa e interrompe a
 > verificação — corrija a planilha e recarregue.
-> Os contadores **Música / Pausa / Ruído** da tela são preenchidos a partir da coluna
-> `fator`: valores que contêm "pausa" contam como pausa, "ruido"/"ruído" como ruído, e
-> qualquer outro valor como música.
+> Os contadores **Música / Ruído** da tela são preenchidos a partir da coluna
+> `fator`: valores que contêm "ruido"/"ruído" contam como ruído e qualquer outro
+> valor como música.
 
 ---
 
@@ -123,13 +122,16 @@ A tela é dividida em quatro regiões:
 
 ### 🔵 Painel superior — Conexão com o BITalino
 
-1. **Escanear** — procura dispositivos Bluetooth próximos (~3 s). Ao final, a lista de
-   endereços aparece no campo de seleção.
-2. **Selecione o endereço MAC** — escolha o seu BITalino na caixa de seleção. O endereço
-   tem o formato `XX:XX:XX:XX:XX:XX`.
-3. **Canal** — caixa ao lado do botão *Escanear*. Selecione o **número do canal** do
+1. **Endereço MAC** — digite (ou carregue de um `.config`) o endereço MAC do seu BITalino
+   no campo de seleção. O endereço tem o formato `XX:XX:XX:XX:XX:XX`. É por ele que o
+   Compasso localiza a *stream* LSL publicada pelo OpenSignals (não há mais escaneamento
+   Bluetooth — desnecessário, já que a conexão é feita via OpenSignals + LSL).
+2. **Canal** — caixa ao lado do campo de MAC. Selecione o **número do canal** do
    sensor cujo sinal será gravado (na coluna `signal`). As opções vão de **1 a 6**
    (correspondendo aos canais do BITalino); se nada for escolhido, o canal padrão é usado.
+3. **Botão "Parar"** — ao lado do **Canal**, encerra manualmente a conexão com o BITalino,
+   liberando novamente o campo de MAC e o botão de conexão. É bloqueado (com aviso) enquanto
+   houver um experimento em andamento — pare o experimento antes de desconectar.
 4. **Botão de conexão (imagem à direita)** — conecta ao dispositivo selecionado. Em caso
    de sucesso, a imagem muda para "conectado" e os controles de conexão são travados; em
    caso de falha, aparece uma mensagem explicando o motivo (geralmente LSL desativado).
@@ -172,7 +174,7 @@ que as músicas foram encontradas e mapeadas às condições com sucesso.
 
 ### 🟣 Painel inferior — Progresso e início do experimento
 
-- Contadores **Música / Pausa / Ruído** (`X de Y`), atualizados a cada faixa concluída.
+- Contadores **Música / Ruído** (`X de Y`), atualizados a cada faixa concluída.
 - Linha de **status** da sessão.
 - **Botão principal** (imagem à direita), que muda de estado durante o experimento:
   - **começar** — só fica **habilitado** quando os cinco pré-requisitos abaixo estão prontos;
@@ -208,8 +210,11 @@ O botão **começar** só habilita quando **todos** estão satisfeitos:
 5. O botão **Parar** encerra a sessão a qualquer momento de forma segura, gravando um
    marcador `stop` e finalizando o arquivo da faixa em andamento.
 
-> Cada faixa gera **um par de arquivos** (CSV + XLSX). A coluna de tempo é contada a partir
-> do início da contagem regressiva daquela faixa.
+> Cada coleta cria **uma pasta própria** com o nome `nome_idade_genero_dia-mes-ano_hora-min-seg`.
+> Dentro dela, cada faixa gera **um par de arquivos** (CSV + XLSX) nomeados
+> `ordem_nomedamusica` — onde *ordem* é a posição da faixa na playlist (com zero à esquerda,
+> ex.: `01_minha_musica.csv`). A coluna de tempo é contada a partir do início da contagem
+> regressiva daquela faixa.
 
 ---
 
@@ -272,7 +277,7 @@ final** da faixa, a partir do mesmo conteúdo.
 |---------|--------------------------|
 | **"começar" não habilita** | Falta um dos cinco pré-requisitos. Verifique conexão, dados do participante, pasta de músicas, planilha de condições e diretório de saída. |
 | **Erro ao conectar o BITalino** | O **Lab Streaming Layer** não está ativo no OpenSignals, ou o dispositivo não está transmitindo. Reative e tente novamente. |
-| **Nenhum dispositivo no escaneamento** | Bluetooth desligado ou BITalino fora de alcance/desligado. Ligue o Bluetooth e reescaneie. |
+| **Falha ao conectar / timeout** | OpenSignals sem LSL ativo ou sem transmitir, ou MAC incorreto. Ative o LSL, coloque o BITalino em aquisição e confira o endereço MAC. |
 | **"Nenhuma condição encontrada para X"** | O nome na coluna `musica` da planilha não bate com o arquivo na pasta. Corrija a planilha e recarregue. |
 | **Sinal sempre 0 ou constante** | Canal errado selecionado. Veja a primeira amostra registrada no log e ajuste o número do **Canal**. |
 | **Áudio não toca** | Verifique se os arquivos estão em `.mp3`, `.wav` ou `.ogg` e se o volume do sistema não está no mínimo. |

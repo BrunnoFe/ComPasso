@@ -80,5 +80,5 @@ def styled_combobox(master, **kwargs):
                 dropdown_fg_color=ROSA, dropdown_hover_color=AZUL_CLARO, text_color=CINZA,
                 dropdown_text_color=CINZA, justify=ctk.CENTER, font=BASE_FONT_MIN,
                 dropdown_font=BASE_FONT_MIN)
-    opts.update(kwargs)
-    return ctk.CTkComboBox(master, **opts)
+    opts.update(kwargs) #atualiza com os kwargs passados pelo chamador (ex: variable, values, state, width)
+    return ctk.CTkComboBox(master, **opts) #passa os kwargs atualizados para o construtor do CTkComboBox

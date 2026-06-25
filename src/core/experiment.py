@@ -6,18 +6,16 @@ import threading
 from pylsl import local_clock
 
 from . import experiment_logger
-from .recorder import LSLRecorder, build_output_basename
+from .recorder import LSLRecorder, build_session_dirname, build_track_filename
 
 
 def _classify_condition(fator: str) -> str:
-    """Classifica o fator de uma faixa em 'musica', 'pausa' ou 'ruido'.
+    """Classifica o fator de uma faixa em 'musica' ou 'ruido'.
 
     Heurística simples baseada em palavras-chave do valor da coluna `fator`.
-    Por padrão, qualquer faixa que não seja pausa nem ruído é tratada como música.
+    Por padrão, qualquer faixa que não seja ruído é tratada como música.
     """
     f = (fator or "").strip().lower()
-    if "pausa" in f:
-        return "pausa"
     if "ruido" in f or "ruído" in f:
         return "ruido"
     return "musica"
@@ -45,10 +43,11 @@ class ExperimentRunner:
         self._stop_event = threading.Event()
         self._continue_event = threading.Event()
         self._order = []
+        self._session_dir = None
         self._recorder = None
         self._thread = None
-        self._running = False 
-        self._done = {"musica": 0, "pausa": 0, "ruido": 0}
+        self._running = False
+        self._done = {"musica": 0, "ruido": 0}
 
     def is_running(self) -> bool:
         return self._running
@@ -102,16 +101,28 @@ class ExperimentRunner:
 
     # ------------------------------------------------------------------ #
     def _run_experiment(self) -> None:
-        totals = {"musica": 0, "pausa": 0, "ruido": 0}
+        # pasta única da sessão de coleta (criada uma vez, antes da primeira faixa)
+        session_name = build_session_dirname(self.ctx)
+        self._session_dir = os.path.join(self.ctx.save_dir, session_name)
+        try:
+            os.makedirs(self._session_dir, exist_ok=True)
+        except OSError as e:
+            experiment_logger.logger.error(f"Não foi possível criar a pasta da sessão '{self._session_dir}': {e}")
+            self._post_status("Erro ao criar a pasta de salvamento; experimento abortado.")
+            self._finish()
+            return
+        experiment_logger.logger.info(f"Pasta da sessão criada: {self._session_dir}")
+
+        totals = {"musica": 0, "ruido": 0}
         for path in self._order:
             totals[_classify_condition(self.ctx.music_condition_mapping.get(path, ""))] += 1
-        self._done = {"musica": 0, "pausa": 0, "ruido": 0}
+        self._done = {"musica": 0, "ruido": 0}
         self._update_counters(totals)
 
-        for path in self._order:
+        for order, path in enumerate(self._order, start=1):
             if self._stop_event.is_set():
                 break
-            self._run_track(path, totals)
+            self._run_track(order, path, totals)
             if self._stop_event.is_set():
                 break
             # aguarda o 'continuar' antes da próxima faixa
@@ -124,7 +135,7 @@ class ExperimentRunner:
 
         self._finish()
 
-    def _run_track(self, path: str, totals: dict) -> None:
+    def _run_track(self, order: int, path: str, totals: dict) -> None:
         self.music_name = os.path.basename(path)
         self.music_fator = self.ctx.music_condition_mapping.get(path, "")
         cat = _classify_condition(self.music_fator)
@@ -132,7 +143,8 @@ class ExperimentRunner:
         self._set_button("rodando")
 
         # 1) aquisição + captura de t0 (drena buffer -> t0 -> primeira linha, sem lacuna)
-        csv_path = os.path.join(self.ctx.save_dir, build_output_basename(self.ctx) + ".csv")
+        filename = build_track_filename(order, len(self._order), self.music_name)
+        csv_path = os.path.join(self._session_dir, filename + ".csv")
         recorder = LSLRecorder(self.ctx.bitalino, self.ctx.signal_channel, csv_path)
         self._recorder = recorder
         t0 = recorder.start()
@@ -207,5 +219,4 @@ class ExperimentRunner:
     def _update_counters(self, totals: dict) -> None:
         done = dict(self._done)
         self.ctx.run_after(lambda: self.ctx.music_counter.set(f"Música: {done['musica']} de {totals['musica']}"))
-        self.ctx.run_after(lambda: self.ctx.pausa_counter.set(f"Pausa: {done['pausa']} de {totals['pausa']}"))
         self.ctx.run_after(lambda: self.ctx.ruido_counter.set(f"Ruído: {done['ruido']} de {totals['ruido']}"))

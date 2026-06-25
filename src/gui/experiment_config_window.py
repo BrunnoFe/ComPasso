@@ -39,14 +39,14 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.transient(master)
         self.after(10, self._safe_grab)
 
-        container = ctk.CTkFrame(self, corner_radius=CORNER, border_width=BORDER_WIDTH_INSIDE,
+        mainframe = ctk.CTkFrame(self, corner_radius=CORNER, border_width=BORDER_WIDTH_INSIDE,
                                  bg_color=AZUL, fg_color=AZUL_CLARO, border_color=AZUL)
-        container.grid(row=0, column=0, padx=20, pady=20, sticky=ctk.NSEW)
+        mainframe.grid(row=0, column=0, padx=20, pady=20, sticky=ctk.NSEW)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        container.grid_columnconfigure(1, weight=1)
+        mainframe.grid_columnconfigure(1, weight=1)
 
-        self.titulo = styled_label(container, text="Configuração do Experimento", font=BASE_FONT)
+        self.titulo = styled_label(mainframe, text="Configuração do Experimento", font=BASE_FONT)
         self.titulo.grid(row=0, column=0, columnspan=3, padx=15, pady=(15, 20), sticky=ctk.N)
 
         # variáveis dos campos
@@ -59,28 +59,28 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.mac_var = ctk.StringVar()
 
         # 1) Pasta de músicas
-        self._path_row(container, 1, "Pasta de músicas:", self.music_folder_var, self._pick_music_folder)
+        self._path_row(mainframe, 1, "Pasta de músicas:", self.music_folder_var, self._pick_music_folder)
         # 2) Quantidade de músicas
-        self._entry_row(container, 2, "Quantidade de músicas:", self.music_quantity_var, "Apenas dígitos (mín. 1)")
+        self._entry_row(mainframe, 2, "Quantidade de músicas:", self.music_quantity_var, "Apenas dígitos (mín. 1)")
         # 3) Quantidade de ruído
-        self._entry_row(container, 3, "Quantidade de ruído:", self.noise_quantity_var, "Apenas dígitos (mín. 0)")
+        self._entry_row(mainframe, 3, "Quantidade de ruído:", self.noise_quantity_var, "Apenas dígitos (mín. 0)")
         # 4) Arquivo de fatores
-        self._path_row(container, 4, "Arquivo de fatores:", self.factors_file_var, self._pick_factors_file)
+        self._path_row(mainframe, 4, "Arquivo de fatores:", self.factors_file_var, self._pick_factors_file)
         # 5) Pasta de salvamento dos dados
-        self._path_row(container, 5, "Pasta de salvamento dos dados:", self.data_save_var, self._pick_save_folder)
+        self._path_row(mainframe, 5, "Pasta de salvamento dos dados:", self.data_save_var, self._pick_save_folder)
 
         # 6) Canal ativo do BITalino
-        styled_label(container, text="Canal ativo do BITalino:").grid(row=6, column=0, padx=15, pady=10, sticky=ctk.E)
-        self.channel_combobox = styled_combobox(container, variable=self.channel_var, values=CHANNEL_OPTIONS, state="readonly", width=120)
+        styled_label(mainframe, text="Canal ativo do BITalino:").grid(row=6, column=0, padx=15, pady=10, sticky=ctk.E)
+        self.channel_combobox = styled_combobox(mainframe, variable=self.channel_var, values=CHANNEL_OPTIONS, state="readonly", width=120, bg_color=AZUL_CLARO)
         self.channel_combobox.grid(row=6, column=1, columnspan=2, padx=15, pady=10, sticky=ctk.W)
 
         # 7) Endereço MAC do BITalino
-        styled_label(container, text="Endereço MAC do BITalino:").grid(row=7, column=0, padx=15, pady=10, sticky=ctk.E)
-        self.mac_entry = styled_entry(container, textvariable=self.mac_var, width=320, placeholder_text="XX:XX:XX:XX:XX:XX")
+        styled_label(mainframe, text="Endereço MAC do BITalino:").grid(row=7, column=0, padx=15, pady=10, sticky=ctk.E)
+        self.mac_entry = styled_entry(mainframe, textvariable=self.mac_var, width=320, placeholder_text="XX:XX:XX:XX:XX:XX")
         self.mac_entry.grid(row=7, column=1, columnspan=2, padx=15, pady=10, sticky=ctk.EW)
 
         # botões
-        button_row = ctk.CTkFrame(container, fg_color=TRANSPARENTE)
+        button_row = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
         button_row.grid(row=8, column=0, columnspan=3, padx=15, pady=(20, 15), sticky=ctk.E)
         self.salvar_button = styled_button(button_row, text="Salvar", width=120, bg_color=AZUL_CLARO, fg_color=ROSA, hover_color=AMARELO, command=self._on_salvar)
         self.salvar_button.grid(row=0, column=0, padx=(0, 10))

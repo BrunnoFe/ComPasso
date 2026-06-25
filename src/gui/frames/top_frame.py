@@ -2,10 +2,10 @@ import customtkinter as ctk
 
 from .. import gui_logger
 from ..guiconfigs import set_grids
-from ..theme import (AZUL, AZUL_CLARO, ROSA, CINZA, TRANSPARENTE,
+from ..theme import (AZUL, AZUL_CLARO, BASE_FONT_MED, ROSA, CINZA, TRANSPARENTE,
                      BASE_FONT, BORDER_WIDTH, CORNER)
-from ..widgets import show_message, bind_hover_images, styled_label, styled_button, styled_combobox
-from src.core import connectar_bitalino, run_scan_devices
+from ..widgets import show_message, bind_hover_images, styled_label, styled_button, styled_combobox, styled_entry
+from src.core import connectar_bitalino
 
 
 class UpFrame(ctk.CTkFrame):
@@ -23,22 +23,28 @@ class UpFrame(ctk.CTkFrame):
 
         self.mac_addr_var = ctk.StringVar(value="Escolha o dispositivo...")
 
-        self.mac_adress_label = styled_label(self, text="Selecione o endereço MAC do Bitalino:", font=BASE_FONT)
+        self.mac_adress_label = styled_label(self, text="Insira o endereço MAC do Bitalino:", font=BASE_FONT_MED)
         self.mac_adress_label.grid(row=0, column=1, pady=15, padx=10, sticky=ctk.N)
 
-        self.up_select_macaddr = styled_combobox(self, state="normal", variable=self.mac_addr_var, values=[""])
+        self.up_select_macaddr = styled_entry(self, placeholder_text="Endereço MAC", textvariable=self.mac_addr_var, bg_color=ROSA, justify=ctk.CENTER, font=BASE_FONT_MED)
         self.up_select_macaddr.grid(row=0, column=1, pady=10, padx=10, sticky=ctk.EW)
 
         self.scan_controls = ctk.CTkFrame(self, fg_color=TRANSPARENTE, bg_color=ROSA)
         self.scan_controls.grid(row=0, column=1, pady=15, padx=10, sticky=ctk.S)
 
-        self.refresh_mac_button = styled_button(self.scan_controls, text="Escanear", width=80, bg_color=ROSA, fg_color=ROSA, command=self.update_mac_addresses)
-        self.refresh_mac_button.grid(row=0, column=0, padx=(0, 8), sticky=ctk.S)
+        self.canal_label = styled_label(self.scan_controls, text="Canal:", bg_color=TRANSPARENTE)
+        self.canal_label.grid(row=0, column=0, padx=(0, 8), sticky=ctk.S)
 
-        self.canal_var = ctk.StringVar(value="Canal")
+        self.canal_var = ctk.StringVar(value="A1")
         self.canal_combobox = styled_combobox(self.scan_controls, state="readonly", variable=self.canal_var, width=90,
-                                               values=["1", "2", "3", "4", "5", "6"], justify=ctk.LEFT, command=self._on_channel_change)
+                                               values=["A1", "A2", "A3", "A4", "A5", "A6"], justify=ctk.LEFT, 
+                                               command=self._on_channel_change)
         self.canal_combobox.grid(row=0, column=1, sticky=ctk.S)
+
+        self.disconnect_button = styled_button(self.scan_controls, text="Desconectar",
+                                               bg_color=TRANSPARENTE, fg_color=ROSA,
+                                               command=self.disconnect_bitalino)
+        self.disconnect_button.grid(row=0, column=2, padx=(8, 0), sticky=ctk.S)
 
         self.button_conectbt_img = imgs.conect_bitalino
         self.button_conectbt_img_dim = imgs.conect_bitalino_dim
@@ -50,32 +56,13 @@ class UpFrame(ctk.CTkFrame):
         self.button_conect_bitalino.grid(row=0, column=2, pady=20, padx=10, sticky=ctk.NSEW)
         bind_hover_images(self.button_conect_bitalino, self.button_conectbt_img, self.button_conectbt_img_dim)
 
-    def update_mac_addresses(self):
-        """Escaneia dispositivos BLE fora da thread da GUI; atualiza o ComboBox ao final."""
-        self.refresh_mac_button.configure(state="disabled", text="...")
-        self.ctx.run_async(self._scan_devices_worker, on_done=self._update_mac_combobox)
-
-    def _on_channel_change(self, value: str):
+    def _on_channel_change(self, canal_escolhido: str):
         """Atualiza o canal LSL usado na coluna 'signal' (padrão 0 se inválido)."""
         try:
-            self.ctx.signal_channel = int(value)
+            self.ctx.signal_channel = int(canal_escolhido[1])
         except (TypeError, ValueError):
             self.ctx.signal_channel = 0
         gui_logger.logger.info(f"Canal de sinal selecionado: {self.ctx.signal_channel}")
-
-    def _scan_devices_worker(self):
-        """Executa o scan BLE (bloqueante) fora da thread da GUI. Retorna a lista de MACs."""
-        try:
-            mac_addresses = run_scan_devices()
-        except Exception as e:
-            gui_logger.logger.error(f"Erro durante o escaneamento de dispositivos: {e}")
-            mac_addresses = None
-        return mac_addresses if mac_addresses else ["Sem dispositivos encontrados..."]
-
-    def _update_mac_combobox(self, mac_addresses: list):
-        """Atualiza o ComboBox e reabilita o botão de scan (thread principal)."""
-        self.up_select_macaddr.configure(values=mac_addresses)
-        self.refresh_mac_button.configure(state="normal", text="Escanear")
 
     def conect_bitalino(self, mac_addr: str):
         """Conecta ao Bitalino fora da thread da GUI; trata o resultado na thread principal."""
@@ -104,5 +91,30 @@ class UpFrame(ctk.CTkFrame):
             self.button_conect_bitalino.unbind('<Enter>')
             self.button_conect_bitalino.unbind('<Leave>')
             self.button_conect_bitalino.configure(state="disabled", image=self.button_conectbt_img_conectado)
-            self.refresh_mac_button.configure(state="disabled")
             self.up_select_macaddr.configure(state="disabled")
+
+    def disconnect_bitalino(self):
+        """Encerra manualmente a conexão LSL com o Bitalino e restaura a UI de conexão.
+
+        Bloqueia (com aviso) se houver um experimento em andamento — o usuário deve parar
+        o experimento antes de desconectar."""
+        runner = self.ctx.runner
+        if runner is not None and runner.is_running():
+            show_message("Atenção", "Pare o experimento antes de desconectar o Bitalino.", icon="warning")
+            return
+
+        inlet = self.ctx.bitalino
+        if inlet is not None:
+            try:
+                inlet.close_stream()
+            except Exception as e:
+                gui_logger.logger.warning(f"Falha ao encerrar o stream do Bitalino: {e}")
+        self.ctx.bitalino = None
+        self.ctx.mac_addr = None
+        gui_logger.logger.info("Bitalino desconectado manualmente pelo usuário.")
+        self.ctx.status_text.set("Bitalino desconectado")
+
+        # restaura o botão de conexão e o campo de MAC
+        self.button_conect_bitalino.configure(state="normal", image=self.button_conectbt_img)
+        bind_hover_images(self.button_conect_bitalino, self.button_conectbt_img, self.button_conectbt_img_dim)
+        self.up_select_macaddr.configure(state="normal")

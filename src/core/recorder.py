@@ -20,17 +20,36 @@ def _sanitize(value: str) -> str:
     return "".join(c if (c.isalnum() or c in ("-", "_")) else "_" for c in value)
 
 
-def build_output_basename(ctx) -> str:
-    """Monta o nome base do arquivo de saída no padrão
-    `nome_idade_genero_dia_hora`, com o sufixo de data/hora gerado no momento da
-    criação do arquivo (garante unicidade por faixa).
+def build_session_dirname(ctx) -> str:
+    """Monta o nome da pasta da sessão de coleta no padrão
+    `nome_idade_genero_dia-mes-ano_hora-min-seg`.
+
+    O sufixo de data/hora é gerado uma única vez por sessão (no início do
+    experimento), de modo que todas as faixas da mesma coleta fiquem na mesma pasta.
     """
     agora = datetime.now()
     suffix = agora.strftime("%d-%m-%Y_%H-%M-%S")
     nome = _sanitize(ctx.nome)
     idade = _sanitize(ctx.idade)
     genero = _sanitize(ctx.genero)
-    return f"{nome}_{idade}_{genero}_{suffix}" #
+    return f"{nome}_{idade}_{genero}_{suffix}"
+
+
+def build_track_filename(order: int, total: int, music_name: str) -> str:
+    """Monta o nome base do arquivo de uma faixa no padrão `ordem_nomedamusica`.
+
+    A ordem é a posição da faixa na playlist (1-based), com zero à esquerda para
+    ordenação correta no explorador de arquivos (largura mínima de 2 dígitos). A
+    extensão do áudio é removida do nome da música.
+
+    :param order: posição da faixa na sequência de reprodução (começa em 1).
+    :param total: total de faixas da sessão (define a largura do preenchimento).
+    :param music_name: nome do arquivo de áudio (com ou sem extensão).
+    :return: nome base sem extensão, ex.: ``"01_minha_musica"``.
+    """
+    width = max(2, len(str(total)))
+    stem = os.path.splitext(music_name)[0]  # remove a extensão do áudio
+    return f"{order:0{width}d}_{_sanitize(stem)}"
 
 
 class LSLRecorder:

@@ -11,18 +11,15 @@ class DownFrame(ctk.CTkFrame):
 
     def __init__(self, master, ctx):
         super().__init__(master, corner_radius=CORNER, border_width=BORDER_WIDTH, bg_color=AZUL, fg_color=ROSA, border_color=AZUL)
-        set_grids(self, rows_conf={1: [0, 1, 2]}, column_conf={1: [0, 1, 2]}, grid_row=2)
+        set_grids(self, rows_conf={1: [0, 1]}, column_conf={1: [0, 1, 2]}, grid_row=2)
 
         self.ctx = ctx
 
         self.exp_progress_music_label = styled_label(self, textvariable=self.ctx.music_counter)
         self.exp_progress_music_label.grid(row=0, column=0, padx=15, pady=10, sticky=ctk.W)
 
-        self.exp_progress_pausas_label = styled_label(self, textvariable=self.ctx.pausa_counter)
-        self.exp_progress_pausas_label.grid(row=1, column=0, padx=15, pady=10, sticky=ctk.W)
-
         self.exp_progress_ruido_label = styled_label(self, textvariable=self.ctx.ruido_counter)
-        self.exp_progress_ruido_label.grid(row=2, column=0, padx=15, pady=10, sticky=ctk.W)
+        self.exp_progress_ruido_label.grid(row=1, column=0, padx=15, pady=10, sticky=ctk.W)
 
         self.down_infos_label = styled_label(self, textvariable=self.ctx.status_text)
         self.down_infos_label.grid(row=1, column=1, padx=15, pady=10, sticky=NSE)
