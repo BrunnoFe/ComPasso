@@ -9,7 +9,7 @@ from ..theme import (AZUL, AZUL_CLARO, ROSA, CINZA, AMARELO, AMARELO_ESC, TRANSP
                      BASE_FONT, BORDER_WIDTH, BORDER_WIDTH_INSIDE, CORNER, NSE)
 from ..widgets import show_message, styled_label, styled_button, styled_entry
 from src.core import (scan_music_files, match_conditions, MissingConditionError,
-                      set_system_volume)
+                      set_system_volume, get_system_volume)
 from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir
 
 
@@ -38,17 +38,17 @@ class UpLeftMidFrame(ctk.CTkFrame):
 
         self.name_label = styled_label(self, text="Nome:")
         self.name_label.grid(row=0, column=0, padx=15, pady=15, sticky=ctk.E)
-        self.name_entry = styled_entry(self, width=300, placeholder_text="Digite o nome do participante")
+        self.name_entry = styled_entry(self, width=300, height=30, placeholder_text="Digite o nome do participante")
         self.name_entry.grid(row=0, column=1, padx=15, pady=15, sticky=ctk.EW)
 
         self.idade_label = styled_label(self, text="Idade:")
         self.idade_label.grid(row=1, column=0, padx=15, pady=15, sticky=ctk.E)
-        self.idade_entry = styled_entry(self, width=300, placeholder_text="Digite a idade do participante")
+        self.idade_entry = styled_entry(self, width=300, height=30, placeholder_text="Digite a idade do participante")
         self.idade_entry.grid(row=1, column=1, padx=15, pady=15, sticky=ctk.EW)
 
         self.genero_label = styled_label(self, text="Gênero:")
         self.genero_label.grid(row=2, column=0, padx=15, pady=15, sticky=ctk.E)
-        self.genero_entry = styled_entry(self, width=300, placeholder_text="Digite o gênero do participante")
+        self.genero_entry = styled_entry(self, width=300, height=30, placeholder_text="Digite o gênero do participante")
         self.genero_entry.grid(row=2, column=1, padx=15, pady=15, sticky=ctk.EW)
 
         self.save_infos_button = styled_button(self, text="Salvar informações", bg_color=AZUL_CLARO, fg_color=ROSA, command=self.save_infos)
@@ -266,6 +266,11 @@ class DownMidFrame(ctk.CTkFrame):
         self.music_volume_label = styled_label(self, textvariable=self.ctx.volume_text, font=BASE_FONT, width=150, anchor=ctk.E)
         self.music_volume_label.grid(row=0, column=2, padx=10, pady=15, sticky=ctk.EW)
 
+        # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
+        vol = int(round(get_system_volume()))
+        self.music_volume.set(vol)
+        self.ctx.volume_text.set(f"Volume: {vol}%")
+
         self.music_time_begin = styled_label(self, textvariable=self.ctx.time_begin_text, font=BASE_FONT, width=90, anchor=ctk.E)
         self.music_time_begin.grid(row=1, column=3, padx=20, pady=10, sticky=ctk.EW)
 
@@ -273,7 +278,7 @@ class DownMidFrame(ctk.CTkFrame):
         self.music_time_end.grid(row=1, column=0, padx=20, pady=10, sticky=ctk.EW)
 
         self.stop_button = styled_button(self, text="Parar", width=80, bg_color=AZUL_CLARO, fg_color=ROSA, command=self._on_stop)
-        self.stop_button.grid(row=2, column=1, columnspan=2, padx=10, pady=10, sticky=ctk.NS)
+        self.stop_button.grid(row=2, column=0, columnspan=4, padx=10, pady=10, sticky=ctk.NS)
 
         self.music_progress = ctk.CTkProgressBar(self, height=10, border_width=BORDER_WIDTH, border_color=AZUL, bg_color=AZUL_CLARO, fg_color=ROSA, progress_color=CINZA)
         self.music_progress.grid(row=1, column=0, columnspan=4, padx=80, pady=20, sticky=ctk.NSEW)

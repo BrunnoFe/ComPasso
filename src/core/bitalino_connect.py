@@ -4,6 +4,12 @@ from pylsl import StreamInlet, resolve_byprop
 
 from . import connection_logger
 
+# Aceita os separadores ":", espaço e "-" (ex.: "AA:BB:..", "AA BB..", "AA-BB..").
+MAC_RE = re.compile(
+    r'^([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})'
+    r'[:\s\-]([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})$'
+)
+
 
 def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
     """
@@ -14,10 +20,10 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
         :return: Um objeto StreamInlet se a conexão for bem-sucedida, ou uma mensagem de erro caso contrário.
 
     """
-    mac_pattern: re.Pattern[str] = re.compile(r"\d\d[: ]\d\d[: ]\d\d[: ]\d\d[: ]\d\d[: ]\d\d")
-    mac_match: re.Match[str] | None = mac_pattern.match(mac_addr)
+    mac_match: re.Match[str] | None = MAC_RE.match(mac_addr)
 
     if mac_match is not None:
+        mac_addr = ':'.join(mac_match.groups()).upper()  # forma normalizada, usada daqui em diante
         connection_logger.logger.info(f'Endereço MAC selecionado = {mac_addr}. Conectando a stream ao OpenSignals ...')
         try:
             bitalino_inlet: StreamInlet = StreamInlet(resolve_byprop(prop='type', value=mac_addr, minimum=1, timeout=2)[0], recover=False)

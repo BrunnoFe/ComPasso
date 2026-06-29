@@ -164,14 +164,17 @@ class LSLRecorder:
                             recorder_logger.logger.info(f"Primeira amostra completa (verificação de canal): {sample}")
                             self._first_sample_logged = True
 
-                        marker, music_file, fator = self._take_marker_for(ts)
-                        writer.writerow([ts - self.t0, self._signal_value(sample), marker,
-                                        music_file if music_file is not None else "",
-                                        fator if fator is not None else ""])
-                        f.flush()
-                        if time.time() - last_fsync >= self.FSYNC_INTERVAL:
-                            os.fsync(f.fileno())
-                            last_fsync = time.time()
+                        # Descarta amostras anteriores a t0 (timestamp negativo): garante
+                        # que a primeira linha gravada tenha timestamp >= 0.
+                        if ts >= self.t0:
+                            marker, music_file, fator = self._take_marker_for(ts)
+                            writer.writerow([ts - self.t0, self._signal_value(sample), marker,
+                                            music_file if music_file is not None else "",
+                                            fator if fator is not None else ""])
+                            f.flush()
+                            if time.time() - last_fsync >= self.FSYNC_INTERVAL:
+                                os.fsync(f.fileno())
+                                last_fsync = time.time()
 
                     # condição de término: stop pedido e todos os marcadores já anexados
                     if self._stop_event.is_set() and not self._has_pending():

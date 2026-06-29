@@ -11,7 +11,7 @@ from .bitalino_connect import connectar_bitalino
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
 from .experiment import ExperimentRunner
 from .musics import scan_music_files, match_conditions, MissingConditionError
-from .audio import set_system_volume
+from .audio import set_system_volume, get_system_volume
 from . import config_manager
 
 __all__ = [
@@ -30,5 +30,6 @@ __all__ = [
     'match_conditions',
     'MissingConditionError',
     'set_system_volume',
+    'get_system_volume',
     'config_manager'
 ]
