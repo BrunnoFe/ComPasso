@@ -5,12 +5,14 @@ Gera um executável otimizado do Compasso com **PyInstaller** (build em pasta ú
 cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
 
 ## Pré-requisitos
+
 - Python 3.12+ (o projeto foi validado em 3.14).
 - (Opcional) **UPX** no `PATH` para comprimir os binários. Sem UPX, o build funciona
   normalmente — a compressão é apenas ignorada.
 - OpenSignals/`liblsl` **não** são necessários para *buildar*, apenas para usar o app.
 
 ## Preparar o ambiente
+
 ```bash
 python -m venv .venv
 # Windows
@@ -21,23 +23,55 @@ source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
 ```
 
-## Gerar o build (comando único)
+## Gerar o build
+
+### onedir (padrão, recomendado para release)
+
 ```bash
 pyinstaller compasso.spec
 ```
 
 Saída:
-- **Windows:** `dist/Compasso-win/Compasso.exe` (com os arquivos de apoio em `dist/Compasso-win/_internal/`).
+
+- **Windows:** `dist/Compasso-win/Compasso.exe` (apoio em `dist/Compasso-win/_internal/`).
 - **macOS:** `dist/Compasso-mac/` e o bundle `dist/Compasso.app`.
 
-Para um teste rápido no Windows:
+Teste rápido no Windows: `dist\Compasso-win\Compasso.exe`
+
+### onefile (variante de arquivo único)
+
+Defina a variável `COMPASSO_ONEFILE` antes de buildar:
+
 ```bash
-dist\Compasso-win\Compasso.exe
+# Windows (PowerShell)
+$env:COMPASSO_ONEFILE = "1"; pyinstaller compasso.spec; Remove-Item Env:\COMPASSO_ONEFILE
+# Windows (cmd)
+set COMPASSO_ONEFILE=1 && pyinstaller compasso.spec
+# macOS/Linux
+COMPASSO_ONEFILE=1 pyinstaller compasso.spec
 ```
 
+Saída: **`dist/Compasso.exe`** (Windows, ~47 MB) ou **`dist/Compasso.app`** (macOS).
+
+**Caveats do onefile** (por que o onedir é o alvo primário):
+
+- O EXE se **auto-extrai num diretório TEMP** (`sys._MEIPASS`) a cada execução →
+  **startup mais lento** que o onedir.
+- **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do
+  Compasso já vão para pastas do usuário (Documentos/Compasso, app-data) via
+  `src/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
+- Recursos lidos (imagens, `lsl.dll`) são resolvidos a partir de `sys._MEIPASS`
+  (`src/gui/assets.py` já trata isso) — não dependa de caminhos relativos ao `.exe`.
+- Maior chance de **falso-positivo de antivírus** e de o `lsl.dll` ser bloqueado.
+- As saídas têm nomes distintos (`Compasso-win/` vs `Compasso.exe`), então coexistem em
+  `dist/`. Atenção: `--clean` limpa o cache e o `build/`, mas **não remove a saída da outra
+  variante** — apague `dist/` manualmente entre builds de release se quiser um diretório limpo.
+
 ## macOS
+
 1. Rode o build **em um Mac** (não é possível a partir do Windows).
 2. Gere o ícone `.icns` a partir do PNG antes de buildar, por exemplo:
+
    ```bash
    mkdir icon.iconset
    sips -z 16 16   assets/icon.png --out icon.iconset/icon_16x16.png
@@ -47,9 +81,11 @@ dist\Compasso-win\Compasso.exe
    sips -z 512 512 assets/icon.png --out icon.iconset/icon_512x512.png
    iconutil -c icns icon.iconset -o assets/icon.icns
    ```
+
 3. `pyinstaller compasso.spec`.
 
 ## Notas
+
 - `dist/` e `build/` não são versionados (ver `.gitignore`). `compasso.spec` é versionado.
 - Dependências de runtime ficam em `requirements.txt`; ferramentas de build (PyInstaller,
   pyflakes) ficam em `requirements-dev.txt`.

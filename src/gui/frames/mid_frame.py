@@ -223,8 +223,11 @@ class UpRightMidFrame(ctk.CTkFrame):
         try:
             music_files = scan_music_files(folder)
         except FileNotFoundError as e:
+            # captura a mensagem antes do lambda: Python limpa `e` ao sair do except,
+            # e o lambda só roda depois (via run_after), o que causaria NameError.
+            erro = str(e)
             self._scan_in_progress = False
-            self.ctx.run_after(lambda: show_message("Erro", f"Pasta de músicas não encontrada: {e}.\nPor favor, verifique o caminho e tente novamente."))
+            self.ctx.run_after(lambda: show_message("Erro", f"Pasta de músicas não encontrada: {erro}.\nPor favor, verifique o caminho e tente novamente."))
             return
 
         if not music_files:

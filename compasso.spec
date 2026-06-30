@@ -1,15 +1,27 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Spec do PyInstaller para o Compasso (multiplataforma).
+"""Spec do PyInstaller para o Compasso (multiplataforma, onedir + onefile).
 
 Build (a partir da raiz do projeto, com o venv ativo):
-    pyinstaller compasso.spec
+    pyinstaller compasso.spec                 # onedir (padrão)
+    COMPASSO_ONEFILE=1 pyinstaller compasso.spec   # onefile (Windows: set/$env:)
 
-Windows -> dist/Compasso-win/Compasso.exe
-macOS   -> dist/Compasso-mac/ + dist/Compasso.app  (gere assets/icon.icns antes; ver BUILD.md)
+onedir  -> dist/Compasso-win/Compasso.exe   |  dist/Compasso-mac/ (+ Compasso.app)
+onefile -> dist/Compasso.exe                |  dist/Compasso.app
+
+CAVEATS do onefile (tratados aqui / no código):
+- O EXE se auto-extrai num diretório TEMP a cada execução (sys._MEIPASS). NÃO escreva
+  dados nele: dados/logs vão para pastas do usuário (Documentos/Compasso, app-data) via
+  src/utils/paths.py — independentes do bundle.
+- Recursos empacotados (assets/, lsl.dll) ficam em sys._MEIPASS. src/gui/assets.py já
+  resolve ASSETS_DIR a partir de sys._MEIPASS quando congelado.
+- Startup mais lento (extração a cada run) e maior chance de falso-positivo de antivírus
+  do que o onedir — por isso o onedir é o alvo primário para o release.
 """
+import os
 import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
 
+ONEFILE = bool(os.environ.get("COMPASSO_ONEFILE"))
 is_win = sys.platform.startswith("win")
 is_mac = sys.platform == "darwin"
 
@@ -59,40 +71,71 @@ a = Analysis(
 
 pyz = PYZ(a.pure)
 
-exe = EXE(
-    pyz,
-    a.scripts,
-    [],
-    exclude_binaries=True,
-    name="Compasso",
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,                 # ignorado de forma graciosa se o UPX não estiver no PATH
-    console=False,            # app GUI: sem janela de console
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-    icon=icon_file,
-    version=version_file,
-)
-
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name=collect_name,
-)
-
-if is_mac:
-    app = BUNDLE(
-        coll,
-        name="Compasso.app",
-        icon="assets/icon.icns",
-        bundle_identifier="com.compasso.app",
+if ONEFILE:
+    # Tudo (scripts, binários e dados) embutido em um único EXE auto-extraível.
+    exe = EXE(
+        pyz,
+        a.scripts,
+        a.binaries,
+        a.datas,
+        [],
+        name="Compasso",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,                 # ignorado de forma graciosa se o UPX não estiver no PATH
+        upx_exclude=[],
+        runtime_tmpdir=None,      # usa o TEMP padrão do SO para a auto-extração
+        console=False,            # app GUI: sem janela de console
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=icon_file,
+        version=version_file,
     )
+    if is_mac:
+        app = BUNDLE(
+            exe,
+            name="Compasso.app",
+            icon="assets/icon.icns",
+            bundle_identifier="com.compasso.app",
+        )
+else:
+    # onedir: EXE leve + pasta _internal com binários/dados (startup rápido).
+    exe = EXE(
+        pyz,
+        a.scripts,
+        [],
+        exclude_binaries=True,
+        name="Compasso",
+        debug=False,
+        bootloader_ignore_signals=False,
+        strip=False,
+        upx=True,
+        console=False,
+        disable_windowed_traceback=False,
+        argv_emulation=False,
+        target_arch=None,
+        codesign_identity=None,
+        entitlements_file=None,
+        icon=icon_file,
+        version=version_file,
+    )
+    coll = COLLECT(
+        exe,
+        a.binaries,
+        a.datas,
+        strip=False,
+        upx=True,
+        upx_exclude=[],
+        name=collect_name,
+    )
+    if is_mac:
+        app = BUNDLE(
+            coll,
+            name="Compasso.app",
+            icon="assets/icon.icns",
+            bundle_identifier="com.compasso.app",
+        )
