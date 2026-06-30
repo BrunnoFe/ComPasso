@@ -7,7 +7,7 @@ import customtkinter as ctk
 from . import gui_logger
 from . import set_window_grid, set_window_configs, set_grids
 from .context import AppContext
-from .assets import AppImages
+from .assets import AppImages, ASSETS_DIR
 from .theme import AZUL, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, BORDER_WIDTH, CORNER
 from .frames import UpFrame, MidFrame, DownFrame
 from .experiment_config_window import ExperimentConfigWindow
@@ -26,6 +26,12 @@ class Compasso(ctk.CTk):
         self.minsize(WIN_MIN_WIDTH, WIN_MIN_HEIGHT)
         set_window_configs(self, width_multip=0.5, height_multip=0.5)
         set_window_grid(self)
+
+        # ícone da janela principal (Windows usa .ico; em outros SOs o ícone vem do bundle)
+        try:
+            self.iconbitmap(str(ASSETS_DIR / "icon.ico"))
+        except Exception as e:
+            gui_logger.logger.warning(f"Não foi possível definir o ícone da janela: {e}")
 
         self.ctx = AppContext(self)
         self.ctx.images = AppImages()   # carregado após o root existir

@@ -5,7 +5,7 @@ from tkinter import filedialog
 
 from .. import gui_logger
 from ..guiconfigs import set_grids
-from ..theme import (AZUL, AZUL_CLARO, ROSA, CINZA, AMARELO, AMARELO_ESC, TRANSPARENTE,
+from ..theme import (AZUL, AZUL_CLARO, ROSA, CINZA, AMARELO, AMARELO_ESC,
                      BASE_FONT, BORDER_WIDTH, BORDER_WIDTH_INSIDE, CORNER, NSE)
 from ..widgets import show_message, styled_label, styled_button, styled_entry
 from src.core import (scan_music_files, match_conditions, MissingConditionError,

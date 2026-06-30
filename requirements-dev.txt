@@ -1,0 +1,4 @@
+# Dependências de build/desenvolvimento (NÃO são dependências de runtime).
+# Instale junto com requirements.txt apenas para gerar o executável ou rodar o lint.
+pyinstaller==6.21.0
+pyflakes==3.4.0

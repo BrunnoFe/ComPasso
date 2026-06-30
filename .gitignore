@@ -2,8 +2,13 @@
 
 # Ambientes Virtuais
 venv/
+.venv/
 env/
 .env
+
+# Saídas de build do PyInstaller (não versionar)
+/dist/
+/build/
 
 # Arquivos compilados do Python
 __pycache__/

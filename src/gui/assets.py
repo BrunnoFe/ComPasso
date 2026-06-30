@@ -6,12 +6,18 @@ diretório de trabalho atual) e carrega todas as imagens uma única vez em objet
 ``Compasso.__init__``), pois ``CTkImage`` depende do root.
 """
 
+import sys
 from pathlib import Path
 
 from .widgets import load_image
 
-# .../src/gui/assets.py -> parents[2] = raiz do repositório -> /assets
-ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+# Em desenvolvimento: .../src/gui/assets.py -> parents[2] = raiz do repositório -> /assets.
+# Empacotado (PyInstaller): os dados ficam em sys._MEIPASS/assets. O comportamento em
+# desenvolvimento é idêntico ao anterior.
+if getattr(sys, "frozen", False):
+    ASSETS_DIR = Path(getattr(sys, "_MEIPASS", ".")) / "assets"
+else:
+    ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
 
 
 def _asset(name: str) -> str:

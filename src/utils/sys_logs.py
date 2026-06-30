@@ -1,6 +1,5 @@
 import time
 import logging
-from pathlib import Path
 
 from src.utils.configs import ENCODING_FORMAT, LOG_FORMAT
 from src.utils.paths import get_logs_dir

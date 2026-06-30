@@ -1,0 +1,58 @@
+# Build do Compasso (executável)
+
+Gera um executável otimizado do Compasso com **PyInstaller** (build em pasta única,
+`--onedir`). O `compasso.spec` é multiplataforma, mas **PyInstaller não faz
+cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
+
+## Pré-requisitos
+- Python 3.12+ (o projeto foi validado em 3.14).
+- (Opcional) **UPX** no `PATH` para comprimir os binários. Sem UPX, o build funciona
+  normalmente — a compressão é apenas ignorada.
+- OpenSignals/`liblsl` **não** são necessários para *buildar*, apenas para usar o app.
+
+## Preparar o ambiente
+```bash
+python -m venv .venv
+# Windows
+.venv\Scripts\activate
+# macOS/Linux
+source .venv/bin/activate
+
+pip install -r requirements.txt -r requirements-dev.txt
+```
+
+## Gerar o build (comando único)
+```bash
+pyinstaller compasso.spec
+```
+
+Saída:
+- **Windows:** `dist/Compasso-win/Compasso.exe` (com os arquivos de apoio em `dist/Compasso-win/_internal/`).
+- **macOS:** `dist/Compasso-mac/` e o bundle `dist/Compasso.app`.
+
+Para um teste rápido no Windows:
+```bash
+dist\Compasso-win\Compasso.exe
+```
+
+## macOS
+1. Rode o build **em um Mac** (não é possível a partir do Windows).
+2. Gere o ícone `.icns` a partir do PNG antes de buildar, por exemplo:
+   ```bash
+   mkdir icon.iconset
+   sips -z 16 16   assets/icon.png --out icon.iconset/icon_16x16.png
+   sips -z 32 32   assets/icon.png --out icon.iconset/icon_32x32.png
+   sips -z 128 128 assets/icon.png --out icon.iconset/icon_128x128.png
+   sips -z 256 256 assets/icon.png --out icon.iconset/icon_256x256.png
+   sips -z 512 512 assets/icon.png --out icon.iconset/icon_512x512.png
+   iconutil -c icns icon.iconset -o assets/icon.icns
+   ```
+3. `pyinstaller compasso.spec`.
+
+## Notas
+- `dist/` e `build/` não são versionados (ver `.gitignore`). `compasso.spec` é versionado.
+- Dependências de runtime ficam em `requirements.txt`; ferramentas de build (PyInstaller,
+  pyflakes) ficam em `requirements-dev.txt`.
+- Se o app empacotado acusar erro de `liblsl`/`lsl`, confirme que a biblioteca nativa do
+  `pylsl` foi copiada para `dist/Compasso-win/_internal/` (o `compasso.spec` já faz isso via
+  `collect_dynamic_libs("pylsl")`).

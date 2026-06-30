@@ -2,8 +2,8 @@ import customtkinter as ctk
 
 from .. import gui_logger
 from ..guiconfigs import set_grids
-from ..theme import (AZUL, AZUL_CLARO, BASE_FONT_MED, ROSA, CINZA, TRANSPARENTE,
-                     BASE_FONT, BORDER_WIDTH, CORNER)
+from ..theme import (AZUL, AZUL_CLARO, BASE_FONT_MED, ROSA, TRANSPARENTE,
+                     BORDER_WIDTH, CORNER)
 from ..widgets import show_message, bind_hover_images, styled_label, styled_button, styled_combobox, styled_entry
 from src.core import connectar_bitalino, ConnectionWatchdog
 

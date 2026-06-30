@@ -1,5 +1,3 @@
-import CTkMessagebox
-
 from . import gui_logger
 
 def set_window_grid(master):
