@@ -19,6 +19,16 @@ __pycache__/
 logs/
 *.log
 
+# Testes e cobertura (artefatos gerados pelo pytest/pytest-cov)
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Jupyter
+.ipynb_checkpoints/
+
 # Pasta de Dados / Excel
 data/
 musicas/

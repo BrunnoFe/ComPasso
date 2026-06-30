@@ -1,0 +1,64 @@
+# Testes — Compasso
+
+Suíte em `pytest`. Nenhum teste toca hardware real (BITalino/LSL), rede ou diálogos de
+arquivo; o hardware é substituído por *fakes* determinísticos.
+
+## Como rodar
+
+```bash
+venv\Scripts\activate           # Windows
+pip install -r requirements-dev.txt
+pytest                          # a partir da raiz do repositório
+```
+
+Com cobertura:
+
+```bash
+pytest --cov=src --cov-report=term-missing
+```
+
+Configuração em [`pytest.ini`](../pytest.ini): `testpaths = tests`, `pythonpath = .`
+(permite `import src...` a partir da raiz).
+
+## O que é coberto
+
+| Arquivo | Foco |
+| --- | --- |
+| `test_acquisition_sync.py` | `LSLRecorder`: captura de `t0`, descarte de timestamps < t0, `ts−t0`, casamento marcador→amostra, canal, cabeçalho CSV, XLSX |
+| `test_recorder_naming.py` | `_sanitize`, `build_track_filename` (zero-pad/largura/extensão), `build_session_dirname` |
+| `test_mac_validation.py` | `MAC_RE` (bitalino_connect) + `MAC_REGEX` (config_manager); normalização e rejeição |
+| `test_watchdog.py` | `ConnectionWatchdog`: dispara após TIMEOUT, não dispara em gaps curtos, ocioso/desconectado, não puxa amostra durante gravação |
+| `test_config_manager.py` | `_is_int`, `validate_values`, round-trip salvar/carregar, preferências |
+| `test_musics.py` | `scan_music_files`, `match_conditions`, `MissingConditionError` |
+| `test_validation.py` / `test_formatting.py` / `test_classify_condition.py` | lógica pura (participante, MM:SS, ruído/música) |
+| `test_audio_volume.py` | `set/get_system_volume` (Windows/macOS/Linux mockados, clamp, fallbacks) |
+| `test_paths.py` | estrutura de pastas + `ensure_app_dirs` |
+| `test_button_state_logic.py` | `DownFrame._validar_prerequisitos` via ctx falso (sem renderizar GUI) |
+
+## Fakes e fixtures (`conftest.py`)
+
+- **`FakeInlet`** — substitui `pylsl.StreamInlet`: separa buffer de *drain* (`timeout=0.0`)
+  do *stream* de aquisição (`timeout>0`) e sinaliza fim via `on_exhausted`, permitindo
+  encerrar o loop de aquisição de forma determinística, sem esperas reais.
+- **`FakeClock`** — substitui `local_clock`/`time.monotonic`; pode avançar um passo fixo
+  por chamada (usado para alcançar o TIMEOUT do watchdog em poucos ticks).
+- **`make_factors_xlsx`** — gera um `.xlsx` de condições em `tmp_path` (nada commitado).
+- **`valid_config_values`**, **`participant`** — dados de exemplo.
+
+`local_clock`/`time` são *patchados no namespace do próprio módulo* (ex.:
+`src.core.recorder.local_clock`), pois os módulos fazem `from pylsl import local_clock`.
+
+## Deliberadamente NÃO coberto (e por quê)
+
+- **`player.py`** (reprodução real do pygame) e **`connectar_bitalino` end-to-end**
+  (resolução LSL real / rede) — dependem de hardware/áudio; apenas a lógica isolável
+  (normalização de MAC, ramos de erro) é testada com mocks.
+- **Renderização de widgets CustomTkinter** — alto esforço, baixo valor para uma
+  ferramenta de pesquisa; testamos a lógica subjacente contra um `ctx` falso.
+- **Diálogos de arquivo / volume real do SO** — mockados.
+
+## Efeito colateral conhecido
+
+Importar `src.core`/`src.utils` cria arquivos de log em app-data (infraestrutura de
+logging do próprio app, via `bootstrap()`), não dados de teste. Os testes não escrevem
+DADOS fora de `tmp_path`.

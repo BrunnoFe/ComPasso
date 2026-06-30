@@ -49,7 +49,14 @@ hiddenimports = [
 
 # NÃO excluir psutil (importado por pycaw.utils) nem packaging (importado por
 # customtkinter.windows.ctk_tk/ctk_toplevel) — são dependências de runtime reais.
-excludes = ["tkinter.test", "pygame.tests", "numpy.tests"]
+#
+# A suíte de testes (tests/) e o framework de teste NÃO são importados por main.py,
+# então a análise estática já não os empacota; os excludes abaixo são uma salvaguarda
+# explícita para garantir que nunca entrem no executável de release.
+excludes = [
+    "tkinter.test", "pygame.tests", "numpy.tests",
+    "tests", "pytest", "_pytest", "pytest_mock",
+]
 
 icon_file = "assets/icon.ico" if is_win else ("assets/icon.icns" if is_mac else None)
 version_file = "version_info.txt" if is_win else None
