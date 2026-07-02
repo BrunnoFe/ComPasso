@@ -12,7 +12,7 @@ from . import set_window_configs
 from . import theme
 from .context import AppContext
 from .assets import AppImages, ASSETS_DIR
-from .theme import ACCENT, ACCENT_TINT, BAR_BG, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT
+from .theme import ACCENT, ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FOOTER_BG, TEXT, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT
 from .widgets import show_message
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphPlaceholder, DownFrame)
@@ -73,7 +73,8 @@ class Compasso(ctk.CTk):
         # Adiciona o botão principal "Experimento"
         self.btn_experimento = self.menu_bar.add_cascade(
             "Experimento",
-            hover_color=ACCENT_TINT
+            hover_color=ACCENT_TINT,
+            font=ctk.CTkFont(DISPLAY_FAMILY, 12, weight="bold")
         )
         
         # Cria o dropdown flutuante associado ao botão
@@ -88,10 +89,13 @@ class Compasso(ctk.CTk):
         # Adiciona as opções
         self.dropdown_experimento.add_option(option="Novo", command=self._on_novo)
         self.dropdown_experimento.add_option(option="Abrir", command=self._on_abrir)
-        self.dropdown_experimento.add_option(option="Editar", command=self._on_editar)
+        self.editar_option = self.dropdown_experimento.add_option(  # type: ignore[func-returns-value]
+            option="Editar", command=self._on_editar, state="disabled")
 
         # Menu "Tema": uma opção por paleta disponível; troca a aparência ao vivo.
-        self.btn_tema = self.menu_bar.add_cascade("Tema", hover_color=ACCENT_TINT)
+        self.btn_tema = self.menu_bar.add_cascade("Tema", 
+                                                  hover_color=ACCENT_TINT,
+                                                  font=ctk.CTkFont(DISPLAY_FAMILY, 12, weight="bold"))
         self.dropdown_tema = CustomDropdownMenu(
             widget=self.btn_tema,
             bg_color=WIN_BG,
@@ -106,10 +110,7 @@ class Compasso(ctk.CTk):
             )
 
     def _enable_editar(self):
-        try:
-            self.dropdown_experimento.entryconfigure("Editar", state="normal")
-        except Exception as e:
-            gui_logger.logger.warning(f"Não foi possível habilitar 'Editar': {e}")
+        self.editar_option.configure(state="normal") #type: ignore[union-attr]
 
     # ------------------------------------------------------------------ #
     def _theme_switch_allowed(self) -> bool:
