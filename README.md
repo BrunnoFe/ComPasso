@@ -1,4 +1,4 @@
-# 🧭 ComPasso
+<img width="1280" height="320" alt="banner-blend" src="https://github.com/user-attachments/assets/2fd0a973-1433-4083-bbc9-4fd72d5c2d22" />
 
 <p>
   <img alt="License" src="https://img.shields.io/github/license/BrunnoFe/Compasso?color=2DD4BF">
