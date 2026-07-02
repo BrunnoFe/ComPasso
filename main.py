@@ -1,6 +1,6 @@
 import sys
 
-from src.gui import Compasso
+from src.gui import ComPasso
 from src.utils import SetLogger
 
 main_logger = SetLogger(category='main', namelogger='mainLogger')
@@ -10,7 +10,7 @@ def main():
     main_logger.logger.info("Iniciando o software ComPasso...")
     
     try:
-        app = Compasso(
+        app = ComPasso(
             nome="ComPasso", 
         )
         main_logger.logger.info("Interface gráfica carregada com sucesso.")

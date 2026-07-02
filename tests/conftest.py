@@ -1,4 +1,4 @@
-"""Fixtures compartilhadas da suíte de testes do Compasso.
+"""Fixtures compartilhadas da suíte de testes do ComPasso.
 
 Como rodar (a partir da raiz do repositório)::
 

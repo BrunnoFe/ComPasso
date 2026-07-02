@@ -41,12 +41,12 @@ _FIELD_LABELS = {
 
 
 def get_experiment_files_dir():
-    """Pasta padrão dos arquivos de configuração: ``Documentos/Compasso/Experiment files``."""
+    """Pasta padrão dos arquivos de configuração: ``Documentos/ComPasso/Experiment files``."""
     return get_documents_dir() / APP_NAME / "Experiment files"
 
 
 def get_prefs_path():
-    """Arquivo de preferências do app: ``<app-data>/Compasso/prefs.json``."""
+    """Arquivo de preferências do app: ``<app-data>/ComPasso/prefs.json``."""
     return get_app_data_dir() / APP_NAME / "prefs.json"
 
 

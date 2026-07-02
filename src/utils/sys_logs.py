@@ -8,7 +8,7 @@ from src.utils.paths import get_logs_dir
 class SetLogger():
     """Cria um logger nomeado que grava em uma subpasta própria dentro de ``logs/``.
 
-    O arquivo fica em ``<app-data>/Compasso/logs/<category>/<category>_<timestamp>.log``.
+    O arquivo fica em ``<app-data>/ComPasso/logs/<category>/<category>_<timestamp>.log``.
     A subpasta é criada sob demanda, de modo que o logger funciona independentemente da
     ordem de importação.
     """

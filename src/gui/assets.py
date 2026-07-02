@@ -3,7 +3,7 @@
 Resolve a pasta ``assets/`` a partir da localização deste arquivo (independente do
 diretório de trabalho atual) e carrega todas as imagens uma única vez em objetos
 ``CTkImage``. Deve ser instanciado **após** a criação do root Tk (ex.: dentro de
-``Compasso.__init__``), pois ``CTkImage`` depende do root.
+``ComPasso.__init__``), pois ``CTkImage`` depende do root.
 """
 
 import sys

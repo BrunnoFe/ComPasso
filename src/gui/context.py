@@ -10,9 +10,9 @@ if TYPE_CHECKING:
     from .assets import AppImages
 
 class AppContext:
-    """Estado compartilhado da aplicação Compasso.
+    """Estado compartilhado da aplicação ComPasso.
 
-    Um único objeto, criado pela janela raiz (`Compasso`) e repassado para todos os
+    Um único objeto, criado pela janela raiz (`ComPasso`) e repassado para todos os
     frames, que centraliza:
 
     - serviços/estado: o `Player`, o inlet do Bitalino, dados do participante,
@@ -36,7 +36,7 @@ class AppContext:
         self.mac_addr: str | None = None          # str | None
         self.signal_channel: int = 0       # índice do canal LSL usado na coluna 'signal'
         self.runner = None            # ExperimentRunner | None
-        self.images: Optional["AppImages"] = None   # criado por Compasso após o root
+        self.images: Optional["AppImages"] = None   # criado por ComPasso após o root
 
         # callback registrado pelo DownFrame para alternar o estado do botão principal
         # ("comecar" | "rodando" | "continuar"); chamado pelo runner via post().

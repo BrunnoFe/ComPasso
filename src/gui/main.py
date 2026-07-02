@@ -21,7 +21,7 @@ from src.core import config_manager, set_system_volume
 
 #ctk.set_appearance_mode("dark")
 
-class Compasso(ctk.CTk):
+class ComPasso(ctk.CTk):
     """Janela raiz: cria o `AppContext` e monta o `MainFrame` (tema escuro)."""
 
     def __init__(self, nome="ComPasso"):
@@ -332,5 +332,5 @@ class MainFrame(ctk.CTkFrame):
         self.after(100, self.files_card.check_music_file_infos)
 
 if __name__ == "__main__":
-    app = Compasso()
+    app = ComPasso()
     app.mainloop()

@@ -1,7 +1,7 @@
 # UTF-8
 #
 # Arquivo de versão do Windows usado pelo PyInstaller (EXE version=...).
-# ProductName fixo = "Compasso"; demais valores são placeholders da v1.0.0.
+# ProductName fixo = "ComPasso"; demais valores são placeholders da v1.0.0.
 VSVersionInfo(
   ffi=FixedFileInfo(
     filevers=(1, 0, 0, 0),
@@ -17,13 +17,13 @@ VSVersionInfo(
     StringFileInfo([
       StringTable(
         '040904B0',
-        [StringStruct('CompanyName', 'Compasso'),
-         StringStruct('FileDescription', 'Compasso'),
+        [StringStruct('CompanyName', 'ComPasso'),
+         StringStruct('FileDescription', 'ComPasso'),
          StringStruct('FileVersion', '1.0.0'),
-         StringStruct('InternalName', 'Compasso'),
-         StringStruct('LegalCopyright', '© 2026 Compasso'),
-         StringStruct('OriginalFilename', 'Compasso.exe'),
-         StringStruct('ProductName', 'Compasso'),
+         StringStruct('InternalName', 'ComPasso'),
+         StringStruct('LegalCopyright', '© 2026 ComPasso'),
+         StringStruct('OriginalFilename', 'ComPasso.exe'),
+         StringStruct('ProductName', 'ComPasso'),
          StringStruct('ProductVersion', '1.0.0')])
     ]),
     VarFileInfo([VarStruct('Translation', [1033, 1200])])

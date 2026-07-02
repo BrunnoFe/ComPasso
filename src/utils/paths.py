@@ -1,7 +1,7 @@
 """Resolução de caminhos cross-platform e criação das pastas da aplicação.
 
 Decisões (ver discussão de projeto):
-- Dados do experimento (CSV/XLSX) -> ``<Documentos>/Compasso/data`` (fácil de achar
+- Dados do experimento (CSV/XLSX) -> ``<Documentos>/ComPasso/data`` (fácil de achar
   pelo pesquisador).
 - Logs e ``errors.log`` -> diretório de app-data do SO (``%LOCALAPPDATA%`` no Windows,
   ``~/Library/Application Support`` no macOS, ``$XDG_DATA_HOME``/``~/.local/share`` no
@@ -71,17 +71,17 @@ def get_app_data_dir() -> Path:
 
 
 def get_data_dir() -> Path:
-    """Pasta dos dados do experimento: ``<Documentos>/Compasso/data``."""
+    """Pasta dos dados do experimento: ``<Documentos>/ComPasso/data``."""
     return get_documents_dir() / APP_NAME / "data"
 
 
 def get_logs_dir() -> Path:
-    """Pasta raiz dos logs: ``<app-data>/Compasso/logs``."""
+    """Pasta raiz dos logs: ``<app-data>/ComPasso/logs``."""
     return get_app_data_dir() / APP_NAME / "logs"
 
 
 def get_errors_log_path() -> Path:
-    """Arquivo central de erros, fora da pasta de logs: ``<app-data>/Compasso/errors.log``."""
+    """Arquivo central de erros, fora da pasta de logs: ``<app-data>/ComPasso/errors.log``."""
     return get_app_data_dir() / APP_NAME / "errors.log"
 
 

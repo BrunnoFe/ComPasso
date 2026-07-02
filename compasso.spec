@@ -1,16 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Spec do PyInstaller para o Compasso (multiplataforma, onedir + onefile).
+"""Spec do PyInstaller para o ComPasso (multiplataforma, onedir + onefile).
 
 Build (a partir da raiz do projeto, com o venv ativo):
     pyinstaller compasso.spec                 # onedir (padrão)
     COMPASSO_ONEFILE=1 pyinstaller compasso.spec   # onefile (Windows: set/$env:)
 
-onedir  -> dist/Compasso-win/Compasso.exe   |  dist/Compasso-mac/ (+ Compasso.app)
-onefile -> dist/Compasso.exe                |  dist/Compasso.app
+onedir  -> dist/ComPasso-win/ComPasso.exe   |  dist/ComPasso-mac/ (+ ComPasso.app)
+onefile -> dist/ComPasso.exe                |  dist/ComPasso.app
 
 CAVEATS do onefile (tratados aqui / no código):
 - O EXE se auto-extrai num diretório TEMP a cada execução (sys._MEIPASS). NÃO escreva
-  dados nele: dados/logs vão para pastas do usuário (Documentos/Compasso, app-data) via
+  dados nele: dados/logs vão para pastas do usuário (Documentos/ComPasso, app-data) via
   src/utils/paths.py — independentes do bundle.
 - Recursos empacotados (assets/, lsl.dll) ficam em sys._MEIPASS. src/gui/assets.py já
   resolve ASSETS_DIR a partir de sys._MEIPASS quando congelado.
@@ -60,7 +60,7 @@ excludes = [
 
 icon_file = "assets/icon.ico" if is_win else ("assets/icon.icns" if is_mac else None)
 version_file = "version_info.txt" if is_win else None
-collect_name = "Compasso-win" if is_win else ("Compasso-mac" if is_mac else "Compasso")
+collect_name = "ComPasso-win" if is_win else ("ComPasso-mac" if is_mac else "ComPasso")
 
 
 a = Analysis(
@@ -86,7 +86,7 @@ if ONEFILE:
         a.binaries,
         a.datas,
         [],
-        name="Compasso",
+        name="ComPasso",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -105,7 +105,7 @@ if ONEFILE:
     if is_mac:
         app = BUNDLE(
             exe,
-            name="Compasso.app",
+            name="ComPasso.app",
             icon="assets/icon.icns",
             bundle_identifier="com.compasso.app",
         )
@@ -116,7 +116,7 @@ else:
         a.scripts,
         [],
         exclude_binaries=True,
-        name="Compasso",
+        name="ComPasso",
         debug=False,
         bootloader_ignore_signals=False,
         strip=False,
@@ -142,7 +142,7 @@ else:
     if is_mac:
         app = BUNDLE(
             coll,
-            name="Compasso.app",
+            name="ComPasso.app",
             icon="assets/icon.icns",
             bundle_identifier="com.compasso.app",
         )

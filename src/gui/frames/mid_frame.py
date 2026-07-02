@@ -20,7 +20,6 @@ class _Card(ctk.CTkFrame):
         super().__init__(master, fg_color=BAR_BG, border_width=1,
                          border_color=BORDER, corner_radius=CORNER)
 
-
 class ParticipantCard(_Card):
     """Cartão do participante com dois estados: formulário e resumo.
 
@@ -307,8 +306,8 @@ class PlayerBar(_Card):
         super().__init__(master)
         self.ctx = ctx
 
-        row = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
-        row.pack(fill="x", padx=20, pady=16)
+        row = ctk.CTkFrame(self, fg_color=TRANSPARENTE, height=200)
+        row.pack(fill="both", padx=20, pady=16, expand=True)
 
         # ----- esquerda: faixa -----
         left = ctk.CTkFrame(row, fg_color=TRANSPARENTE)

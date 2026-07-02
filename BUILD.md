@@ -1,6 +1,6 @@
-# Build do Compasso (executável)
+# Build do ComPasso (executável)
 
-Gera um executável otimizado do Compasso com **PyInstaller** (build em pasta única,
+Gera um executável otimizado do ComPasso com **PyInstaller** (build em pasta única,
 `--onedir`). O `compasso.spec` é multiplataforma, mas **PyInstaller não faz
 cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
 
@@ -33,10 +33,10 @@ pyinstaller compasso.spec
 
 Saída:
 
-- **Windows:** `dist/Compasso-win/Compasso.exe` (apoio em `dist/Compasso-win/_internal/`).
-- **macOS:** `dist/Compasso-mac/` e o bundle `dist/Compasso.app`.
+- **Windows:** `dist/ComPasso-win/ComPasso.exe` (apoio em `dist/ComPasso-win/_internal/`).
+- **macOS:** `dist/ComPasso-mac/` e o bundle `dist/ComPasso.app`.
 
-Teste rápido no Windows: `dist\Compasso-win\Compasso.exe`
+Teste rápido no Windows: `dist\ComPasso-win\ComPasso.exe`
 
 ### onefile (variante de arquivo único)
 
@@ -51,19 +51,19 @@ set COMPASSO_ONEFILE=1 && pyinstaller compasso.spec
 COMPASSO_ONEFILE=1 pyinstaller compasso.spec
 ```
 
-Saída: **`dist/Compasso.exe`** (Windows, ~47 MB) ou **`dist/Compasso.app`** (macOS).
+Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (macOS).
 
 **Caveats do onefile** (por que o onedir é o alvo primário):
 
 - O EXE se **auto-extrai num diretório TEMP** (`sys._MEIPASS`) a cada execução →
   **startup mais lento** que o onedir.
 - **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do
-  Compasso já vão para pastas do usuário (Documentos/Compasso, app-data) via
+  ComPasso já vão para pastas do usuário (Documentos/ComPasso, app-data) via
   `src/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
 - Recursos lidos (imagens, `lsl.dll`) são resolvidos a partir de `sys._MEIPASS`
   (`src/gui/assets.py` já trata isso) — não dependa de caminhos relativos ao `.exe`.
 - Maior chance de **falso-positivo de antivírus** e de o `lsl.dll` ser bloqueado.
-- As saídas têm nomes distintos (`Compasso-win/` vs `Compasso.exe`), então coexistem em
+- As saídas têm nomes distintos (`ComPasso-win/` vs `ComPasso.exe`), então coexistem em
   `dist/`. Atenção: `--clean` limpa o cache e o `build/`, mas **não remove a saída da outra
   variante** — apague `dist/` manualmente entre builds de release se quiser um diretório limpo.
 
@@ -84,11 +84,18 @@ Saída: **`dist/Compasso.exe`** (Windows, ~47 MB) ou **`dist/Compasso.app`** (ma
 
 3. `pyinstaller compasso.spec`.
 
+## Publicando um release no GitHub
+
+1. Gere os builds `onedir` no Windows (`dist/ComPasso-win/`) e no macOS (`dist/ComPasso.app`).
+2. Compacte cada saída (`ComPasso-win.zip`, `ComPasso-mac.zip`) — não suba o conteúdo solto.
+3. Crie a tag e o release (`vX.Y.Z`) no GitHub e anexe os `.zip`. Veja a seção
+   [Releases do README](README.md#-releases) para a convenção de nomes dos artefatos.
+
 ## Notas
 
 - `dist/` e `build/` não são versionados (ver `.gitignore`). `compasso.spec` é versionado.
 - Dependências de runtime ficam em `requirements.txt`; ferramentas de build (PyInstaller,
   pyflakes) ficam em `requirements-dev.txt`.
 - Se o app empacotado acusar erro de `liblsl`/`lsl`, confirme que a biblioteca nativa do
-  `pylsl` foi copiada para `dist/Compasso-win/_internal/` (o `compasso.spec` já faz isso via
+  `pylsl` foi copiada para `dist/ComPasso-win/_internal/` (o `compasso.spec` já faz isso via
   `collect_dynamic_libs("pylsl")`).

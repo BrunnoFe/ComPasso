@@ -1,6 +1,6 @@
 """Constantes visuais compartilhadas da GUI (cores, fontes e dimensões).
 
-Tema escuro do Compasso. Três paletas estão disponíveis (Teal/Iris/Amber); a paleta
+Tema escuro do ComPasso. Três paletas estão disponíveis (Teal/Iris/Amber); a paleta
 ativa é escolhida por `THEME` — trocar essa única linha recolore toda a interface. As
 constantes semânticas (WIN_BG, ACCENT, TEXT...) derivam de `THEME` e são importadas pelos
 frames e helpers, evitando repetir cores em cada módulo.

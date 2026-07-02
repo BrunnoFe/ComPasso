@@ -19,7 +19,7 @@ from .theme import (WIN_BG, BAR_BG, BORDER, INPUT_BG, TEXT, MUTED, FAINT,
 
 
 def show_message(title: str, message: str, icon: str = "cancel") -> None:
-    """Exibe uma CTkMessagebox com o estilo escuro padrão do Compasso.
+    """Exibe uma CTkMessagebox com o estilo escuro padrão do ComPasso.
 
     Deve ser chamada na thread da GUI (use `ctx.run_after(...)` a partir de threads
     de trabalho).
