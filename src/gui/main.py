@@ -1,4 +1,5 @@
 import os
+import webbrowser
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
@@ -17,7 +18,7 @@ from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphPlaceholder, DownFrame)
 from .experiment_config_window import ExperimentConfigWindow
 from src.core import config_manager, set_system_volume
-from src.utils import ICON_FILENAME
+from src.utils import ICON_FILENAME, PROJECT_URL, get_logs_dir, open_path
 
 # Volume principal do sistema aplicado uma única vez no arranque do app.
 _INIT_VOLUME = 50
@@ -108,6 +109,40 @@ class ComPasso(ctk.CTk):
                 option=nome_tema,
                 command=lambda n=nome_tema: self._on_theme_selected(n)
             )
+
+        # Menu "Ajuda": abrir a pasta de logs e a página do projeto no GitHub.
+        self.btn_ajuda = self.menu_bar.add_cascade("Ajuda",
+                                                   hover_color=ACCENT_TINT,
+                                                   font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
+        self.dropdown_ajuda = CustomDropdownMenu(
+            widget=self.btn_ajuda,
+            bg_color=WIN_BG,
+            hover_color=ACCENT_TINT,
+            border_color=BAR_BG,
+            border_width=2
+        )
+        self.dropdown_ajuda.add_option(option="Abrir pasta de logs", command=self._on_open_logs)
+        self.dropdown_ajuda.add_option(option="Página do projeto (GitHub)", command=self._on_open_github)
+
+    def _on_open_logs(self):
+        """Abre a pasta de logs (`<app-data>/ComPasso/logs`) no gerenciador de arquivos do SO."""
+        path = get_logs_dir()
+        try:
+            path.mkdir(parents=True, exist_ok=True)
+            open_path(str(path))
+            gui_logger.logger.info(f"Pasta de logs aberta: {path}")
+        except Exception as e:
+            gui_logger.logger.warning(f"Falha ao abrir a pasta de logs: {e}")
+            show_message("Ajuda", f"Não foi possível abrir a pasta de logs:\n{path}", icon="warning")
+
+    def _on_open_github(self):
+        """Abre a página do projeto no navegador padrão."""
+        try:
+            webbrowser.open(PROJECT_URL)
+            gui_logger.logger.info(f"Página do projeto aberta: {PROJECT_URL}")
+        except Exception as e:
+            gui_logger.logger.warning(f"Falha ao abrir a página do projeto: {e}")
+            show_message("Ajuda", "Não foi possível abrir a página do projeto no navegador.", icon="warning")
 
     def _enable_editar(self):
         self.editar_option.configure(state="normal") #type: ignore[union-attr]
@@ -275,11 +310,29 @@ class ComPasso(ctk.CTk):
         except Exception as e:
             gui_logger.logger.warning(f"apply_config (pasta de salvamento): {e}")
 
+        # Quantidade de ruído: total de reproduções do ruído na sessão (0 se inválido/ausente).
+        try:
+            nq = data.get("noise_quantity", 0)
+            self.ctx.noise_quantity = int(nq) if str(nq).strip().isdigit() else 0
+        except Exception as e:
+            self.ctx.noise_quantity = 0
+            gui_logger.logger.warning(f"apply_config (quantidade de ruído): {e}")
+
+        # marca que há uma configuração carregada (pré-requisito para iniciar o experimento)
+        self.ctx.config_loaded = True
+
         # atualiza os checks dos arquivos e o stepper após aplicar a config
         try:
             files._refresh_checks()
         except Exception as e:
             gui_logger.logger.warning(f"apply_config (refresh checks): {e}")
+
+        # se as músicas já foram mapeadas, reflete a nova noise_quantity nos contadores
+        try:
+            files.update_session_counters()
+        except Exception as e:
+            gui_logger.logger.warning(f"apply_config (contadores): {e}")
+
         self.ctx.notify_stepper()
 
 

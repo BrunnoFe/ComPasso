@@ -1,10 +1,9 @@
 """Widgets vetoriais em ``tkinter.Canvas`` usados pelo redesign.
 
-- ``Waveform``: barras estáticas da logo (onda sonora).
 - ``LiveEqualizer``: barrinhas animadas do indicador "Conectado".
 
-São ``Canvas`` do tkinter puro (não CustomTkinter) porque desenham formas simples;
-recebem as cores por parâmetro para casar com o fundo do widget-pai.
+É ``Canvas`` do tkinter puro (não CustomTkinter) porque desenha formas simples;
+recebe as cores por parâmetro para casar com o fundo do widget-pai e com o tema ativo.
 """
 
 import random
@@ -12,20 +11,6 @@ import tkinter as tk
 
 # Intervalo (ms) entre quadros da animação do equalizador "Conectado".
 _EQ_TICK_MS = 160
-
-
-class Waveform(tk.Canvas):
-    """Barras estáticas da logo (onda sonora)."""
-
-    def __init__(self, master, heights, color, bg, bar_w=3, gap=2, height=30):
-        w = len(heights) * (bar_w + gap)
-        super().__init__(master, width=w, height=height, bg=bg,
-                         highlightthickness=0, bd=0)
-        base = height
-        for i, h in enumerate(heights):
-            x = i * (bar_w + gap)
-            self.create_rectangle(x, base - h, x + bar_w, base,
-                                  fill=color, outline="", width=0)
 
 
 class LiveEqualizer(tk.Canvas):

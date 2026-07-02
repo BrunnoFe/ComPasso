@@ -63,6 +63,11 @@ class AppContext:
         self.music_files: list = []
         self.music_condition_mapping: dict = {}
 
+        # configuração do experimento (.config): quantidade total de reproduções de ruído e
+        # se há uma config carregada (pré-requisito para iniciar — ver bottom_frame).
+        self.noise_quantity: int = 0
+        self.config_loaded: bool = False
+
         # textos reativos dos rótulos (qualquer frame faz .set())
         self.status_text = ctk.StringVar(value="Conecte o Bitalino")
         self.current_music_text = ctk.StringVar(value="—")

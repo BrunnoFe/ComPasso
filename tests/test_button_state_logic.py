@@ -13,8 +13,8 @@ _validar = DownFrame._validar_prerequisitos
 
 
 def _ctx(**kwargs):
-    base = dict(bitalino=object(), infos_saved=True, music_files=["a.mp3"],
-                save_dir="/saida", runner=None)
+    base = dict(config_loaded=True, bitalino=object(), infos_saved=True,
+                music_files=["a.mp3"], save_dir="/saida", runner=None)
     base.update(kwargs)
     return types.SimpleNamespace(**base)
 
@@ -25,6 +25,10 @@ def _call(ctx):
 
 def test_all_prereqs_met_returns_empty():
     assert _call(_ctx()) == ""
+
+
+def test_missing_config():
+    assert "configuração" in _call(_ctx(config_loaded=False))
 
 
 def test_missing_bitalino():
@@ -54,6 +58,7 @@ def test_runner_not_running_is_ok():
 
 
 def test_prereqs_checked_in_priority_order():
-    # faltando vários: a mensagem do bitalino (1ª checagem) tem prioridade
-    msg = _call(_ctx(bitalino=None, infos_saved=False, music_files=[], save_dir=None))
-    assert "Bitalino" in msg
+    # faltando vários: a mensagem da configuração (1ª checagem) tem prioridade
+    msg = _call(_ctx(config_loaded=False, bitalino=None, infos_saved=False,
+                     music_files=[], save_dir=None))
+    assert "configuração" in msg

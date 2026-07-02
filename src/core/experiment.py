@@ -23,6 +23,95 @@ def _classify_condition(fator: str) -> str:
     return CONDITION_MUSICA
 
 
+def _distribute(files: list, total: int) -> list:
+    """Distribui `total` reproduções entre `files` de forma o mais uniforme possível.
+
+    Embaralha `files` (para que o "extra" caia em arquivos aleatórios) e devolve `total`
+    itens em round-robin. Ex.: 2 arquivos e `total=5` → um arquivo aparece 3× e o outro 2×.
+    Retorna `[]` se `files` estiver vazio ou `total <= 0`.
+    """
+    if not files or total <= 0:
+        return []
+    files = list(files)
+    random.shuffle(files)
+    return [files[i % len(files)] for i in range(total)]
+
+
+def expand_playlist(mapping: dict, noise_quantity: int) -> list:
+    """Expande o mapeamento em um multiconjunto de faixas (não ordenado).
+
+    Cada música (fator classificado como 'musica') aparece uma vez; os arquivos de ruído
+    distintos recebem, no total, `noise_quantity` reproduções distribuídas entre eles
+    (ver `_distribute`). Arquivos de ruído são distinguidos pelo caminho (nome do arquivo).
+    """
+    musicas = [p for p, f in mapping.items() if _classify_condition(f) == CONDITION_MUSICA]
+    ruidos = [p for p, f in mapping.items() if _classify_condition(f) == CONDITION_RUIDO]
+    return musicas + _distribute(ruidos, int(noise_quantity or 0))
+
+
+def count_totals(playlist: list, mapping: dict) -> dict:
+    """Conta quantas faixas de cada condição há em `playlist`."""
+    totals = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
+    for path in playlist:
+        totals[_classify_condition(mapping.get(path, ""))] += 1
+    return totals
+
+
+def session_totals(mapping: dict, noise_quantity: int) -> tuple:
+    """Totais da sessão `(total_musicas, total_ruido)` para exibição na GUI.
+
+    Reutiliza `expand_playlist`/`count_totals` para ter uma única fonte de verdade; devolve
+    ints simples para que a camada de GUI não precise conhecer as constantes de condição.
+    """
+    totals = count_totals(expand_playlist(mapping, noise_quantity), mapping)
+    return totals[CONDITION_MUSICA], totals[CONDITION_RUIDO]
+
+
+def pseudo_random_order(playlist: list, mapping: dict) -> list:
+    """Ordena `playlist` de forma pseudoaleatória respeitando as regras do ruído.
+
+    Regras: o ruído nunca é a primeira faixa e há ao menos 2 músicas entre dois ruídos
+    consecutivos. Usa um método construtivo (combinação uniforme) que garante essas
+    restrições sem rejeição por tentativa; se forem infactíveis (ruídos demais para poucas
+    músicas), faz melhor-esforço (nunca ruído primeiro) e registra um aviso.
+    """
+    musicas = [p for p in playlist if _classify_condition(mapping.get(p, "")) == CONDITION_MUSICA]
+    ruidos = [p for p in playlist if _classify_condition(mapping.get(p, "")) == CONDITION_RUIDO]
+    random.shuffle(musicas)
+    random.shuffle(ruidos)
+
+    M, R = len(musicas), len(ruidos)
+    if R == 0:
+        return musicas
+
+    U = M - 1 - 2 * (R - 1)
+    if U < 0:
+        experiment_logger.logger.warning(
+            f"Restrições de espaçamento do ruído infactíveis ({M} música(s) para {R} ruído(s)); "
+            "usando melhor-esforço (ruído nunca em primeiro).")
+        # melhor-esforço: começa por uma música (se houver) e intercala o restante.
+        rest = musicas[1:] + ruidos
+        random.shuffle(rest)
+        return (musicas[:1] + rest) if musicas else ruidos
+
+    # g[i] = nº de músicas antes do ruído i (0-based). a não-decrescente em [0, U] garante
+    # g[0] >= 1 (não-primeiro) e g[i+1]-g[i] >= 2 (>=2 músicas entre ruídos), g[R-1] <= M.
+    a = sorted(random.randint(0, U) for _ in range(R))
+    g = [a[i] + 1 + 2 * i for i in range(R)]
+
+    result = []
+    gi = 0
+    for k, m in enumerate(musicas, start=1):
+        result.append(m)
+        while gi < R and g[gi] == k:
+            result.append(ruidos[gi])
+            gi += 1
+    while gi < R:  # segurança: ruídos residuais (não deve ocorrer com U >= 0)
+        result.append(ruidos[gi])
+        gi += 1
+    return result
+
+
 class ExperimentRunner:
     """Orquestra a sessão experimental em uma thread separada da GUI.
 
@@ -71,11 +160,12 @@ class ExperimentRunner:
         if self._thread is not None and self._thread.is_alive():
             experiment_logger.logger.warning("Sessão anterior ainda finalizando; aguarde um instante.")
             return
-        files = list(self.ctx.music_files or [])
-        if not files:
-            experiment_logger.logger.warning("Nenhum arquivo de música para iniciar o experimento.")
+        mapping = self.ctx.music_condition_mapping or {}
+        nq = int(getattr(self.ctx, "noise_quantity", 0) or 0)
+        self._order = pseudo_random_order(expand_playlist(mapping, nq), mapping)
+        if not self._order:
+            experiment_logger.logger.warning("Nenhuma faixa para iniciar o experimento.")
             return
-        self._order = random.sample(files, len(files))
         self._stop_event.clear() #limpa o evento de parada antes de iniciar
         self._continue_event.clear()
         self._running = True
@@ -125,9 +215,7 @@ class ExperimentRunner:
             return
         experiment_logger.logger.info(f"Pasta da sessão criada: {self._session_dir}")
 
-        totals = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
-        for path in self._order:
-            totals[_classify_condition(self.ctx.music_condition_mapping.get(path, ""))] += 1
+        totals = count_totals(self._order, self.ctx.music_condition_mapping or {})
         self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
         self._update_counters(totals)
 

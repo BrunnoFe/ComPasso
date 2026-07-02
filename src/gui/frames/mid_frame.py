@@ -4,20 +4,19 @@ import customtkinter as ctk
 from tkinter import filedialog
 
 from .. import gui_logger
-from ..theme import (BORDER, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
+from ..theme import (BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
                      TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, title, caption, mono, ghost_button,
-                       styled_button, styled_entry, circle, check_icon, danger_button, Card)
+                       styled_entry, circle, check_icon, danger_button, Card)
 from src.core import (scan_music_files, match_conditions, MissingConditionError,
-                      set_system_volume, get_system_volume)
-from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir
+                      set_system_volume, get_system_volume, session_totals)
+from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir, MIN_IDADE, MAX_IDADE
 
 # Intervalos (ms) do laço da GUI deste frame.
 _POLL_MS = 100             # re-checagem da seleção de arquivos até tudo estar pronto
 _PROGRESS_MS = 500         # atualização da barra de progresso / indicador de gravação
 _VOLUME_DEBOUNCE_MS = 150  # espera após o último passo do slider antes de aplicar o volume
-
 
 class ParticipantCard(Card):
     """Cartão do participante com dois estados: formulário e resumo.
@@ -31,35 +30,35 @@ class ParticipantCard(Card):
         self.ctx = ctx
 
         inner = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
-        inner.pack(fill="both", expand=True, padx=20, pady=18)
-        title(inner, "Participante").pack(anchor="w", pady=(0, 14))
+        inner.pack(fill="both", expand=True, padx=20, pady=5)
+        title(inner, "Participante").pack(anchor=ctk.W, pady=(5,0))
 
         self._body = ctk.CTkFrame(inner, fg_color=TRANSPARENTE)
-        self._body.pack(fill="both", expand=True)
+        self._body.pack(fill=ctk.BOTH, expand=True)
 
         # ----- estado de formulário -----
         self.form_frame = ctk.CTkFrame(self._body, fg_color=TRANSPARENTE)
         self.name_entry = self._field(self.form_frame, "Nome", "Digite o nome do participante")
         self.idade_entry = self._field(self.form_frame, "Idade", "Digite a idade do participante")
         self.genero_entry = self._field(self.form_frame, "Gênero", "Digite o gênero do participante")
-        self.save_infos_button = styled_button(self.form_frame, text="Salvar informações",
-                                                height=36, command=self.save_infos)
-        self.save_infos_button.pack(anchor="e", pady=(6, 0))
+        self.save_infos_button = ghost_button(self.form_frame, text="Salvar informações",
+                                                height=30, command=self.save_infos)
+        self.save_infos_button.pack(anchor=ctk.S, pady=(20, 0))
 
         # ----- estado de resumo -----
         self.summary_frame = ctk.CTkFrame(self._body, fg_color=TRANSPARENTE)
 
-        self.form_frame.pack(fill="both", expand=True)
+        self.form_frame.pack(fill=ctk.BOTH, expand=True)
 
         # expõe ao DownFrame o salvamento silencioso quando o form está preenchido mas não salvo
         self.ctx.save_participant_infos_if_filled = self.save_infos_if_filled
 
     def _field(self, master, label, placeholder):
         row = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
-        row.pack(fill="x", pady=(0, 10))
-        caption(row, label.upper()).pack(anchor="w", pady=(0, 4))
-        entry = styled_entry(row, height=34, placeholder_text=placeholder)
-        entry.pack(fill="x")
+        row.pack(fill=ctk.X, pady=(5, 5))
+        caption(row, label.upper()).pack(anchor=ctk.W, pady=(0, 2))
+        entry = styled_entry(row, height=25, placeholder_text=placeholder)
+        entry.pack(fill=ctk.X)
         return entry
 
     # ------------------------------------------------------------------ #
@@ -88,7 +87,7 @@ class ParticipantCard(Card):
             return
 
         if not validar_idade(idade):
-            show_message("Erro", "Idade deve ser um número entre 0 e 100.")
+            show_message("Erro", f"Idade deve ser um número entre {MIN_IDADE} e {MAX_IDADE}.")
             return
 
         if not nome or not idade or not genero:
@@ -104,7 +103,7 @@ class ParticipantCard(Card):
 
         self._render_summary(nome, idade, genero)
         self.form_frame.pack_forget()
-        self.summary_frame.pack(fill="both", expand=True)
+        self.summary_frame.pack(fill=ctk.BOTH, expand=True)
 
         gui_logger.logger.info("Informações do participante salvas com sucesso.")
         self.ctx.notify_stepper()
@@ -128,7 +127,7 @@ class ParticipantCard(Card):
         gui_logger.logger.info("Habilitando edição das informações do participante.")
         self.ctx.infos_saved = False
         self.summary_frame.pack_forget()
-        self.form_frame.pack(fill="both", expand=True)
+        self.form_frame.pack(fill=ctk.BOTH, expand=True)
         self.ctx.notify_stepper()
 
     def restore_summary(self):
@@ -137,7 +136,7 @@ class ParticipantCard(Card):
             return
         self._render_summary(self.ctx.nome, self.ctx.idade, self.ctx.genero)
         self.form_frame.pack_forget()
-        self.summary_frame.pack(fill="both", expand=True)
+        self.summary_frame.pack(fill=ctk.BOTH, expand=True)
 
 
 class FilesCard(Card):
@@ -152,8 +151,8 @@ class FilesCard(Card):
         self.ctx = ctx
 
         inner = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
-        inner.pack(fill="both", expand=True, padx=20, pady=18)
-        title(inner, "Arquivos & saída").pack(anchor="w", pady=(0, 12))
+        inner.pack(fill=ctk.BOTH, expand=True, padx=20, pady=18)
+        title(inner, "Arquivos & Dados").pack(anchor=ctk.W, pady=(0, 12))
 
         self.music_file_folder_var = ctk.StringVar(value=self._MUSIC_HINT)
         self.conditions_file_var = ctk.StringVar(value=self._COND_HINT)
@@ -169,23 +168,30 @@ class FilesCard(Card):
 
     def _row(self, master, label, var, btn_text, command, first=False):
         r = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
-        r.pack(fill="x", pady=(0 if first else 10, 0))
-        chk = check_icon(r, done=False)
-        chk.pack(side="left")
+        r.pack(fill=ctk.X, pady=(0 if first else 10, 10))
+        chk = check_icon(r, text="X", fg_color=DANGER_TINT, done=False)
+        chk.pack(side=ctk.LEFT)
         col = ctk.CTkFrame(r, fg_color=TRANSPARENTE)
-        col.pack(side="left", fill="x", expand=True, padx=12)
-        caption(col, label.upper()).pack(anchor="w")
-        mono(col, "", FONT_BASE, MUTED, textvariable=var, anchor="w").pack(anchor="w", fill="x")
+        col.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
+        caption(col, label.upper()).pack(anchor=ctk.W)
+        mono(col, "", FONT_BASE, MUTED, textvariable=var, anchor=ctk.W).pack(anchor=ctk.W, fill=ctk.X)
         gb = ghost_button(r, btn_text, size=FONT_BASE, command=command)
         gb.configure(width=88, height=32)
-        gb.pack(side="right")
+        gb.pack(side=ctk.RIGHT)
         return chk
 
     def _refresh_checks(self):
         """Recolore os ícones de check a partir do estado do contexto (thread da GUI)."""
-        self._checks["music"].configure(text_color=SUCCESS if self.ctx.music_folder else FAINT)
-        self._checks["cond"].configure(text_color=SUCCESS if self.ctx.music_condition_mapping else FAINT)
-        self._checks["save"].configure(text_color=SUCCESS if self.ctx.save_dir else FAINT)
+
+        if self.ctx.music_folder:
+            self._checks["music"].configure(fg_color=ACCENT_TINT, text="✓", text_color=SUCCESS)
+
+        if self.ctx.conditions_file:
+            self._checks["cond"].configure(fg_color=ACCENT_TINT, text="✓", text_color=SUCCESS)
+
+        if self.ctx.save_dir:
+            self._checks["save"].configure(fg_color=ACCENT_TINT, text="✓", text_color=SUCCESS)
+
 
     def _pick_path(self, dialog, var, ctx_attr: str, erro_msg: str):
         """Abre um diálogo de seleção e, se um caminho válido for escolhido, atualiza a
@@ -294,8 +300,30 @@ class FilesCard(Card):
         self._scan_in_progress = False
         self.ctx.run_after(lambda: self.ctx.status_text.set("Mapemento de músicas para condições realizado com sucesso!"))
         self.ctx.run_after(self._refresh_checks)
+        self.update_session_counters()
         self.ctx.notify_stepper()
         gui_logger.logger.info("Mapemento de músicas e condições realizado com sucesso!")
+
+    def update_session_counters(self):
+        """Atualiza os contadores do rodapé a partir do mapeamento e da `noise_quantity`.
+
+        Mostra os totais planejados (Estímulos/Ruído) já no carregamento dos arquivos, com
+        os "concluídos" zerados — antes mesmo de o experimento iniciar. Seguro de chamar de
+        qualquer thread (agenda a atualização das Vars na thread da GUI via `run_after`)."""
+        mapping = self.ctx.music_condition_mapping or {}
+        if not mapping:
+            return
+        mt, nt = session_totals(mapping, int(self.ctx.noise_quantity or 0))
+
+        def apply():
+            self.ctx.music_done_text.set("0")
+            self.ctx.ruido_done_text.set("0")
+            self.ctx.music_total_text.set(str(mt))
+            self.ctx.ruido_total_text.set(str(nt))
+            self.ctx.session_progress.set(0.0)
+            self.ctx.session_status_text.set(f"0 / {mt + nt}")
+
+        self.ctx.run_after(apply)
 
 
 class PlayerBar(Card):
@@ -305,23 +333,23 @@ class PlayerBar(Card):
         super().__init__(master)
         self.ctx = ctx
 
-        row = ctk.CTkFrame(self, fg_color=TRANSPARENTE, height=200)
-        row.pack(fill="both", padx=20, pady=16, expand=True)
+        row = ctk.CTkFrame(self, fg_color=TRANSPARENTE, height=300)
+        row.pack(fill=ctk.BOTH, padx=20, pady=16, expand=True)
 
         # ----- esquerda: faixa -----
         left = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        left.pack(side="left")
+        left.pack(side=ctk.LEFT)
 
         self.rec_frame = ctk.CTkFrame(left, fg_color=TRANSPARENTE)
         ctk.CTkLabel(self.rec_frame, text="●", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side="left", padx=(0, 7))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side=ctk.LEFT, padx=(0, 7))
         ctk.CTkLabel(self.rec_frame, text="GRAVANDO", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold")).pack(side=ctk.LEFT)
         # rec_frame é mostrado/escondido em _update_progress conforme a aquisição
 
         ctk.CTkLabel(left, textvariable=self.ctx.current_music_text, text_color=TEXT,
-                     width=240, anchor="w",
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).pack(anchor="w", pady=(4, 4))
+                     width=240, anchor=ctk.W,
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).pack(anchor=ctk.W, pady=(4, 4))
         self.condition_chip = ctk.CTkLabel(left, textvariable=self.ctx.current_condition_text,
                                            fg_color=ACCENT_TINT, text_color=ACCENT, corner_radius=CORNER_CHIP,
                                            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
@@ -329,26 +357,26 @@ class PlayerBar(Card):
 
         # ----- centro: progresso -----
         prog = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        prog.pack(side="left", fill="x", expand=True, padx=22)
-        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side="left")
+        prog.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=22)
+        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side=ctk.LEFT)
         self.music_progress = ctk.CTkProgressBar(prog, height=6, corner_radius=CORNER_PILL,
                                                  progress_color=ACCENT, fg_color=BORDER)
         self.music_progress.set(0.0)
-        self.music_progress.pack(side="left", fill="x", expand=True, padx=12)
-        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side="left")
+        self.music_progress.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
+        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side=ctk.LEFT)
 
         # ----- volume -----
         vol = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        vol.pack(side="left", padx=(0, 22))
+        vol.pack(side=ctk.LEFT, padx=(0, 22))
         ctk.CTkLabel(vol, text="Volume", text_color=MUTED,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side="left", padx=(0, 8))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side=ctk.LEFT, padx=(0, 8))
         self.music_volume = ctk.CTkSlider(vol, width=90, height=16, from_=0, to=100,
                                           number_of_steps=100, progress_color=ACCENT,
                                           button_color=ACCENT, button_hover_color=ACCENT,
                                           fg_color=BORDER, command=self._on_volume_change)
-        self.music_volume.pack(side="left")
+        self.music_volume.pack(side=ctk.LEFT)
         self.music_volume_label = mono(vol, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
-        self.music_volume_label.pack(side="left", padx=(8, 0))
+        self.music_volume_label.pack(side=ctk.LEFT, padx=(8, 0))
 
         # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
         v = int(round(get_system_volume()))
@@ -356,7 +384,7 @@ class PlayerBar(Card):
         self.ctx.volume_text.set(f"{v}%")
 
         # ----- parar -----
-        danger_button(row, "Parar", command=self._on_stop, width=90, height=BTN_H).pack(side="left")
+        danger_button(row, "Parar", command=self._on_stop, width=90, height=BTN_H).pack(side=ctk.LEFT)
 
         self.after(_PROGRESS_MS, self._update_progress)
 
@@ -421,12 +449,12 @@ class PlayerBar(Card):
             runner = self.ctx.runner
             acquiring = runner is not None and runner.is_acquiring()
             if acquiring and not self.rec_frame.winfo_ismapped():
-                self.rec_frame.pack(anchor="w")
+                self.rec_frame.pack(anchor=ctk.W, pady=(4, 4))
             elif not acquiring and self.rec_frame.winfo_ismapped():
                 self.rec_frame.pack_forget()
             has_cond = bool(self.ctx.current_condition_text.get().strip())
             if has_cond and not self.condition_chip.winfo_ismapped():
-                self.condition_chip.pack(anchor="w")
+                self.condition_chip.pack(anchor=ctk.W, pady=(4, 4))
             elif not has_cond and self.condition_chip.winfo_ismapped():
                 self.condition_chip.pack_forget()
         except Exception:

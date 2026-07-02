@@ -13,6 +13,7 @@ Sem dependências externas: a pasta Documentos no Windows é resolvida pela API 
 
 import os
 import platform
+import subprocess
 from pathlib import Path
 
 from .configs import (APP_NAME, DATA_DIRNAME, LOGS_DIRNAME, ERRORS_LOG_FILENAME)
@@ -83,6 +84,22 @@ def get_logs_dir() -> Path:
 def get_errors_log_path() -> Path:
     """Arquivo central de erros, fora da pasta de logs: ``<app-data>/ComPasso/errors.log``."""
     return get_app_data_dir() / APP_NAME / ERRORS_LOG_FILENAME
+
+
+def open_path(path) -> None:
+    """Abre um arquivo ou pasta no gerenciador de arquivos do SO (multiplataforma).
+
+    Windows usa ``os.startfile``; macOS usa ``open``; Linux usa ``xdg-open``.
+    :raises OSError: se o gerenciador de arquivos não puder ser invocado.
+    """
+    path = str(path)
+    system = platform.system()
+    if system == "Windows":
+        os.startfile(path)  # type: ignore[attr-defined]
+    elif system == "Darwin":
+        subprocess.Popen(["open", path])
+    else:
+        subprocess.Popen(["xdg-open", path])
 
 
 def ensure_app_dirs() -> dict:

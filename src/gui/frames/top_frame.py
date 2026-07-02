@@ -1,13 +1,31 @@
+from functools import lru_cache
+
 import customtkinter as ctk
+from PIL import Image
 
 from .. import gui_logger
-from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, FAINT, ACCENT,
+from ..assets import ASSETS_DIR
+from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, ACCENT,
                      ACCENT_TINT, ACCENT_BORDER, SUCCESS, TRANSPARENTE,
                      DISPLAY_FAMILY, MONO_FAMILY, CORNER_SM, CORNER_PILL,
-                     INPUT_H, BTN_H, FONT_2XS, FONT_XS, FONT_MD, FONT_3XL)
+                     INPUT_H, BTN_H, FONT_XS, FONT_MD)
 from ..widgets import show_message, caption, ghost_button, styled_button, Card
-from ..canvas_widgets import Waveform, LiveEqualizer
+from ..canvas_widgets import LiveEqualizer
 from src.core import connectar_bitalino, ConnectionWatchdog
+
+# Altura-alvo (px) do logo no topo da barra de conexão. A coluna do MAC (rótulo +
+# campo INPUT_H) é a mais alta da linha (~61 px); manter o logo abaixo disso preserva
+# a altura atual do ConnectionFrame.
+_LOGO_HEIGHT = 48
+
+
+@lru_cache(maxsize=1)
+def _cropped_logo() -> Image.Image:
+    """Carrega `assets/logo.png` e recorta a margem transparente ao redor do desenho."""
+    img = Image.open(ASSETS_DIR / "logo.png").convert("RGBA")
+    bbox = img.split()[-1].getbbox()
+    return img.crop(bbox) if bbox else img
+
 
 class ConnectionFrame(Card):
     """Barra de conexão: logo, endereço MAC, canal e o estado de conexão do Bitalino.
@@ -27,23 +45,12 @@ class ConnectionFrame(Card):
         main_connect_frame = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
         main_connect_frame.pack(fill="x", padx=20, pady=16)
 
-        # ----- logo (waveform + wordmark) -----
-        logo_img_frame = ctk.CTkFrame(main_connect_frame, fg_color=TRANSPARENTE)
-        logo_img_frame.pack(side="left")
-
-        wave_box_img = ctk.CTkFrame(logo_img_frame, fg_color=ACCENT_TINT, corner_radius=11)
-        wave_box_img.pack(side="left")
-        Waveform(wave_box_img, [8, 16, 23, 12, 19], ACCENT, ACCENT_TINT,
-                 bar_w=4, gap=3, height=24).pack(padx=10, pady=8)
-        
-        logo_txt_frame = ctk.CTkFrame(logo_img_frame, fg_color=TRANSPARENTE)
-        logo_txt_frame.pack(side="left", padx=(12, 0))
-
-        ctk.CTkLabel(logo_txt_frame, text="ComPasso", text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_3XL, weight="bold")).pack(anchor="w")
-
-        ctk.CTkLabel(logo_txt_frame, text="MÚSICA & FISIOLOGIA", text_color=FAINT,
-                     font=ctk.CTkFont(MONO_FAMILY, FONT_2XS)).pack(anchor="w")
+        # ----- logo (assets/logo.png) -----
+        logo_src = _cropped_logo()
+        logo_w = round(_LOGO_HEIGHT * logo_src.width / logo_src.height)
+        self._logo_image = ctk.CTkImage(light_image=logo_src, dark_image=logo_src,
+                                        size=(logo_w, _LOGO_HEIGHT))
+        ctk.CTkLabel(main_connect_frame, image=self._logo_image, text="").pack(side="left")
 
         # divisor
         ctk.CTkFrame(main_connect_frame, fg_color=BORDER, width=5, height=42).pack(side="left", padx=22)
@@ -78,6 +85,8 @@ class ConnectionFrame(Card):
             text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
             dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
         
+        #self.canal_optionmenu._dropdown_menu.configure(highlightthickness=1, highlightbackground=BORDER)
+
         self.canal_optionmenu.pack()
 
         # espaçador

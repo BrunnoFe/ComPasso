@@ -23,7 +23,7 @@ class DownFrame(ctk.CTkFrame):
         row.pack(fill="x", padx=24, pady=16)
 
         # ----- contadores -----
-        self._counter(row, "MÚSICA", self.ctx.music_done_text, self.ctx.music_total_text)
+        self._counter(row, "ESTÍMULOS", self.ctx.music_done_text, self.ctx.music_total_text)
         self._counter(row, "RUÍDO", self.ctx.ruido_done_text, self.ctx.ruido_total_text)
 
         # ----- status + progresso da sessão -----
@@ -111,6 +111,8 @@ class DownFrame(ctk.CTkFrame):
 
     def _validar_prerequisitos(self) -> str:
         """Retorna uma mensagem de erro se algum pré-requisito faltar, ou '' se tudo certo."""
+        if not getattr(self.ctx, "config_loaded", False):
+            return "Crie ou abra uma configuração de experimento (menu Experimento) antes de iniciar."
         if self.ctx.bitalino is None:
             return "Conecte o Bitalino antes de iniciar o experimento."
         if not self.ctx.infos_saved:

@@ -9,7 +9,7 @@ config_logger = SetLogger(category='config', namelogger='configLogger')
 
 from .bitalino_connect import connectar_bitalino, ConnectionWatchdog
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
-from .experiment import ExperimentRunner
+from .experiment import ExperimentRunner, session_totals
 from .musics import scan_music_files, match_conditions, MissingConditionError
 from .audio import set_system_volume, get_system_volume
 from . import config_manager
@@ -27,6 +27,7 @@ __all__ = [
     'build_session_dirname',
     'build_track_filename',
     'ExperimentRunner',
+    'session_totals',
     'scan_music_files',
     'match_conditions',
     'MissingConditionError',

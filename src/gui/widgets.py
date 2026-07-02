@@ -37,13 +37,13 @@ def show_message(title: str, message: str, icon: str = "cancel") -> None:
     de trabalho).
     """
     CTkMessagebox(title=title, message=message, icon=icon, option_1="OK",
-                  sound=True, **_MSGBOX_STYLE)
+                  sound=True, **_MSGBOX_STYLE) #type: ignore
 
 
 def confirm(title: str, message: str) -> bool:
     """Diálogo de confirmação Sim/Não no estilo padrão. Retorna True se o usuário escolher 'Sim'."""
     box = CTkMessagebox(title=title, message=message, icon="question",
-                        option_1="Não", option_2="Sim", **_MSGBOX_STYLE)
+                        option_1="Não", option_2="Sim", **_MSGBOX_STYLE) #type: ignore
     return box.get() == "Sim"
 
 
@@ -61,7 +61,7 @@ class Card(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
         opts = dict(fg_color=BAR_BG, border_width=1, border_color=BORDER, corner_radius=CORNER)
         opts.update(kwargs)
-        super().__init__(master, **opts)
+        super().__init__(master, **opts) #type: ignore
 
 
 # ---------------------------------------------------------------------------
@@ -148,9 +148,9 @@ def circle(master, text, filled=True, size=28, **kwargs):
         text_color=ACCENT_INK if filled else ACCENT,
         font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold"), **kwargs)
 
-def check_icon(master, done=True, size=22, radius=7, **kwargs):
+def check_icon(master, done=True, size=22, radius=7, text="✓", fg_color=ACCENT_TINT, **kwargs):
     """Ícone de check de uma linha de arquivo (verde quando pronto, apagado quando não)."""
-    return ctk.CTkLabel(master, text="✓", width=size, height=size,
-                        corner_radius=radius, fg_color=ACCENT_TINT,
+    return ctk.CTkLabel(master, text=text, width=size, height=size,
+                        corner_radius=radius, fg_color=fg_color,
                         text_color=SUCCESS if done else FAINT,
                         font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"), **kwargs)

@@ -1,5 +1,7 @@
 """Validações puras dos dados do participante (sem dependência de GUI)."""
 
+MIN_IDADE = 18
+MAX_IDADE = 100
 
 def validar_nome_genero(nome: str, genero: str) -> bool:
     """Valida nome e gênero do participante: ambos devem conter apenas letras e espaços."""
@@ -11,8 +13,8 @@ def validar_nome_genero(nome: str, genero: str) -> bool:
 
 
 def validar_idade(idade: str) -> bool:
-    """Valida a idade do participante: deve ser um inteiro entre 0 e 100."""
+    """Valida a idade do participante: deve ser um inteiro entre 18 e 100."""
     if not idade.isdigit():
         return False
     valor = int(idade)
-    return 0 <= valor <= 100
+    return MIN_IDADE <= valor <= MAX_IDADE
