@@ -62,10 +62,21 @@ class DownFrame(ctk.CTkFrame):
         total = ctk.CTkLabel(line, text="", text_color=FAINT2,
                              font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG))
         total.pack(side="left")
-        # prefixo " / " no total via trace
+        # prefixo " / " no total via trace. `total_var` vive no AppContext e sobrevive à
+        # troca de tema (_rebuild_ui destrói e recria o DownFrame); sem remover a trace no
+        # <Destroy>, o `_sync` antigo continuaria registrado e tentaria configurar um label
+        # já destruído na próxima escrita da variável (TclError "invalid command name").
         def _sync(*_):
             total.configure(text=f" / {total_var.get()}")
-        total_var.trace_add("write", _sync)
+        trace_name = total_var.trace_add("write", _sync)
+        # `<Destroy>` dispara uma vez por widget interno do CTkLabel; a 2ª+ tentativa de
+        # remover a mesma trace levanta TclError ("can't delete Tcl command") — ignorada.
+        def _remove_trace(_e=None):
+            try:
+                total_var.trace_remove("write", trace_name)
+            except Exception:
+                pass
+        total.bind("<Destroy>", _remove_trace)
         _sync()
 
     # ------------------------------------------------------------------ #
