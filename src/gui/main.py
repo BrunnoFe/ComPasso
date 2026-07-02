@@ -38,14 +38,13 @@ class ComPasso(ctk.CTk):
         self.minsize(WIN_MIN_WIDTH, WIN_MIN_HEIGHT)
         set_window_configs(self, width=WIN_MIN_WIDTH, height=WIN_MIN_HEIGHT)
 
-        pywinstyles.change_border_color(self, WIN_BG)  # Windows: muda a cor da borda da janela
-        pywinstyles.change_header_color(self, WIN_BG)  # Windows: muda a cor da barra de título
-
         # ícone da janela principal (Windows usa .ico; em outros SOs o ícone vem do bundle)
         try:
+            pywinstyles.change_border_color(self, WIN_BG)  # Windows: muda a cor da borda da janela
+            pywinstyles.change_header_color(self, WIN_BG)  # Windows: muda a cor da barra de título
             self.iconbitmap(str(ASSETS_DIR / ICON_FILENAME))
         except Exception as e:
-            gui_logger.logger.warning(f"Não foi possível definir o ícone da janela: {e}")
+            gui_logger.logger.warning(f"Não foi possível ajustar a janela : {e}")
 
         self.ctx = AppContext(self)
 

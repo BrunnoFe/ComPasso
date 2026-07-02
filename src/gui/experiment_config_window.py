@@ -6,8 +6,12 @@ Salva/edita arquivos `.config` via `src.core.config_manager`.
 
 import os
 
+import pywinstyles
 import customtkinter as ctk
 from tkinter import filedialog
+
+from src.gui.assets import ASSETS_DIR
+from src.utils.configs import ICON_FILENAME
 
 from . import gui_logger
 from .theme import (WIN_BG, BAR_BG, BORDER, TRANSPARENTE, BASE_FONT, CORNER)
@@ -36,6 +40,13 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.resizable(False, False)
         self.transient(master)
         self.after(10, self._safe_grab)
+
+        try:
+            pywinstyles.change_border_color(self, WIN_BG)  # Windows: muda a cor da borda da janela
+            pywinstyles.change_header_color(self, WIN_BG)  # Windows: muda a cor da barra de título
+            self.iconbitmap(str(ASSETS_DIR / ICON_FILENAME))
+        except Exception as e:
+            gui_logger.logger.warning(f"Não foi possível ajustar a janela : {e}")
 
         mainframe = ctk.CTkFrame(self, corner_radius=CORNER, border_width=1,
                                  bg_color=WIN_BG, fg_color=BAR_BG, border_color=BORDER)
