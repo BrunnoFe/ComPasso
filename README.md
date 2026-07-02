@@ -1,4 +1,10 @@
-# 🧭 ComPasso
+<img width="1280" height="320" alt="banner-blend" src="https://github.com/user-attachments/assets/2fd0a973-1433-4083-bbc9-4fd72d5c2d22" />![<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" font-family="Segoe UI, -apple-system, system-ui, sans-serif">
+  <defs><linearGradient id="bg" x1="460.0" y1="0" x2="820.0" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#2DD4BF"></stop><stop offset="1" stop-color="#7C74FF"></stop></linearGradient></defs>
+  <rect width="1280" height="320" fill="#0E1116"></rect>
+  <text x="640" y="150" text-anchor="middle" font-size="92" font-weight="700" letter-spacing="-1" fill="#E6EDF3">ComPasso</text>
+  <path d="M460.0 210.0 L463.8 207.1 L467.5 204.5 L471.3 202.1 L475.0 200.0 L478.8 198.1 L482.5 196.5 L486.3 195.1 L490.0 194.0 L493.8 193.1 L497.5 192.5 L501.3 192.1 L505.0 192.0 L508.8 192.1 L512.5 192.5 L516.3 193.1 L520.0 194.0 L523.8 195.1 L527.5 196.5 L531.3 198.1 L535.0 200.0 L538.8 202.1 L542.5 204.5 L546.3 207.1 L550.0 210.0 L550.0 210.0 L553.8 212.9 L557.5 215.5 L561.3 217.9 L565.0 220.0 L568.8 221.9 L572.5 223.5 L576.3 224.9 L580.0 226.0 L583.8 226.9 L587.5 227.5 L591.3 227.9 L595.0 228.0 L598.8 227.9 L602.5 227.5 L606.3 226.9 L610.0 226.0 L613.8 224.9 L617.5 223.5 L621.3 221.9 L625.0 220.0 L628.8 217.9 L632.5 215.5 L636.3 212.9 L640.0 210.0 L645.0 202.0 L650.0 194.0 L655.0 186.0 L660.0 178.0 L665.0 170.0 L670.0 162.0 L675.0 176.4 L680.0 190.8 L685.0 205.2 L690.0 219.6 L695.0 234.0 L700.0 248.4 L705.0 236.4 L710.0 224.4 L715.0 212.4 L720.0 200.4 L725.0 188.4 L730.0 176.4 L735.0 185.2 L740.0 194.0 L745.0 202.8 L750.0 211.6 L755.0 220.4 L760.0 229.2 L765.0 224.4 L770.0 219.6 L775.0 214.8 L780.0 210.0 L785.0 205.2 L790.0 200.4 L795.0 202.0 L800.0 203.6 L805.0 205.2 L810.0 206.8 L815.0 208.4 L820.0 210.0" fill="none" stroke="url(#bg)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>
+  <text x="640" y="292" text-anchor="middle" font-size="20" font-weight="600" letter-spacing="7" fill="#6E7681">MÚSICA &amp; FISIOLOGIA</text>
+</svg>Uploading banner-blend.svg…]()
 
 <p>
   <img alt="License" src="https://img.shields.io/github/license/BrunnoFe/Compasso?color=2DD4BF">
