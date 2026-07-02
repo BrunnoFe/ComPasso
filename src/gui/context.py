@@ -1,13 +1,9 @@
 import threading
-from typing import Optional, TYPE_CHECKING
 
 import customtkinter as ctk
 
 from . import gui_logger
 from src.core.player import Player
-
-if TYPE_CHECKING:
-    from .assets import AppImages
 
 class AppContext:
     """Estado compartilhado da aplicação ComPasso.
@@ -36,7 +32,6 @@ class AppContext:
         self.mac_addr: str | None = None          # str | None
         self.signal_channel: int = 0       # índice do canal LSL usado na coluna 'signal'
         self.runner = None            # ExperimentRunner | None
-        self.images: Optional["AppImages"] = None   # criado por ComPasso após o root
 
         # callback registrado pelo DownFrame para alternar o estado do botão principal
         # ("comecar" | "rodando" | "continuar"); chamado pelo runner via post().

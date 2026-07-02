@@ -1,7 +1,7 @@
 import time
 import logging
 
-from src.utils.configs import ENCODING_FORMAT, LOG_FORMAT
+from src.utils.configs import ENCODING_FORMAT, LOG_FORMAT, LOG_TIMESTAMP_FORMAT
 from src.utils.paths import get_logs_dir
 
 
@@ -28,7 +28,7 @@ class SetLogger():
 
         folder = get_logs_dir() / category
         folder.mkdir(parents=True, exist_ok=True)
-        timestamp = time.strftime(r"%d_%m_%Y_%H_%M_%S", time.localtime())
+        timestamp = time.strftime(LOG_TIMESTAMP_FORMAT, time.localtime())
         self.logfilepath: str = str(folder / f"{category}_{timestamp}.log")
 
         self.logFormat = logging.Formatter(fmt=LOG_FORMAT)

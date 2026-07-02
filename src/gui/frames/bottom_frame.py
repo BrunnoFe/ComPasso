@@ -1,7 +1,8 @@
 import customtkinter as ctk
 
 from ..theme import (FOOTER_BG, BORDER, TEXT, MUTED, FAINT, FAINT2, ACCENT,
-                     ACCENT_INK, TRANSPARENTE, DISPLAY_FAMILY)
+                     ACCENT_INK, TRANSPARENTE, DISPLAY_FAMILY, CORNER_PILL, ACTION_BTN_H,
+                     FONT_BASE, FONT_LG, FONT_XL, FONT_4XL)
 from ..widgets import show_message, mono, caption
 from src.core import ExperimentRunner
 
@@ -31,18 +32,18 @@ class DownFrame(ctk.CTkFrame):
         head = ctk.CTkFrame(mid, fg_color=TRANSPARENTE)
         head.pack(fill="x")
         ctk.CTkLabel(head, textvariable=self.ctx.status_text, text_color=MUTED, anchor="w",
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 12)).pack(side="left", fill="x", expand=True)
-        mono(head, "", 12, FAINT, textvariable=self.ctx.session_status_text).pack(side="right")
-        spb = ctk.CTkProgressBar(mid, height=6, corner_radius=999,
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side="left", fill="x", expand=True)
+        mono(head, "", FONT_BASE, FAINT, textvariable=self.ctx.session_status_text).pack(side="right")
+        spb = ctk.CTkProgressBar(mid, height=6, corner_radius=CORNER_PILL,
                                  progress_color=ACCENT, fg_color=BORDER,
                                  variable=self.ctx.session_progress)
         spb.pack(fill="x", pady=(6, 0))
 
         # ----- botão principal (comecar / rodando / continuar) -----
         self.action_button = ctk.CTkButton(
-            row, text="Começar", width=170, height=48, corner_radius=11,
+            row, text="Começar", width=170, height=ACTION_BTN_H, corner_radius=11,
             fg_color=ACCENT, hover_color=ACCENT, text_color=ACCENT_INK,
-            font=ctk.CTkFont(DISPLAY_FAMILY, 15, weight="bold"),
+            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XL, weight="bold"),
             command=self.comecar_experimento)
         self.action_button.pack(side="left", padx=(24, 0))
 
@@ -57,9 +58,9 @@ class DownFrame(ctk.CTkFrame):
         line = ctk.CTkFrame(col, fg_color=TRANSPARENTE)
         line.pack(anchor="w")
         ctk.CTkLabel(line, textvariable=done_var, text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 19, weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_4XL, weight="bold")).pack(side="left")
         total = ctk.CTkLabel(line, text="", text_color=FAINT2,
-                             font=ctk.CTkFont(DISPLAY_FAMILY, 14))
+                             font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG))
         total.pack(side="left")
         # prefixo " / " no total via trace
         def _sync(*_):

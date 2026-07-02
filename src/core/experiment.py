@@ -6,6 +6,8 @@ import threading
 from pylsl import local_clock
 
 from . import experiment_logger
+from .constants import (MARKER_COUNTDOWN_START, MARKER_MUSIC_START, MARKER_MUSIC_END,
+                       MARKER_STOP, CONDITION_MUSICA, CONDITION_RUIDO, RUIDO_KEYWORDS)
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
 
 
@@ -16,9 +18,9 @@ def _classify_condition(fator: str) -> str:
     Por padrão, qualquer faixa que não seja ruído é tratada como música.
     """
     f = (fator or "").strip().lower()
-    if "ruido" in f or "ruído" in f:
-        return "ruido"
-    return "musica"
+    if any(kw in f for kw in RUIDO_KEYWORDS):
+        return CONDITION_RUIDO
+    return CONDITION_MUSICA
 
 
 class ExperimentRunner:
@@ -47,7 +49,7 @@ class ExperimentRunner:
         self._recorder = None
         self._thread = None
         self._running = False
-        self._done = {"musica": 0, "ruido": 0}
+        self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
 
     def is_running(self) -> bool:
         return self._running
@@ -95,7 +97,7 @@ class ExperimentRunner:
         rec = self._recorder
         if rec is not None:
             try:
-                rec.add_marker("stop", local_clock(), music_file=self.music_name, fator=self.music_fator)
+                rec.add_marker(MARKER_STOP, local_clock(), music_file=self.music_name, fator=self.music_fator)
                 rec.finalize()
             except Exception as e:
                 experiment_logger.logger.error(f"Erro ao finalizar arquivo no stop: {e}")
@@ -123,10 +125,10 @@ class ExperimentRunner:
             return
         experiment_logger.logger.info(f"Pasta da sessão criada: {self._session_dir}")
 
-        totals = {"musica": 0, "ruido": 0}
+        totals = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
         for path in self._order:
             totals[_classify_condition(self.ctx.music_condition_mapping.get(path, ""))] += 1
-        self._done = {"musica": 0, "ruido": 0}
+        self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
         self._update_counters(totals)
 
         for order, path in enumerate(self._order, start=1):
@@ -160,7 +162,7 @@ class ExperimentRunner:
         recorder = LSLRecorder(self.ctx.bitalino, self.ctx.signal_channel, csv_path)
         self._recorder = recorder
         t0 = recorder.start()
-        recorder.add_marker("countdown_start", t0, music_file=self.music_name, fator=self.music_fator)
+        recorder.add_marker(MARKER_COUNTDOWN_START, t0, music_file=self.music_name, fator=self.music_fator)
 
         # 2) contagem regressiva de 10 s
         for remaining in range(self.COUNTDOWN_SECONDS, 0, -1):
@@ -180,10 +182,10 @@ class ExperimentRunner:
             self._recorder = None
             return
         ts_start = local_clock()
-        recorder.add_marker("music_start", ts_start, music_file=self.music_name, fator=self.music_fator)
+        recorder.add_marker(MARKER_MUSIC_START, ts_start, music_file=self.music_name, fator=self.music_fator)
         self.ctx.player.play()
         self._post_current_music(self.music_name)
-        self._post_condition(" música " if cat == "musica" else " ruído ")
+        self._post_condition(" música " if cat == CONDITION_MUSICA else " ruído ")
         self._post_status(f"Reproduzindo: {self.music_name}")
 
         # 4) aguarda o fim da faixa (ou stop)
@@ -193,7 +195,7 @@ class ExperimentRunner:
 
         # 5) fim da música + finalização do arquivo
         ts_end = local_clock()
-        recorder.add_marker("music_end", ts_end, music_file=self.music_name, fator=self.music_fator)
+        recorder.add_marker(MARKER_MUSIC_END, ts_end, music_file=self.music_name, fator=self.music_fator)
         recorder.stop()
         recorder.finalize()
         self._recorder = None
@@ -236,15 +238,15 @@ class ExperimentRunner:
 
     def _update_counters(self, totals: dict) -> None:
         done = dict(self._done)
-        total_tracks = totals["musica"] + totals["ruido"]
-        done_tracks = done["musica"] + done["ruido"]
+        total_tracks = totals[CONDITION_MUSICA] + totals[CONDITION_RUIDO]
+        done_tracks = done[CONDITION_MUSICA] + done[CONDITION_RUIDO]
         frac = (done_tracks / total_tracks) if total_tracks else 0.0
 
         def apply():
-            self.ctx.music_done_text.set(str(done["musica"]))
-            self.ctx.music_total_text.set(str(totals["musica"]))
-            self.ctx.ruido_done_text.set(str(done["ruido"]))
-            self.ctx.ruido_total_text.set(str(totals["ruido"]))
+            self.ctx.music_done_text.set(str(done[CONDITION_MUSICA]))
+            self.ctx.music_total_text.set(str(totals[CONDITION_MUSICA]))
+            self.ctx.ruido_done_text.set(str(done[CONDITION_RUIDO]))
+            self.ctx.ruido_total_text.set(str(totals[CONDITION_RUIDO]))
             self.ctx.session_progress.set(frac)
             self.ctx.session_status_text.set(f"{done_tracks} / {total_tracks}")
 

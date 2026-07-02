@@ -5,3 +5,18 @@ APP_NAME = 'ComPasso'
 
 # Formato único dos registros de log (reutilizado pelos loggers e pelo errors.log).
 LOG_FORMAT = '%(asctime)s:%(filename)s: %(name)s: %(levelname)s: %(funcName)s -> %(message)s'
+
+# ---------------------------------------------------------------------------
+# Nomes de pastas e arquivos da aplicação (resolvidos em src/utils/paths.py e
+# src/core/config_manager.py). Centralizados aqui para que renomear uma pasta ou
+# arquivo de saída seja uma alteração de uma única linha.
+# ---------------------------------------------------------------------------
+DATA_DIRNAME = 'data'                          # <Documentos>/ComPasso/<DATA_DIRNAME>
+LOGS_DIRNAME = 'logs'                          # <app-data>/ComPasso/<LOGS_DIRNAME>
+EXPERIMENT_FILES_DIRNAME = 'Experiment files'  # <Documentos>/ComPasso/<...>
+ERRORS_LOG_FILENAME = 'errors.log'             # <app-data>/ComPasso/<ERRORS_LOG_FILENAME>
+PREFS_FILENAME = 'prefs.json'                  # <app-data>/ComPasso/<PREFS_FILENAME>
+ICON_FILENAME = 'icon.ico'                     # assets/<ICON_FILENAME> (ícone da janela)
+
+# Formato de data/hora no nome dos arquivos de log (um por execução).
+LOG_TIMESTAMP_FORMAT = '%d_%m_%Y_%H_%M_%S'

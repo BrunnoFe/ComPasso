@@ -13,6 +13,10 @@ MAC_RE = re.compile(
     r'[:\s\-]([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})[:\s\-]([0-9A-Fa-f]{2})$'
 )
 
+# Timeouts (s) da resolução da stream LSL e da 1ª amostra de verificação. Sem LSL ativo
+# no OpenSignals, `resolve_byprop` bloqueia por LSL_RESOLVE_TIMEOUT antes de falhar.
+LSL_RESOLVE_TIMEOUT = 2
+LSL_PULL_TIMEOUT = 1
 
 def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
     """
@@ -30,7 +34,7 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
         connection_logger.logger.info(f'Endereço MAC selecionado = {mac_addr}. Conectando a stream ao OpenSignals ...')
         try:
             bitalino_inlet: StreamInlet = StreamInlet(resolve_byprop(prop='type', value=mac_addr,
-                                                                      minimum=1, timeout=2)[0], 
+                                                                      minimum=1, timeout=LSL_RESOLVE_TIMEOUT)[0],
                                                                       recover=False, 
                                                                       processing_flags=proc_clocksync | proc_dejitter | proc_monotonize)
 
@@ -46,13 +50,8 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
                     'nominal_srate=0 (taxa irregular): o dejitter não suavizará os timestamps. '
                     'Configure a taxa de aquisição (ex.: 100 Hz) no OpenSignals.')
 
-            # Pós-processamento do inlet: sincroniza relógios, regride os timestamps para
-            # uma grade uniforme (dejitter) e garante monotonicidade. Converte as rajadas
-            # de ~15 amostras com timestamps quase idênticos em amostras espaçadas ~10 ms.
-            #bitalino_inlet.set_postprocessing(proc_clocksync | proc_dejitter | proc_monotonize)
-
             try:
-                bitalino_inlet.pull_sample(timeout=1)
+                bitalino_inlet.pull_sample(timeout=LSL_PULL_TIMEOUT)
                 connection_logger.logger.info('Conexão bem-sucedida ao Bitalino. Stream conectada ao OpenSignals.')
                 return bitalino_inlet
             except Exception as e:
@@ -133,11 +132,3 @@ class ConnectionWatchdog:
                 if cb is not None:
                     self.ctx.run_after(cb)
                 self._last_ok = time.monotonic()    # reset: permite disparar de novo
-
-
-if __name__ == '__main__':
-    bitalino = connectar_bitalino(mac_addr='20:17:09:18:60:29')
-    while True:
-        if isinstance(bitalino, StreamInlet):
-            eeg_data, timestamp = bitalino.pull_sample(timeout=1)
-            print(f'EEG Data: {eeg_data}, Timestamp: {timestamp}')

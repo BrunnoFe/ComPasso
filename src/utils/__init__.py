@@ -1,4 +1,6 @@
-from .configs import ENCODING_FORMAT, APP_NAME, LOG_FORMAT
+from .configs import (ENCODING_FORMAT, APP_NAME, LOG_FORMAT, DATA_DIRNAME, LOGS_DIRNAME,
+                     EXPERIMENT_FILES_DIRNAME, ERRORS_LOG_FILENAME, PREFS_FILENAME,
+                     ICON_FILENAME, LOG_TIMESTAMP_FORMAT)
 from .paths import (get_documents_dir, get_app_data_dir, get_data_dir,
                     get_logs_dir, get_errors_log_path, ensure_app_dirs)
 from .bootstrap import bootstrap
@@ -14,6 +16,13 @@ __all__ = [
     'ENCODING_FORMAT',
     'APP_NAME',
     'LOG_FORMAT',
+    'DATA_DIRNAME',
+    'LOGS_DIRNAME',
+    'EXPERIMENT_FILES_DIRNAME',
+    'ERRORS_LOG_FILENAME',
+    'PREFS_FILENAME',
+    'ICON_FILENAME',
+    'LOG_TIMESTAMP_FORMAT',
     'get_documents_dir',
     'get_app_data_dir',
     'get_data_dir',

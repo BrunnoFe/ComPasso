@@ -10,7 +10,8 @@ import re
 import json
 
 from . import config_logger
-from src.utils import ENCODING_FORMAT, APP_NAME, get_documents_dir, get_app_data_dir
+from src.utils import (ENCODING_FORMAT, APP_NAME, EXPERIMENT_FILES_DIRNAME, PREFS_FILENAME,
+                      get_documents_dir, get_app_data_dir)
 
 CONFIG_VERSION = 1
 
@@ -42,12 +43,12 @@ _FIELD_LABELS = {
 
 def get_experiment_files_dir():
     """Pasta padrão dos arquivos de configuração: ``Documentos/ComPasso/Experiment files``."""
-    return get_documents_dir() / APP_NAME / "Experiment files"
+    return get_documents_dir() / APP_NAME / EXPERIMENT_FILES_DIRNAME
 
 
 def get_prefs_path():
     """Arquivo de preferências do app: ``<app-data>/ComPasso/prefs.json``."""
-    return get_app_data_dir() / APP_NAME / "prefs.json"
+    return get_app_data_dir() / APP_NAME / PREFS_FILENAME
 
 
 def default_config() -> dict:
@@ -178,10 +179,8 @@ def _read_prefs() -> dict:
         return {}
 
 
-def set_last_config(path: str) -> None:
-    """Registra, nas preferências, o caminho do último `.config` salvo/aberto."""
-    prefs = _read_prefs()
-    prefs["last_config"] = str(path)
+def _write_prefs(prefs: dict) -> None:
+    """Grava o dict de preferências em `prefs.json`, criando a pasta se necessário."""
     prefs_path = get_prefs_path()
     try:
         os.makedirs(os.path.dirname(str(prefs_path)), exist_ok=True)
@@ -189,6 +188,13 @@ def set_last_config(path: str) -> None:
             json.dump(prefs, f, ensure_ascii=False, indent=2)
     except OSError as e:
         config_logger.logger.error(f"Falha ao gravar preferências: {e}")
+
+
+def set_last_config(path: str) -> None:
+    """Registra, nas preferências, o caminho do último `.config` salvo/aberto."""
+    prefs = _read_prefs()
+    prefs["last_config"] = str(path)
+    _write_prefs(prefs)
 
 
 def get_last_config_path():
@@ -201,13 +207,7 @@ def set_theme_pref(name: str) -> None:
     """Registra, nas preferências, o nome da paleta de tema selecionada."""
     prefs = _read_prefs()
     prefs["theme"] = str(name)
-    prefs_path = get_prefs_path()
-    try:
-        os.makedirs(os.path.dirname(str(prefs_path)), exist_ok=True)
-        with open(prefs_path, "w", encoding=ENCODING_FORMAT) as f:
-            json.dump(prefs, f, ensure_ascii=False, indent=2)
-    except OSError as e:
-        config_logger.logger.error(f"Falha ao gravar preferências: {e}")
+    _write_prefs(prefs)
 
 
 def get_theme_pref():

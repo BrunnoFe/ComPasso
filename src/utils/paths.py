@@ -15,7 +15,7 @@ import os
 import platform
 from pathlib import Path
 
-from .configs import APP_NAME
+from .configs import (APP_NAME, DATA_DIRNAME, LOGS_DIRNAME, ERRORS_LOG_FILENAME)
 
 
 def _windows_documents() -> Path:
@@ -72,17 +72,17 @@ def get_app_data_dir() -> Path:
 
 def get_data_dir() -> Path:
     """Pasta dos dados do experimento: ``<Documentos>/ComPasso/data``."""
-    return get_documents_dir() / APP_NAME / "data"
+    return get_documents_dir() / APP_NAME / DATA_DIRNAME
 
 
 def get_logs_dir() -> Path:
     """Pasta raiz dos logs: ``<app-data>/ComPasso/logs``."""
-    return get_app_data_dir() / APP_NAME / "logs"
+    return get_app_data_dir() / APP_NAME / LOGS_DIRNAME
 
 
 def get_errors_log_path() -> Path:
     """Arquivo central de erros, fora da pasta de logs: ``<app-data>/ComPasso/errors.log``."""
-    return get_app_data_dir() / APP_NAME / "errors.log"
+    return get_app_data_dir() / APP_NAME / ERRORS_LOG_FILENAME
 
 
 def ensure_app_dirs() -> dict:

@@ -4,23 +4,22 @@ import customtkinter as ctk
 from tkinter import filedialog
 
 from .. import gui_logger
-from ..theme import (BAR_BG, BORDER, TEXT, MUTED, FAINT, SUCCESS, ACCENT,
-                     ACCENT_TINT, DANGER, TRANSPARENTE, CORNER, DISPLAY_FAMILY)
+from ..theme import (BORDER, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
+                     TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
+                     FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, title, caption, mono, ghost_button,
-                       styled_button, styled_entry, circle, check_icon, danger_button)
+                       styled_button, styled_entry, circle, check_icon, danger_button, Card)
 from src.core import (scan_music_files, match_conditions, MissingConditionError,
                       set_system_volume, get_system_volume)
 from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir
 
+# Intervalos (ms) do laço da GUI deste frame.
+_POLL_MS = 100             # re-checagem da seleção de arquivos até tudo estar pronto
+_PROGRESS_MS = 500         # atualização da barra de progresso / indicador de gravação
+_VOLUME_DEBOUNCE_MS = 150  # espera após o último passo do slider antes de aplicar o volume
 
-class _Card(ctk.CTkFrame):
-    """Cartão escuro base (fundo, borda e cantos padronizados do redesign)."""
 
-    def __init__(self, master):
-        super().__init__(master, fg_color=BAR_BG, border_width=1,
-                         border_color=BORDER, corner_radius=CORNER)
-
-class ParticipantCard(_Card):
+class ParticipantCard(Card):
     """Cartão do participante com dois estados: formulário e resumo.
 
     - Formulário (padrão / após "Editar"): campos Nome/Idade/Gênero + "Salvar informações".
@@ -114,13 +113,13 @@ class ParticipantCard(_Card):
         for child in list(self.summary_frame.winfo_children()):
             child.destroy()
         avatar = circle(self.summary_frame, (nome[:1] or "?").upper(), filled=False, size=52)
-        avatar.configure(font=ctk.CTkFont(DISPLAY_FAMILY, 18, weight="bold"))
+        avatar.configure(font=ctk.CTkFont(DISPLAY_FAMILY, FONT_3XL, weight="bold"))
         avatar.pack(side="left")
         info = ctk.CTkFrame(self.summary_frame, fg_color=TRANSPARENTE)
         info.pack(side="left", padx=14)
         ctk.CTkLabel(info, text=nome, text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 17, weight="bold")).pack(anchor="w")
-        mono(info, f"{idade} anos · {genero}", 12, MUTED).pack(anchor="w")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_2XL, weight="bold")).pack(anchor="w")
+        mono(info, f"{idade} anos · {genero}", FONT_BASE, MUTED).pack(anchor="w")
         eb = ghost_button(self.summary_frame, "Editar", command=self.edit_infos)
         eb.configure(width=80, height=36)
         eb.pack(side="right")
@@ -141,7 +140,7 @@ class ParticipantCard(_Card):
         self.summary_frame.pack(fill="both", expand=True)
 
 
-class FilesCard(_Card):
+class FilesCard(Card):
     """Carregamento da pasta de músicas, do Excel de condições e do diretório de saída."""
 
     _MUSIC_HINT = "Pasta contendo os arquivos de música"
@@ -176,8 +175,8 @@ class FilesCard(_Card):
         col = ctk.CTkFrame(r, fg_color=TRANSPARENTE)
         col.pack(side="left", fill="x", expand=True, padx=12)
         caption(col, label.upper()).pack(anchor="w")
-        mono(col, "", 12, MUTED, textvariable=var, anchor="w").pack(anchor="w", fill="x")
-        gb = ghost_button(r, btn_text, size=12, command=command)
+        mono(col, "", FONT_BASE, MUTED, textvariable=var, anchor="w").pack(anchor="w", fill="x")
+        gb = ghost_button(r, btn_text, size=FONT_BASE, command=command)
         gb.configure(width=88, height=32)
         gb.pack(side="right")
         return chk
@@ -229,15 +228,15 @@ class FilesCard(_Card):
 
         if not folder or folder == self._MUSIC_HINT:
             self.ctx.status_text.set("Selecione a pasta contendo os arquivos de música.")
-            self.after(100, self.check_music_file_infos)
+            self.after(_POLL_MS, self.check_music_file_infos)
             return
         elif not cond or cond == self._COND_HINT:
             self.ctx.status_text.set("Selecione o arquivo excel contendo as condições ou fatores das músicas.")
-            self.after(100, self.check_music_file_infos)
+            self.after(_POLL_MS, self.check_music_file_infos)
             return
         elif not save or save == self._SAVE_HINT:
             self.ctx.status_text.set("Selecione o diretório para salvar os dados.")
-            self.after(100, self.check_music_file_infos)
+            self.after(_POLL_MS, self.check_music_file_infos)
             return
 
         # tudo selecionado; mapeia (uma vez por combinação) enquanto ainda não houver mapeamento
@@ -248,7 +247,7 @@ class FilesCard(_Card):
                 self._scan_in_progress = True
                 self.ctx.status_text.set("Arquivos selecionados! Verificando condições...")
                 self.ctx.run_async(lambda: self.get_musics_from_folder(folder, cond))
-            self.after(100, self.check_music_file_infos)
+            self.after(_POLL_MS, self.check_music_file_infos)
 
     def get_musics_from_folder(self, folder: str, cond_path: str):
         """Varre a pasta de músicas (thread de trabalho) e dispara o casamento de condições."""
@@ -299,7 +298,7 @@ class FilesCard(_Card):
         gui_logger.logger.info("Mapemento de músicas e condições realizado com sucesso!")
 
 
-class PlayerBar(_Card):
+class PlayerBar(Card):
     """Controles de reprodução: faixa atual, volume, barra de progresso e parar."""
 
     def __init__(self, master, ctx):
@@ -315,40 +314,40 @@ class PlayerBar(_Card):
 
         self.rec_frame = ctk.CTkFrame(left, fg_color=TRANSPARENTE)
         ctk.CTkLabel(self.rec_frame, text="●", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 10)).pack(side="left", padx=(0, 7))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side="left", padx=(0, 7))
         ctk.CTkLabel(self.rec_frame, text="GRAVANDO", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 11, weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold")).pack(side="left")
         # rec_frame é mostrado/escondido em _update_progress conforme a aquisição
 
         ctk.CTkLabel(left, textvariable=self.ctx.current_music_text, text_color=TEXT,
                      width=240, anchor="w",
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 14, weight="bold")).pack(anchor="w", pady=(4, 4))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).pack(anchor="w", pady=(4, 4))
         self.condition_chip = ctk.CTkLabel(left, textvariable=self.ctx.current_condition_text,
-                                           fg_color=ACCENT_TINT, text_color=ACCENT, corner_radius=6,
-                                           font=ctk.CTkFont(DISPLAY_FAMILY, 11, weight="bold"))
+                                           fg_color=ACCENT_TINT, text_color=ACCENT, corner_radius=CORNER_CHIP,
+                                           font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
         # o chip é mostrado/escondido conforme houver condição (em _update_progress)
 
         # ----- centro: progresso -----
         prog = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
         prog.pack(side="left", fill="x", expand=True, padx=22)
-        mono(prog, "", 12, MUTED, textvariable=self.ctx.time_begin_text).pack(side="left")
-        self.music_progress = ctk.CTkProgressBar(prog, height=6, corner_radius=999,
+        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side="left")
+        self.music_progress = ctk.CTkProgressBar(prog, height=6, corner_radius=CORNER_PILL,
                                                  progress_color=ACCENT, fg_color=BORDER)
         self.music_progress.set(0.0)
         self.music_progress.pack(side="left", fill="x", expand=True, padx=12)
-        mono(prog, "", 12, MUTED, textvariable=self.ctx.time_end_text).pack(side="left")
+        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side="left")
 
         # ----- volume -----
         vol = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
         vol.pack(side="left", padx=(0, 22))
         ctk.CTkLabel(vol, text="Volume", text_color=MUTED,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 12)).pack(side="left", padx=(0, 8))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side="left", padx=(0, 8))
         self.music_volume = ctk.CTkSlider(vol, width=90, height=16, from_=0, to=100,
                                           number_of_steps=100, progress_color=ACCENT,
                                           button_color=ACCENT, button_hover_color=ACCENT,
                                           fg_color=BORDER, command=self._on_volume_change)
         self.music_volume.pack(side="left")
-        self.music_volume_label = mono(vol, "", 12, TEXT, textvariable=self.ctx.volume_text)
+        self.music_volume_label = mono(vol, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
         self.music_volume_label.pack(side="left", padx=(8, 0))
 
         # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
@@ -357,9 +356,9 @@ class PlayerBar(_Card):
         self.ctx.volume_text.set(f"{v}%")
 
         # ----- parar -----
-        danger_button(row, "Parar", command=self._on_stop, width=90, height=38).pack(side="left")
+        danger_button(row, "Parar", command=self._on_stop, width=90, height=BTN_H).pack(side="left")
 
-        self.after(500, self._update_progress)
+        self.after(_PROGRESS_MS, self._update_progress)
 
     def _on_stop(self):
         """Para o experimento (se houver um em curso) e a reprodução de áudio."""
@@ -367,12 +366,8 @@ class PlayerBar(_Card):
         if runner is not None and runner.is_running():
             runner.stop()
             return
-        player = self.ctx.player
         try:
-            if getattr(player, '_playlist_loaded', False):
-                player.stop_playlist()
-            else:
-                player.stop()
+            self.ctx.player.stop()
         except Exception:
             pass
 
@@ -389,7 +384,7 @@ class PlayerBar(_Card):
             pending = getattr(self, "_volume_after_id", None)
             if pending is not None:
                 self.after_cancel(pending)
-            self._volume_after_id = self.after(150, self._apply_pending_volume)
+            self._volume_after_id = self.after(_VOLUME_DEBOUNCE_MS, self._apply_pending_volume)
         except Exception:
             pass
 
@@ -438,6 +433,6 @@ class PlayerBar(_Card):
             pass
 
         try:
-            self.after(500, self._update_progress)
+            self.after(_PROGRESS_MS, self._update_progress)
         except Exception:
             pass

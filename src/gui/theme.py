@@ -186,11 +186,22 @@ def current_theme_name() -> str:
 # ---------------------------------------------------------------------------
 WIN_MIN_WIDTH: int = 1280
 WIN_MIN_HEIGHT: int = 768
+
+# Raios de canto
 CORNER: int = 14          # raio dos cartões
 CORNER_SM: int = 9        # raio de campos/botões
+CORNER_PILL: int = 999    # totalmente arredondado (pills, barras de progresso)
+CORNER_CHIP: int = 6      # chips (ex.: condição no player)
 
-# Atalho de sticky usado com frequência
-NSE: str = "nse"
+# Alturas de widgets recorrentes
+INPUT_H: int = 36         # entradas de texto / optionmenu
+BTN_H: int = 38           # botões padrão (conectar, ghost, parar)
+ACTION_BTN_H: int = 48    # botão principal do rodapé ("Começar")
+
+# Escala de espaçamento (paddings recorrentes; one-offs assimétricos ficam inline)
+PAD_SM: int = 8
+PAD_MD: int = 16
+PAD_LG: int = 22
 
 # ---------------------------------------------------------------------------
 # Fontes
@@ -204,6 +215,18 @@ elif _sys.platform.startswith("win"):
 else:
     DISPLAY_FAMILY, MONO_FAMILY = "DejaVu Sans", "DejaVu Sans Mono"
 
+# Escala de tamanhos de fonte (cobre os tamanhos usados na UI: 9,10,11,12,13,14,15,17,18,19).
+# Trocar um valor aqui reflete em todos os widgets que usam o mesmo nível.
+FONT_2XS: int = 9
+FONT_XS: int = 10
+FONT_SM: int = 11
+FONT_BASE: int = 12
+FONT_MD: int = 13
+FONT_LG: int = 14
+FONT_XL: int = 15
+FONT_2XL: int = 17
+FONT_3XL: int = 18
+FONT_4XL: int = 19
+
 BASE_FONT: tuple = (DISPLAY_FAMILY, 16, "bold")
-BASE_FONT_MED: tuple = (DISPLAY_FAMILY, 14, "bold")
-BASE_FONT_MIN: tuple = (DISPLAY_FAMILY, 12, "bold")
+BASE_FONT_MIN: tuple = (DISPLAY_FAMILY, FONT_BASE, "bold")

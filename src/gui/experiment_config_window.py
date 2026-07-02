@@ -8,11 +8,10 @@ import os
 
 import customtkinter as ctk
 from tkinter import filedialog
-from CTkMessagebox import CTkMessagebox
 
 from . import gui_logger
-from .theme import (WIN_BG, BAR_BG, INPUT_BG, BORDER, TEXT, TRANSPARENTE, BASE_FONT, CORNER)
-from .widgets import (show_message, styled_label, styled_button, styled_entry,
+from .theme import (WIN_BG, BAR_BG, BORDER, TRANSPARENTE, BASE_FONT, CORNER)
+from .widgets import (show_message, confirm, styled_label, styled_button, styled_entry,
                      styled_combobox, ghost_button)
 from src.core.config_manager import (save_config, validate_values, get_experiment_files_dir,
                                      CHANNEL_OPTIONS)
@@ -158,13 +157,7 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
 
         if self.mode == "editar" and self.config_path:
             nome = os.path.basename(self.config_path)
-            box = CTkMessagebox(title="Confirmar", message=f"Sobrescrever {nome}?", icon="question",
-                                option_1="Não", option_2="Sim",
-                                fg_color=BAR_BG, bg_color=WIN_BG, text_color=TEXT, button_color=INPUT_BG,
-                                button_hover_color=BORDER, font=("Helvetica", 12, "bold"), border_color=BORDER,
-                                border_width=1, title_color=TEXT, button_text_color=TEXT,
-                                corner_radius=CORNER, width=500, height=300)
-            if box.get() != "Sim":
+            if not confirm("Confirmar", f"Sobrescrever {nome}?"):
                 return
             path = self.config_path
         else:

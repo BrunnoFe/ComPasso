@@ -10,6 +10,9 @@ recebem as cores por parâmetro para casar com o fundo do widget-pai.
 import random
 import tkinter as tk
 
+# Intervalo (ms) entre quadros da animação do equalizador "Conectado".
+_EQ_TICK_MS = 160
+
 
 class Waveform(tk.Canvas):
     """Barras estáticas da logo (onda sonora)."""
@@ -52,6 +55,6 @@ class LiveEqualizer(tk.Canvas):
                 hh = random.randint(int(self.h * 0.3), self.h)
                 x = i * (self.bar_w + self.gap)
                 self.coords(r, x, self.h - hh, x + self.bar_w, self.h)
-            self.after(160, self._tick)
+            self.after(_EQ_TICK_MS, self._tick)
         except tk.TclError:
             return

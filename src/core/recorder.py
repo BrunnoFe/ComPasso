@@ -8,6 +8,7 @@ import pandas as pd
 from pylsl import local_clock
 
 from . import recorder_logger
+from .constants import SESSION_TIMESTAMP_FORMAT, TRACK_ORDER_MIN_WIDTH
 from src.utils import ENCODING_FORMAT
 
 # Cabeçalho exato exigido pela especificação (ordem das colunas importa).
@@ -28,7 +29,7 @@ def build_session_dirname(ctx) -> str:
     experimento), de modo que todas as faixas da mesma coleta fiquem na mesma pasta.
     """
     agora = datetime.now()
-    suffix = agora.strftime("%d-%m-%Y_%H-%M-%S")
+    suffix = agora.strftime(SESSION_TIMESTAMP_FORMAT)
     nome = _sanitize(ctx.nome)
     idade = _sanitize(ctx.idade)
     genero = _sanitize(ctx.genero)
@@ -47,7 +48,7 @@ def build_track_filename(order: int, total: int, music_name: str) -> str:
     :param music_name: nome do arquivo de áudio (com ou sem extensão).
     :return: nome base sem extensão, ex.: ``"01_minha_musica"``.
     """
-    width = max(2, len(str(total)))
+    width = max(TRACK_ORDER_MIN_WIDTH, len(str(total)))
     stem = os.path.splitext(music_name)[0]  # remove a extensão do áudio
     return f"{order:0{width}d}_{_sanitize(stem)}"
 

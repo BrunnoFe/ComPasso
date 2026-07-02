@@ -3,12 +3,13 @@ import customtkinter as ctk
 from .. import gui_logger
 from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, FAINT, ACCENT,
                      ACCENT_TINT, ACCENT_BORDER, SUCCESS, TRANSPARENTE,
-                     DISPLAY_FAMILY, MONO_FAMILY, CORNER_SM)
-from ..widgets import show_message, caption, ghost_button, styled_button
+                     DISPLAY_FAMILY, MONO_FAMILY, CORNER_SM, CORNER_PILL,
+                     INPUT_H, BTN_H, FONT_2XS, FONT_XS, FONT_MD, FONT_3XL)
+from ..widgets import show_message, caption, ghost_button, styled_button, Card
 from ..canvas_widgets import Waveform, LiveEqualizer
 from src.core import connectar_bitalino, ConnectionWatchdog
 
-class ConnectionFrame(ctk.CTkFrame):
+class ConnectionFrame(Card):
     """Barra de conexão: logo, endereço MAC, canal e o estado de conexão do Bitalino.
 
     Dois estados visuais mutuamente exclusivos, alternados por show/hide:
@@ -20,8 +21,7 @@ class ConnectionFrame(ctk.CTkFrame):
     """
 
     def __init__(self, master, ctx):
-        super().__init__(master, fg_color=BAR_BG, border_width=1,
-                         border_color=BORDER, corner_radius=14)
+        super().__init__(master)
         self.ctx = ctx
 
         main_connect_frame = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
@@ -40,10 +40,10 @@ class ConnectionFrame(ctk.CTkFrame):
         logo_txt_frame.pack(side="left", padx=(12, 0))
 
         ctk.CTkLabel(logo_txt_frame, text="ComPasso", text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 18, weight="bold")).pack(anchor="w")
-        
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_3XL, weight="bold")).pack(anchor="w")
+
         ctk.CTkLabel(logo_txt_frame, text="MÚSICA & FISIOLOGIA", text_color=FAINT,
-                     font=ctk.CTkFont(MONO_FAMILY, 9)).pack(anchor="w")
+                     font=ctk.CTkFont(MONO_FAMILY, FONT_2XS)).pack(anchor="w")
 
         # divisor
         ctk.CTkFrame(main_connect_frame, fg_color=BORDER, width=5, height=42).pack(side="left", padx=22)
@@ -55,11 +55,11 @@ class ConnectionFrame(ctk.CTkFrame):
         caption(macaddr_frame, "ENDEREÇO MAC").pack(anchor="w", pady=(0, 5))
 
         self.mac_addr_var = ctk.StringVar(value="")
-        self.mac_entry = ctk.CTkEntry(macaddr_frame, width=210, height=36, corner_radius=CORNER_SM,
+        self.mac_entry = ctk.CTkEntry(macaddr_frame, width=210, height=INPUT_H, corner_radius=CORNER_SM,
                                       fg_color=INPUT_BG, border_color=BORDER, text_color=TEXT,
                                       placeholder_text="XX:XX:XX:XX:XX:XX",
                                       textvariable=self.mac_addr_var,
-                                      font=ctk.CTkFont(MONO_FAMILY, 13))
+                                      font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
         self.mac_entry.pack()
 
         # ----- Canal -----
@@ -71,12 +71,12 @@ class ConnectionFrame(ctk.CTkFrame):
         self.canal_var = ctk.StringVar(value="A1")
 
         self.canal_optionmenu = ctk.CTkOptionMenu(
-            channel_frame, width=78, height=36, corner_radius=CORNER_SM,
+            channel_frame, width=78, height=INPUT_H, corner_radius=CORNER_SM,
             values=[f"A{i}" for i in range(1, 7)], variable=self.canal_var,
             command=self._on_channel_change,
             fg_color=INPUT_BG, button_color=INPUT_BG, button_hover_color=BORDER,
             text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
-            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, 13))
+            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
         
         self.canal_optionmenu.pack()
 
@@ -88,7 +88,7 @@ class ConnectionFrame(ctk.CTkFrame):
         self._right_conn_frame.pack(side="left")
 
         # estado desconectado
-        self.connect_button = styled_button(self._right_conn_frame, text="Conectar", width=130, height=38,
+        self.connect_button = styled_button(self._right_conn_frame, text="Conectar", width=130, height=BTN_H,
                                              command=lambda: self.conect_bitalino(self.mac_addr_var.get()))
 
         # estado conectado (pill + equalizer + desconectar), montado sob demanda
@@ -111,20 +111,20 @@ class ConnectionFrame(ctk.CTkFrame):
     def _show_connected(self):
         self.connect_button.pack_forget()
 
-        pill = ctk.CTkFrame(self.connected_box, fg_color=ACCENT_TINT, corner_radius=999,
+        pill = ctk.CTkFrame(self.connected_box, fg_color=ACCENT_TINT, corner_radius=CORNER_PILL,
                             border_width=1, border_color=ACCENT_BORDER)
         pill.pack(side="left", padx=(0, 10))
         inner = ctk.CTkFrame(pill, fg_color=TRANSPARENTE)
         inner.pack(padx=14, pady=7)
         ctk.CTkLabel(inner, text="●", text_color=SUCCESS,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 10)).pack(side="left", padx=(0, 7))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side="left", padx=(0, 7))
         ctk.CTkLabel(inner, text="Conectado", text_color=ACCENT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, 13, weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold")).pack(side="left")
         self._equalizer = LiveEqualizer(inner, ACCENT, ACCENT_TINT)
         self._equalizer.pack(side="left", padx=(8, 0))
 
         ghost = ghost_button(self.connected_box, "Desconectar", command=self.disconnect_bitalino)
-        ghost.configure(width=110, height=38)
+        ghost.configure(width=110, height=BTN_H)
         ghost.pack(side="left")
 
         self.connected_box.pack(side="left")

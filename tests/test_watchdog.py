@@ -9,8 +9,6 @@ que o limiar de TIMEOUT é alcançado de forma determinística em poucos ticks. 
 import time as _t
 import types
 
-import pytest
-
 from src.core.bitalino_connect import ConnectionWatchdog
 
 

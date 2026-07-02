@@ -10,7 +10,12 @@ import subprocess
 
 from . import player_logger
 
-from pycaw.pycaw import AudioUtilities
+try:
+    from pycaw.pycaw import AudioUtilities
+except ImportError:
+    # pycaw é Windows-only (ver requirements.txt); em outros SOs o controle de volume
+    # cai para osascript/amixer abaixo, então a ausência do pacote não pode ser fatal.
+    AudioUtilities = None
 
 _unavailable_logged = False
 

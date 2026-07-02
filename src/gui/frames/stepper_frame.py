@@ -1,10 +1,11 @@
 import customtkinter as ctk
 
-from ..theme import (BAR_BG, BORDER, TEXT, FAINT, ACCENT, ACCENT_INK, ACCENT_TINT,
-                     TRANSPARENTE, DISPLAY_FAMILY)
+from ..theme import (BORDER, TEXT, FAINT, ACCENT, ACCENT_INK, ACCENT_TINT,
+                     TRANSPARENTE, DISPLAY_FAMILY, FONT_XS, FONT_MD, FONT_LG)
+from ..widgets import Card
 
 
-class StepperFrame(ctk.CTkFrame):
+class StepperFrame(Card):
     """Indicador de progresso em 4 etapas (Conectar → Participante → Arquivos → Iniciar).
 
     Funcional: as etapas acendem conforme o estado real do `AppContext`. Registra
@@ -15,8 +16,7 @@ class StepperFrame(ctk.CTkFrame):
     STEPS = ("Conectar", "Participante", "Arquivos", "Iniciar")
 
     def __init__(self, master, ctx):
-        super().__init__(master, fg_color=BAR_BG, border_width=1,
-                         border_color=BORDER, corner_radius=14)
+        super().__init__(master)
         self.ctx = ctx
 
         row = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
@@ -33,18 +33,18 @@ class StepperFrame(ctk.CTkFrame):
 
             badge = ctk.CTkLabel(item, text=str(i + 1), width=28, height=28, corner_radius=14,
                                  fg_color=ACCENT_TINT, text_color=ACCENT,
-                                 font=ctk.CTkFont(DISPLAY_FAMILY, 13, weight="bold"))
+                                 font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold"))
             badge.pack(side="left", padx=(0, 11))
             self._badges.append(badge)
 
             texts = ctk.CTkFrame(item, fg_color=TRANSPARENTE)
             texts.pack(side="left")
             top = ctk.CTkLabel(texts, text=f"ETAPA {i + 1}", text_color=FAINT,
-                               font=ctk.CTkFont(DISPLAY_FAMILY, 10, weight="bold"))
+                               font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS, weight="bold"))
             top.pack(anchor="w")
             self._tops.append(top)
             lab = ctk.CTkLabel(texts, text=label, text_color=TEXT,
-                               font=ctk.CTkFont(DISPLAY_FAMILY, 14, weight="bold"))
+                               font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold"))
             lab.pack(anchor="w")
             self._labels.append(lab)
 

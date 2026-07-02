@@ -7,8 +7,6 @@
 
 import types
 
-import pytest
-
 from src.gui.frames.bottom_frame import DownFrame
 
 _validar = DownFrame._validar_prerequisitos

@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-from ..theme import WIN_BG, BORDER_WIN, FAINT2, TRANSPARENTE, CORNER, MONO_FAMILY
+from ..theme import WIN_BG, BORDER_WIN, FAINT2, TRANSPARENTE, CORNER, MONO_FAMILY, FONT_SM
 
 class GraphPlaceholder(ctk.CTkFrame):
     """Espaço reservado para o gráfico do sinal em tempo real (ainda não implementado).
@@ -14,4 +14,4 @@ class GraphPlaceholder(ctk.CTkFrame):
         self.pack_propagate(False)
         ctk.CTkLabel(self, text="ESPAÇO RESERVADO · GRÁFICO EM TEMPO REAL · EM BREVE",
                      text_color=FAINT2, bg_color=TRANSPARENTE,
-                     font=ctk.CTkFont(MONO_FAMILY, 11)).pack(expand=True)
+                     font=ctk.CTkFont(MONO_FAMILY, FONT_SM)).pack(expand=True)

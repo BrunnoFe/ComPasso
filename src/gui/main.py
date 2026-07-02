@@ -1,5 +1,4 @@
 import os
-import tkinter
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
@@ -11,15 +10,17 @@ from . import gui_logger
 from . import set_window_configs
 from . import theme
 from .context import AppContext
-from .assets import AppImages, ASSETS_DIR
-from .theme import ACCENT, ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FOOTER_BG, TEXT, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT
+from .assets import ASSETS_DIR
+from .theme import ACCENT, ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
 from .widgets import show_message
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphPlaceholder, DownFrame)
 from .experiment_config_window import ExperimentConfigWindow
 from src.core import config_manager, set_system_volume
+from src.utils import ICON_FILENAME
 
-#ctk.set_appearance_mode("dark")
+# Volume principal do sistema aplicado uma única vez no arranque do app.
+_INIT_VOLUME = 50
 
 class ComPasso(ctk.CTk):
     """Janela raiz: cria o `AppContext` e monta o `MainFrame` (tema escuro)."""
@@ -41,12 +42,11 @@ class ComPasso(ctk.CTk):
 
         # ícone da janela principal (Windows usa .ico; em outros SOs o ícone vem do bundle)
         try:
-            self.iconbitmap(str(ASSETS_DIR / "icon.ico"))
+            self.iconbitmap(str(ASSETS_DIR / ICON_FILENAME))
         except Exception as e:
             gui_logger.logger.warning(f"Não foi possível definir o ícone da janela: {e}")
 
         self.ctx = AppContext(self)
-        self.ctx.images = AppImages()   # carregado após o root existir (mantido por compat.)
 
         # menu "Experimento" + sistema de configuração (.config)
         self._loaded_config_path = None
@@ -55,7 +55,7 @@ class ComPasso(ctk.CTk):
 
         # inicialização do volume do sistema em 50% (uma única vez, no arranque).
         # O PlayerBar lê o volume atual em seguida e reflete esse valor no slider.
-        set_system_volume(50)
+        set_system_volume(_INIT_VOLUME)
 
         self.main_frame = MainFrame(self, self.ctx)
         self.main_frame.pack(fill="both", expand=True)
@@ -74,7 +74,7 @@ class ComPasso(ctk.CTk):
         self.btn_experimento = self.menu_bar.add_cascade(
             "Experimento",
             hover_color=ACCENT_TINT,
-            font=ctk.CTkFont(DISPLAY_FAMILY, 12, weight="bold")
+            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold")
         )
         
         # Cria o dropdown flutuante associado ao botão
@@ -93,9 +93,9 @@ class ComPasso(ctk.CTk):
             option="Editar", command=self._on_editar, state="disabled")
 
         # Menu "Tema": uma opção por paleta disponível; troca a aparência ao vivo.
-        self.btn_tema = self.menu_bar.add_cascade("Tema", 
+        self.btn_tema = self.menu_bar.add_cascade("Tema",
                                                   hover_color=ACCENT_TINT,
-                                                  font=ctk.CTkFont(DISPLAY_FAMILY, 12, weight="bold"))
+                                                  font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
         self.dropdown_tema = CustomDropdownMenu(
             widget=self.btn_tema,
             bg_color=WIN_BG,
