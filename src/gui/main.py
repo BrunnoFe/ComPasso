@@ -23,6 +23,8 @@ from src.utils import ICON_FILENAME, PROJECT_URL, get_logs_dir, open_path
 # Volume principal do sistema aplicado uma única vez no arranque do app.
 _INIT_VOLUME = 50
 
+ctk.set_appearance_mode("dark")  # tema escuro por padrão (pode ser alterado pelo usuário)
+
 class ComPasso(ctk.CTk):
     """Janela raiz: cria o `AppContext` e monta o `MainFrame` (tema escuro)."""
 

@@ -84,8 +84,6 @@ class ConnectionFrame(Card):
             fg_color=INPUT_BG, button_color=INPUT_BG, button_hover_color=BORDER,
             text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
             dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
-        
-        #self.canal_optionmenu._dropdown_menu.configure(highlightthickness=1, highlightbackground=BORDER)
 
         self.canal_optionmenu.pack()
 
