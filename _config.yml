@@ -1,0 +1,6 @@
+# Configuração do GitHub Pages (Jekyll) — documentação do ComPasso.
+# Publicação: Settings → Pages → Source: "Deploy from a branch" → branch/pasta /docs.
+title: ComPasso
+description: Documentação da plataforma de pesquisa em psicofisiologia ComPasso.
+theme: jekyll-theme-cayman
+lang: pt-BR

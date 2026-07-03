@@ -159,7 +159,7 @@ Exemplo:
 python main.py
 ```
 
-A janela do ComPasso abre maximizada/centralizada (tamanho mínimo 1280×768). Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#onde-os-dados-são-salvos)).
+Uma **tela de carregamento** é exibida por alguns segundos antes da janela principal abrir (puramente decorativa — se falhar por qualquer motivo, o programa segue direto para a interface). A janela do ComPasso abre maximizada/centralizada (tamanho mínimo 1280×768). Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#onde-os-dados-são-salvos)).
 
 ---
 
@@ -333,9 +333,8 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 | macOS | `ComPasso-mac.zip` (`ComPasso.app`) | Extraia e abra `ComPasso.app`. |
 
 - Não há instalador: é um app "portátil" (onedir) — copie a pasta inteira para onde preferir.
-- Versionamento segue tags `vX.Y.Z`; o changelog de cada versão fica na descrição do release no GitHub.
+- Versionamento segue tags `vAAAA.M.P` (ano.minor.patch); o histórico completo de mudanças de cada versão fica em [`CHANGELOG.md`](CHANGELOG.md), além da descrição de cada release no GitHub.
 - Quer compilar você mesmo (ou gerar a variante `onefile`)? Veja o passo a passo em [BUILD.md](BUILD.md).
-- Ainda não há releases publicados? Acompanhe o [changelog de commits](https://github.com/BrunnoFe/Compasso/commits/main) ou abra uma build local a partir do código-fonte.
 
 ---
 
@@ -353,15 +352,14 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 | **Menu "Tema" não responde** | A troca de tema é bloqueada enquanto o BITalino está conectado ou um experimento está em andamento — desconecte/finalize antes de trocar. |
 | **Onde estão os arquivos de erro?** | `%LOCALAPPDATA%\ComPasso\errors.log` (Windows) / `~/Library/Application Support/ComPasso/errors.log` (macOS). |
 
----
-
-## 📸 Imagens sugeridas para atualizar
-
-A interface passou por um redesign completo (cartões, indicador de etapas, temas, menu de barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
-
-- Captura geral da janela principal já com a barra de menu corrigida ("Experimento" + "Tema" lado a lado).
-- Menu **Tema** aberto, mostrando as 3 paletas (Teal/Iris/Amber) — idealmente 3 capturas, uma por paleta.
-- Barra de conexão no estado **Conectado** (equalizador animado) — um GIF curto comunica melhor que uma imagem estática.
+<!--
+IMAGENS PENDENTES (nota para manutenção, não exibida no README renderizado):
+A interface passou por um redesign completo (cartões, indicador de etapas, temas, menu de
+barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
+- Captura geral da janela principal com a barra de menu ("Experimento" + "Tema" lado a lado).
+- Menu "Tema" aberto, mostrando as 3 paletas (Teal/Iris/Amber) — idealmente 1 captura por paleta.
+- Barra de conexão no estado "Conectado" (equalizador animado) — GIF curto comunica melhor.
 - Indicador de progresso (stepper) em pelo menos dois estados (início e com etapas concluídas).
-- Painel do player com o indicador **● GRAVANDO** e o chip de condição visíveis durante uma faixa em execução.
-- Ícone/logo do app em alta resolução para o topo do README (hoje o cabeçalho usa uma captura de tela cheia).
+- Painel do player com o indicador "GRAVANDO" e o chip de condição durante uma faixa em execução.
+- Ícone/logo do app em alta resolução para o topo do README.
+-->
