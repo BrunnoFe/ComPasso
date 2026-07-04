@@ -1,10 +1,10 @@
-# Menus Experimento / Tema / Ajuda
+# 🗂️ Menus Experimento / Tema / Ajuda
 
 A barra de menus da janela principal tem três cascatas: **Experimento**, **Tema** e **Ajuda**.
 
 <!-- SCREENSHOT: barra de menus com Experimento / Tema / Ajuda -->
 
-## Menu Experimento
+## 📁 Menu Experimento
 
 Centraliza a configuração do experimento em arquivos `.config` reutilizáveis. Cada `.config` é um
 arquivo JSON que armazena caminhos, quantidades e parâmetros do BITalino — veja o schema completo
@@ -66,19 +66,29 @@ Ao **abrir** um arquivo, há ainda verificações de estrutura: se o JSON estive
 (`Campo ausente: versão da configuração (config_version)`), ou se algum campo obrigatório estiver
 ausente/vazio (`Campo ausente: ...` / `Campo vazio: ...`).
 
-## Menu Tema
+## 🎨 Menu Tema
 
-Troca a paleta de cores de toda a aplicação **ao vivo**, sem reiniciar. Três opções disponíveis:
-**Teal** (padrão), **Iris** e **Amber**. A escolha é lembrada entre execuções (persistida em
-`prefs.json`).
+Troca a paleta de cores de toda a aplicação **ao vivo**, sem reiniciar. **Seis** opções
+disponíveis — três escuras e duas claras:
 
-> A troca de tema só é permitida com a aplicação **ociosa** — sem BITalino conectado e sem
+| Paleta | Estilo |
+| --- | --- |
+| 🌊 **Teal** (padrão) | Escura, acento verde-azulado |
+| 🔮 **Iris** | Escura, acento violeta |
+| 🟠 **Amber** | Escura, acento âmbar |
+| ☀️ **Sereno** | Clara, acento azul-céu suave |
+| 🌅 **Aurora** | Clara, acento coral-pêssego |
+| 🌲 **Floresta** | Escura, acento verde-menta |
+
+A escolha é lembrada entre execuções (persistida em `prefs.json`).
+
+> ⚠️ A troca de tema só é permitida com a aplicação **ociosa** — sem BITalino conectado e sem
 > experimento em andamento —, pois ela reconstrói toda a interface. Se você tentar trocar o tema
 > conectado ou durante uma sessão, uma mensagem pede para desconectar/finalizar antes.
 
-<!-- SCREENSHOT: menu Tema aberto mostrando Teal / Iris / Amber -->
+<!-- SCREENSHOT: menu Tema aberto mostrando as 6 paletas (Teal/Iris/Amber/Sereno/Aurora/Floresta) -->
 
-## Menu Ajuda
+## 🆘 Menu Ajuda
 
 Duas opções:
 

@@ -1,6 +1,6 @@
-# Primeiros passos
+# 🚀 Primeiros passos
 
-## Requisitos
+## 📋 Requisitos
 
 - **Sistema operacional:** Windows 10/11 ou macOS. Linux funciona como melhor esforço (a
   interface roda; o controle de volume via `amixer` pode exigir configuração adicional).

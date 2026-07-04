@@ -8,43 +8,42 @@
   <a href="https://github.com/BrunnoFe/Compasso/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/BrunnoFe/Compasso?include_prereleases&color=2DD4BF&label=release"></a>
 </p>
 
-**ComPasso** é uma plataforma de pesquisa em psicofisiologia que sincroniza a reprodução de músicas com a aquisição contínua do sinal do **BITalino** (via OpenSignals + Lab Streaming Layer). Amostras e marcadores de evento compartilham um único relógio (`pylsl.local_clock()`), garantindo sincronia precisa entre o estímulo auditivo e os dados fisiológicos.
+🎵🧠 **ComPasso** é uma plataforma de pesquisa em psicofisiologia que sincroniza a reprodução de músicas com a aquisição contínua do sinal do **BITalino** (via OpenSignals + Lab Streaming Layer). Amostras e marcadores de evento compartilham um único relógio (`pylsl.local_clock()`), garantindo sincronia precisa entre o estímulo auditivo e os dados fisiológicos — e um **gráfico do sinal em tempo real** acompanha cada faixa sem travar a interface, mesmo em sessões longas.
 
 ---
 
 <img width="1273" height="825" alt="ui" src="https://github.com/user-attachments/assets/6b98ac8d-3784-4ef9-9614-1602e40b31a8" />
 
-
 ## Sumário
 
-- [Requisitos](#requisitos)
-- [Instalação](#instalação)
-- [Antes de abrir o programa](#antes-de-abrir-o-programa)
-- [Menu "Experimento" e "Tema"](#menu-experimento-e-tema)
-- [Arquivos que você precisa preparar](#arquivos-que-você-precisa-preparar)
-- [Como executar](#como-executar)
-- [A interface, painel por painel](#a-interface-painel-por-painel)
-- [Executando um experimento](#executando-um-experimento)
-- [Onde os dados são salvos](#onde-os-dados-são-salvos)
-- [Formato dos arquivos de saída](#formato-dos-arquivos-de-saída)
-- [Logs e diagnóstico de erros](#logs-e-diagnóstico-de-erros)
+- [📋 Requisitos](#-requisitos)
+- [📦 Instalação](#-instalação)
+- [🔌 Antes de abrir o programa](#-antes-de-abrir-o-programa)
+- [📁 Menu "Experimento" e "Tema"](#-menu-experimento-e-tema)
+- [📂 Arquivos que você precisa preparar](#-arquivos-que-você-precisa-preparar)
+- [🎬 Como executar](#-como-executar)
+- [🧭 A interface, painel por painel](#-a-interface-painel-por-painel)
+- [🧪 Executando um experimento](#-executando-um-experimento)
+- [💾 Onde os dados são salvos](#-onde-os-dados-são-salvos)
+- [📊 Formato dos arquivos de saída](#-formato-dos-arquivos-de-saída)
+- [🔎 Logs e diagnóstico de erros](#-logs-e-diagnóstico-de-erros)
 - [🚀 Releases](#-releases)
-- [Solução de problemas](#solução-de-problemas)
+- [🔧 Solução de problemas](#-solução-de-problemas)
 
 ---
 
-## Requisitos
+## 📋 Requisitos
 
 - **Windows 10/11 ou macOS** (suporte a Linux como melhor esforço: a interface funciona, mas o controle de volume via `amixer` pode exigir configuração adicional dependendo da distribuição).
 - **Python 3.12+**.
-- **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado** (veja [Antes de abrir o programa](#antes-de-abrir-o-programa)).
+- **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado** (veja [Antes de abrir o programa](#-antes-de-abrir-o-programa)).
 - **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals (LSL ativo).
 
 As dependências Python estão em [`requirements.txt`](requirements.txt) (CustomTkinter, pygame-ce, pylsl, pandas, openpyxl, pillow, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
 
 ---
 
-## Instalação
+## 📦 Instalação
 
 ```bash
 # 1. Crie e ative um ambiente virtual
@@ -60,7 +59,7 @@ Para gerar um executável distribuível (`.exe` no Windows, `.app` no macOS), co
 
 ---
 
-## Antes de abrir o programa
+## 🔌 Antes de abrir o programa
 
 A conexão com o BITalino **só funciona** se o OpenSignals estiver compartilhando os dados via Lab Streaming Layer. Faça isto **antes** de iniciar o ComPasso:
 
@@ -71,19 +70,15 @@ A conexão com o BITalino **só funciona** se o OpenSignals estiver compartilhan
 
 > Sem o LSL ativo e transmitindo, a conexão do ComPasso falha com uma mensagem de erro (timeout de ~2 s ao procurar a stream).
 
-
 <img width="1115" height="761" alt="opensignals" src="https://github.com/user-attachments/assets/e68e7110-96a6-492d-9be2-84ddcad987e3" />
-
 
 ---
 
-## Menu "Experimento" e "Tema"
+## 📁 Menu "Experimento" e "Tema"
 
 O menu **Experimento** (barra de menus da janela principal) centraliza toda a configuração do experimento em arquivos `.config` reutilizáveis. Cada `.config` é um arquivo JSON que armazena caminhos, quantidades esperadas e parâmetros do BITalino — basta abri-lo em sessões futuras para restaurar toda a configuração de uma vez.
 
-
 <img width="704" height="530" alt="configs" src="https://github.com/user-attachments/assets/91b43053-6089-4816-bc6b-ea10a1ffca57" />
-
 
 > **Carga automática ao iniciar:** o ComPasso carrega silenciosamente o último `.config` usado (se o arquivo ainda existir e for válido) e aplica todos os campos automaticamente. Em sessões recorrentes com o mesmo protocolo, basta abrir o programa e clicar em **Começar**.
 
@@ -113,20 +108,28 @@ Disponível somente após um **Novo** ou **Abrir** bem-sucedido. Reabre a janela
 
 ### 🎨 Temas
 
-Novidade da interface redesenhada: o menu **Tema** troca a paleta de cores da aplicação inteira ao vivo, sem reiniciar o programa. Três opções disponíveis — **Teal** (padrão), **Iris** e **Amber** — a escolha é lembrada entre execuções.
+O menu **Tema** troca a paleta de cores da aplicação inteira ao vivo, sem reiniciar o programa. **Seis paletas** disponíveis — a escolha é lembrada entre execuções:
 
-> A troca de tema só é permitida com a aplicação **ociosa** (sem BITalino conectado e sem experimento em andamento), pois reconstrói toda a interface.
+| Paleta | Estilo |
+| --- | --- |
+| 🌊 **Teal** (padrão) | Escura, acento verde-azulado |
+| 🔮 **Iris** | Escura, acento violeta |
+| 🟠 **Amber** | Escura, acento âmbar |
+| ☀️ **Sereno** | Clara, acento azul-céu suave |
+| 🌅 **Aurora** | Clara, acento coral-pêssego |
+| 🌲 **Floresta** | Escura, acento verde-menta |
 
+> ⚠️ A troca de tema só é permitida com a aplicação **ociosa** (sem BITalino conectado e sem experimento em andamento), pois reconstrói toda a interface.
 
 <img width="1270" height="824" alt="iris" src="https://github.com/user-attachments/assets/746422aa-91c0-44e9-a4fe-48944c241222" />
 
-
 <img width="1274" height="820" alt="ambar" src="https://github.com/user-attachments/assets/166bc524-956b-4759-8c71-0d1c041a55ae" />
 
+<!-- SCREENSHOT: capturas das 3 paletas novas (Sereno/Aurora/Floresta), mesmo enquadramento das duas acima -->
 
 ---
 
-## Arquivos que você precisa preparar
+## 📂 Arquivos que você precisa preparar
 
 ### 1. Pasta com as músicas
 
@@ -147,33 +150,29 @@ Exemplo:
 
 <img width="497" height="122" alt="fatores" src="https://github.com/user-attachments/assets/980f1e33-5da6-4e78-a25a-7db569695c06" />
 
-
 > **Importante:** o valor da coluna `música` deve bater exatamente com o nome do arquivo na pasta. Se uma música não tiver linha correspondente, o programa avisa e interrompe a verificação — corrija a planilha e recarregue. Os contadores **Música / Ruído** são calculados a partir da coluna `fator`: valores que contêm "ruido"/"ruído" contam como ruído; qualquer outro valor conta como música.
 
 ---
 
-## Como executar
+## 🎬 Como executar
 
 ```bash
 python main.py
 ```
 
-Uma **tela de carregamento** é exibida por alguns segundos antes da janela principal abrir (puramente decorativa — se falhar por qualquer motivo, o programa segue direto para a interface). A janela do ComPasso abre maximizada/centralizada (tamanho mínimo 1280×768). Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#onde-os-dados-são-salvos)).
+Uma **tela de carregamento** é exibida por alguns segundos antes da janela principal abrir (puramente decorativa — se falhar por qualquer motivo, o programa segue direto para a interface). A janela do ComPasso abre maximizada/centralizada (tamanho mínimo 1280×768). Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#-onde-os-dados-são-salvos)).
 
 ---
 
-## A interface, painel por painel
+## 🧭 A interface, painel por painel
 
 A interface foi redesenhada em cartões escuros com um indicador de progresso em etapas. A tela é dividida em:
 
 ### Barra de conexão — BITalino
 
-
 <img width="1224" height="112" alt="conc" src="https://github.com/user-attachments/assets/20f4a719-5d1a-4b9d-b206-de9267ab4a46" />
 
-
 <img width="1518" height="121" alt="conectado" src="https://github.com/user-attachments/assets/1acfe196-eaf0-4b87-9f77-c3e1498e3b7e" />
-
 
 1. **Endereço MAC** — campo de texto para digitar o endereço MAC do BITalino no formato `XX:XX:XX:XX:XX:XX`. É por ele que o ComPasso localiza a *stream* LSL publicada pelo OpenSignals.
 2. **Canal** — caixa de seleção ao lado do endereço MAC. Escolha o canal do sensor cujo sinal será gravado (**A1 a A6**). O padrão ao abrir o programa é **A1**.
@@ -192,27 +191,21 @@ Logo abaixo da barra de conexão, uma faixa com 4 etapas — **Conectar → Part
 
 ### Painel do participante
 
-
 <img width="488" height="307" alt="partic_info" src="https://github.com/user-attachments/assets/fbc951a0-6ea4-4e7e-bead-706f69baa17b" />
-
 
 Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**. Regras de validação:
 
 - **Nome** e **Gênero**: apenas letras e espaços.
-- **Idade**: número inteiro entre 0 e 100.
+- **Idade**: número inteiro entre **18 e 100**.
 - Todos os campos são obrigatórios.
 
 Após salvar, o cartão muda para um resumo (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo.
 
-
 <img width="489" height="309" alt="partic_card" src="https://github.com/user-attachments/assets/b4d4f495-fafa-4660-927a-58721aa30633" />
-
 
 ### Painel de arquivos e diretório de saída
 
-
 <img width="732" height="307" alt="arquivos" src="https://github.com/user-attachments/assets/ba3d5178-c9e8-467c-9d08-4562ff2e9914" />
-
 
 Três seleções, que também são preenchidas automaticamente ao carregar um `.config` pelo menu **Experimento**:
 
@@ -224,18 +217,26 @@ Cada linha tem um ícone de check que fica verde assim que o respectivo item é 
 
 ### Player
 
-
 <img width="1560" height="244" alt="gravando" src="https://github.com/user-attachments/assets/6fc273c7-6d83-43fc-b245-c87d181c2cc3" />
-
 
 - **Nome da faixa atual** (com um chip indicando a condição/fator) e um indicador **● GRAVANDO** enquanto a aquisição de sinal está ativa.
 - **Barra de progresso** com tempos de início/fim da faixa.
 - **Volume** — slider que controla o volume principal do sistema; ao abrir o programa, o volume é ajustado automaticamente para 50%.
 - **Parar** — interrompe **a qualquer momento** o experimento e a reprodução, gravando o marcador `stop` e finalizando o arquivo da faixa atual.
 
-### Espaço para o gráfico em tempo real
+### 📈 Gráfico do sinal em tempo real
 
-Abaixo do player há um painel reservado para um futuro gráfico do sinal do BITalino em tempo real — ainda não implementado, hoje é apenas uma legenda "EM BREVE".
+<!-- SCREENSHOT: cartão do gráfico durante uma gravação, mostrando a linha do sinal se formando, o ponteiro e o chip de tempo -->
+
+Abaixo do player, um cartão desenha o sinal do BITalino do canal selecionado **ao vivo**, faixa por faixa:
+
+- O gráfico se abre nos **últimos 5 segundos** da contagem regressiva (eixo de tempo começa em `-0:05`) e mostra a música inteira até o fim (`0:00` = início da faixa, destacado por uma linha mais clara).
+- A linha se forma **continuamente e sem travar a interface**, com um ponteiro que acompanha a formação em tempo real e mostra o valor atual (µV) no canto superior.
+- O eixo Y é fixo em **±30 µV** (a escala típica do sinal do BITalino) e só se ajusta automaticamente se um pico ultrapassar essa faixa.
+- Ao final de cada faixa, o registro completo permanece visível até ~1 segundo antes da próxima música começar, quando o gráfico se limpa para a faixa seguinte.
+- Ao **parar** o experimento, o gráfico volta ao estado ocioso ("Aguardando gravação…").
+
+> 💡 O gráfico é só uma conferência visual em tempo real — os dados salvos em CSV/XLSX sempre trazem o valor **bruto** do sinal, sem qualquer suavização aplicada à exibição.
 
 ### Rodapé — Progresso e início do experimento
 
@@ -248,7 +249,7 @@ Abaixo do player há um painel reservado para um futuro gráfico do sinal do BIT
 
 ---
 
-## Executando um experimento
+## 🧪 Executando um experimento
 
 ### Pré-requisitos
 
@@ -262,7 +263,7 @@ Ao clicar em **Começar**, o ComPasso verifica se todos os cinco pré-requisitos
 
 ### Passo a passo
 
-1. Configure o OpenSignals com o LSL ativo (veja [Antes de abrir o programa](#antes-de-abrir-o-programa)).
+1. Configure o OpenSignals com o LSL ativo (veja [Antes de abrir o programa](#-antes-de-abrir-o-programa)).
 2. Abra o ComPasso — o último `.config` é carregado automaticamente se existir.
 3. Se necessário, use **Experimento → Novo** para criar uma configuração ou **Experimento → Abrir** para carregar uma existente.
 4. Confirme o endereço MAC e o canal (**A1–A6**) na barra de conexão e clique em **Conectar**.
@@ -279,7 +280,7 @@ Ao clicar em **Começar**, o ComPasso verifica se todos os cinco pré-requisitos
 
 ---
 
-## Onde os dados são salvos
+## 💾 Onde os dados são salvos
 
 | O quê | Local |
 | --- | --- |
@@ -292,7 +293,7 @@ As pastas são criadas automaticamente na primeira execução.
 
 ---
 
-## Formato dos arquivos de saída
+## 📊 Formato dos arquivos de saída
 
 Cada coleta cria **uma pasta** nomeada `nome_idade_genero_dia-mes-ano_hora-min-seg` dentro do diretório de saída. Dentro dessa pasta, cada faixa gera **um par de arquivos** (CSV + XLSX) nomeados `ordem_nomedamusica`:
 
@@ -325,7 +326,7 @@ Documentos/ComPasso/data/
 
 ---
 
-## Logs e diagnóstico de erros
+## 🔎 Logs e diagnóstico de erros
 
 - Cada módulo grava em sua **própria subpasta** dentro de `logs/` (`connections/`, `gui/`, `main/`, `player/`, `recorder/`, `experiment/`, `musics/`), com um arquivo por execução identificado por data e hora.
 - O **`errors.log`** (fora da pasta `logs/`) reúne **somente** avisos e erros (`WARNING`/`ERROR`/`CRITICAL`) de toda a aplicação — é o primeiro lugar para olhar quando algo der errado. O arquivo tem rotação automática de tamanho.
@@ -342,7 +343,7 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 
 ---
 
-## Solução de problemas
+## 🔧 Solução de problemas
 
 | Sintoma | Causa provável / solução |
 | --- | --- |
@@ -354,6 +355,7 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 | **Sinal sempre 0 ou constante** | Canal errado selecionado. Consulte a primeira amostra registrada no log (linha "Primeira amostra completa") e ajuste o **Canal** na barra de conexão ou em **Experimento → Editar**. |
 | **Áudio não toca** | Verifique se os arquivos estão em `.mp3`, `.wav` ou `.ogg` e se o volume do sistema não está no mínimo. |
 | **Menu "Tema" não responde** | A troca de tema é bloqueada enquanto o BITalino está conectado ou um experimento está em andamento — desconecte/finalize antes de trocar. |
+| **Gráfico fica "Aguardando gravação…" o tempo todo** | O BITalino não está conectado/transmitindo, ou nenhuma faixa está em reprodução no momento — o gráfico só recebe dados durante os 5 s finais da contagem e a reprodução da faixa. |
 | **Onde estão os arquivos de erro?** | `%LOCALAPPDATA%\ComPasso\errors.log` (Windows) / `~/Library/Application Support/ComPasso/errors.log` (macOS). |
 
 <!--
@@ -361,9 +363,12 @@ IMAGENS PENDENTES (nota para manutenção, não exibida no README renderizado):
 A interface passou por um redesign completo (cartões, indicador de etapas, temas, menu de
 barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
 - Captura geral da janela principal com a barra de menu ("Experimento" + "Tema" lado a lado).
-- Menu "Tema" aberto, mostrando as 3 paletas (Teal/Iris/Amber) — idealmente 1 captura por paleta.
+- Menu "Tema" aberto, mostrando as 6 paletas (Teal/Iris/Amber/Sereno/Aurora/Floresta) — idealmente
+  1 captura (ou 3, para as novas Sereno/Aurora/Floresta) por paleta.
 - Barra de conexão no estado "Conectado" (equalizador animado) — GIF curto comunica melhor.
 - Indicador de progresso (stepper) em pelo menos dois estados (início e com etapas concluídas).
 - Painel do player com o indicador "GRAVANDO" e o chip de condição durante uma faixa em execução.
+- Cartão do gráfico do sinal em tempo real, durante uma gravação real (linha se formando + ponteiro
+  + chip de tempo visíveis) — um GIF curto comunica bem a fluidez da animação.
 - Ícone/logo do app em alta resolução para o topo do README.
 -->

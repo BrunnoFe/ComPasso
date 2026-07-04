@@ -1,4 +1,4 @@
-# Solução de problemas
+# 🔧 Solução de problemas
 
 Esta página lista comportamentos de erro reais do ComPasso e como resolvê-los. Quando algo dá
 errado, o primeiro lugar para olhar é o arquivo central de erros:
@@ -53,6 +53,13 @@ Para o fluxo de conexão completo, veja [Conexão com o BITalino](bitalino-conne
 | Sintoma | Causa provável / solução |
 | --- | --- |
 | **Menu "Tema" não responde / pede para desconectar** | A troca de tema é bloqueada enquanto o BITalino está conectado ou um experimento está em andamento. Desconecte/finalize antes de trocar. |
+
+## 📈 Gráfico do sinal em tempo real
+
+| Sintoma | Causa provável / solução |
+| --- | --- |
+| **Gráfico fica sempre em "Aguardando gravação…"** | O gráfico só recebe dados durante os 5 s finais da contagem regressiva e a reprodução da faixa — confirme que o BITalino está conectado e transmitindo, e que uma faixa está de fato em andamento. |
+| **A linha do gráfico não se move / ponteiro parado** | Verifique se o sensor está transmitindo amostras (mesma causa de "Sinal sempre 0 ou constante", acima) — o gráfico reflete exatamente o que chega do BITalino. |
 
 ---
 

@@ -1,10 +1,10 @@
-# Executando um experimento
+# 🧪 Executando um experimento
 
 Esta página descreve o fluxo completo de uma sessão de coleta, do preparo ao encerramento.
 
-## Interface, painel por painel
+## 🧭 Interface, painel por painel
 
-<!-- SCREENSHOT: janela principal completa com todos os painéis -->
+<!-- SCREENSHOT: janela principal completa com todos os painéis, incluindo o gráfico do sinal em tempo real -->
 
 - **Barra de conexão** — endereço MAC, canal (A1–A6), botão Conectar/Desconectar. Veja
   [Conexão com o BITalino](bitalino-connection.md).
@@ -16,6 +16,9 @@ Esta página descreve o fluxo completo de uma sessão de coleta, do preparo ao e
   diretório de saída; cada linha ganha um check verde quando resolvida.
 - **Player** — nome da faixa atual, chip de condição, indicador **● GRAVANDO**, barra de
   progresso, controle de volume e botão **Parar**.
+- **📈 Gráfico do sinal em tempo real** — desenha o sinal do canal selecionado ao vivo durante a
+  gravação, com um ponteiro fluido e leitura do valor atual (µV); veja a seção
+  [Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo.
 - **Rodapé** — contadores **ESTÍMULOS** / **RUÍDO**, status e barra de progresso da sessão, e o
   botão principal (**Começar** / **Executando…** / **Continuar →**).
 
@@ -67,12 +70,14 @@ Para cada faixa da sequência:
 1. **Início da aquisição** — o gravador LSL começa a capturar o sinal e captura o instante `t0`;
    é registrado o marcador **`INICIO_CONTAGEM`**. O botão principal vai para **Executando…**
    (desabilitado).
-2. **Contagem regressiva de 10 segundos** — a gravação já está em curso durante a contagem.
+2. **Contagem regressiva de 10 segundos** — a gravação já está em curso durante a contagem. Nos
+   **5 segundos finais**, o gráfico do sinal já se abre e começa a mostrar o que está sendo
+   captado (veja [📈 Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo).
 3. **Reprodução** — ao iniciar o áudio, é registrado o marcador **`INICIO_MUSICA`** (com o nome
    do arquivo e o fator). O indicador **● GRAVANDO** e o chip de condição (música/ruído) ficam
    visíveis. A faixa toca até o fim.
 4. **Fim da faixa** — é registrado o marcador **`FIM_MUSICA`**, o par CSV + XLSX é finalizado e os
-   contadores são atualizados.
+   contadores são atualizados. O gráfico permanece com o registro completo da faixa visível.
 5. **Pausa entre faixas** — o botão muda para **Continuar →** e a sessão aguarda o pesquisador
    clicar para avançar à próxima faixa. Use este intervalo conforme o protocolo (instruções ao
    participante, anotações etc.).
@@ -81,6 +86,28 @@ Para cada faixa da sequência:
 
 Quando todas as faixas terminam, a sessão é finalizada automaticamente e o status indica
 "Experimento finalizado."
+
+## 📈 Gráfico do sinal em tempo real
+
+<!-- SCREENSHOT: cartão do gráfico durante uma gravação, mostrando a linha do sinal se formando, o ponteiro e o chip de tempo -->
+
+Abaixo do player, um cartão desenha o sinal do BITalino do canal selecionado **ao vivo**, faixa
+por faixa — útil para conferir visualmente, durante a coleta, que o sensor está captando um sinal
+plausível (sem precisar abrir o CSV depois):
+
+- O eixo de tempo começa em **`-0:05`** (os 5 segundos finais da contagem regressiva) e vai até o
+  fim da música; o instante **`0:00`** (início da faixa) é destacado por uma linha vertical mais
+  clara.
+- A linha se forma **continuamente**, com um ponteiro que acompanha a formação e mostra o valor
+  atual (µV) no canto superior direito do cartão.
+- O eixo vertical é fixo em **±30 µV** (a faixa típica do sinal do BITalino) e só se ajusta
+  automaticamente se um pico ultrapassar esse intervalo.
+- Ao final da faixa, o registro completo permanece visível durante a pausa "Continuar →" e some
+  ~1 segundo antes do início da contagem da próxima faixa.
+- Ao clicar em **Parar**, o gráfico volta imediatamente ao estado ocioso ("Aguardando gravação…").
+
+> 💡 O gráfico é só uma conferência visual — os arquivos CSV/XLSX sempre gravam o valor **bruto**
+> do sinal, sem qualquer suavização aplicada à exibição. Veja [Dados de saída](output-data.md).
 
 ## Interrompendo a sessão
 

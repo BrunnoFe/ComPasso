@@ -9,12 +9,16 @@ esperada está marcado no conteúdo com um comentário HTML no formato:
 
 ## Capturas pendentes
 
-- **index.md** — janela principal completa (barra de menu Experimento/Tema/Ajuda, stepper, player).
+- **index.md** — janela principal completa (barra de menu Experimento/Tema/Ajuda, stepper, player,
+  gráfico do sinal em tempo real).
 - **getting-started.md** — (nenhuma obrigatória).
 - **bitalino-connection.md** — OpenSignals com o LSL ativado; barra de conexão no estado "Conectado".
-- **experiment-menu.md** — barra de menus; janela "Configuração do Experimento"; menu Tema aberto.
+- **experiment-menu.md** — barra de menus; janela "Configuração do Experimento"; menu Tema aberto
+  mostrando as 6 paletas (Teal/Iris/Amber/Sereno/Aurora/Floresta).
 - **input-files.md** — planilha de condições com as colunas `musica` e `fator`.
-- **running-an-experiment.md** — janela principal completa; player com "GRAVANDO" e chip de condição.
+- **running-an-experiment.md** — janela principal completa; player com "GRAVANDO" e chip de
+  condição; 📈 **cartão do gráfico do sinal em tempo real durante uma gravação** (linha se
+  formando + ponteiro + chip de tempo visíveis — um GIF curto comunica melhor a fluidez).
 - **output-data.md** — exemplo de arquivo de dados (CSV/XLSX) aberto.
 
 Ao adicionar uma imagem, substitua o comentário correspondente por, por exemplo:

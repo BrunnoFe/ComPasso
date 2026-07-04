@@ -1,4 +1,4 @@
-# Arquivo de configuração `.config`
+# 📁 Arquivo de configuração `.config`
 
 Cada configuração de experimento é salva como um arquivo **`.config`**, que é um **JSON** simples.
 Os arquivos ficam, por padrão, em:
@@ -58,7 +58,7 @@ Separado dos `.config`, o ComPasso mantém um arquivo `prefs.json` na pasta de d
 (`<app-data>/ComPasso/prefs.json`) para lembrar:
 
 - `last_config` — o caminho do último `.config` salvo/aberto (usado para a carga automática).
-- `theme` — a paleta de tema selecionada (Teal/Iris/Amber).
+- `theme` — a paleta de tema selecionada (Teal/Iris/Amber/Sereno/Aurora/Floresta).
 
 ---
 

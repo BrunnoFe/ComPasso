@@ -1,4 +1,4 @@
-# Conexão com o BITalino
+# 🔌 Conexão com o BITalino
 
 A comunicação com o BITalino é feita **inteiramente via Lab Streaming Layer (LSL)**, publicado
 pelo OpenSignals. O ComPasso não faz varredura Bluetooth: ele localiza a *stream* LSL pelo

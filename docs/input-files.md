@@ -1,4 +1,4 @@
-# Arquivos de entrada
+# 📂 Arquivos de entrada
 
 Para rodar um experimento, você precisa preparar dois itens: uma **pasta de músicas** e uma
 **planilha de condições**.

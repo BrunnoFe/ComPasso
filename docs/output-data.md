@@ -1,4 +1,8 @@
-# Dados de saída
+# 💾 Dados de saída
+
+> 💡 O [gráfico do sinal em tempo real](running-an-experiment.md#-gráfico-do-sinal-em-tempo-real)
+> exibido durante a gravação é só uma conferência visual (com suavização leve na exibição) — os
+> arquivos abaixo sempre gravam o valor **bruto** do sinal.
 
 ## Onde os dados são salvos
 
