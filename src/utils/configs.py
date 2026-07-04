@@ -6,6 +6,8 @@ APP_NAME = 'ComPasso'
 # Página do projeto (menu "Ajuda" -> "Página do projeto").
 PROJECT_URL = 'https://github.com/BrunnoFe/Compasso'
 
+PROJECT_GITSITE = 'https://brunnofe.github.io/ComPasso/'
+
 # Formato único dos registros de log (reutilizado pelos loggers e pelo errors.log).
 LOG_FORMAT = '%(asctime)s:%(filename)s: %(name)s: %(levelname)s: %(funcName)s -> %(message)s'
 

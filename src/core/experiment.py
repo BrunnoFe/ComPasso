@@ -128,6 +128,9 @@ class ExperimentRunner:
     """
 
     COUNTDOWN_SECONDS = 10
+    # janela de antecedência (s) do gráfico: quantos segundos finais da contagem regressiva
+    # já aparecem no traço antes da música começar (eixo X total = PLOT_LEAD_SECONDS + duração).
+    PLOT_LEAD_SECONDS = 5
 
     def __init__(self, ctx):
         self.ctx = ctx
@@ -139,6 +142,14 @@ class ExperimentRunner:
         self._thread = None
         self._running = False
         self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
+        # gate de pushes para o gráfico: só True a partir dos PLOT_LEAD_SECONDS finais da
+        # contagem até o FIM_MUSICA, para que amostras fora da janela não corrompam o
+        # traço da faixa anterior.
+        self._plot_active = False
+        # timestamp (relativo ao início da aquisição) da primeira amostra aceita após a
+        # janela abrir — usado para "zerar" o eixo X do gráfico nesse instante, já que o
+        # timestamp bruto da amostra é relativo ao início da gravação (antes da contagem).
+        self._plot_origin = None
 
     def is_running(self) -> bool:
         return self._running
@@ -193,6 +204,8 @@ class ExperimentRunner:
                 experiment_logger.logger.error(f"Erro ao finalizar arquivo no stop: {e}")
             self._recorder = None
         self._running = False
+        self._plot_active = False
+        self._plot_reset()
         self._set_button("comecar")
         self._post_condition("")
         self._post_status("Experimento interrompido.")
@@ -247,28 +260,42 @@ class ExperimentRunner:
 
         csv_path = os.path.join(self._session_dir, filename + ".csv") #type: ignore
         experiment_logger.logger.info(f"Preparando aquisição LSL para '{self.music_name}' (fator: '{self.music_fator}') -> {csv_path}")
-        recorder = LSLRecorder(self.ctx.bitalino, self.ctx.signal_channel, csv_path)
+        recorder = LSLRecorder(self.ctx.bitalino, self.ctx.signal_channel, csv_path,
+                               on_sample=self._plot_push)
         self._recorder = recorder
         t0 = recorder.start()
         recorder.add_marker(MARKER_COUNTDOWN_START, t0, music_file=self.music_name, fator=self.music_fator)
+
+        # carrega o áudio já aqui (não apenas após a contagem) para conhecer a duração da
+        # faixa com antecedência — necessária para fixar o eixo X do gráfico antes do início
+        # da janela de exibição (ver PLOT_LEAD_SECONDS abaixo). Não inicia a reprodução.
+        if not self.ctx.player.load(path):
+            experiment_logger.logger.error(f"Falha ao carregar áudio; pulando faixa: {path}")
+            self._post_status(f"Falha ao carregar '{self.music_name}'; pulando faixa.")
+            self._plot_active = False
+            self._plot_reset()
+            recorder.stop()
+            recorder.finalize()
+            self._recorder = None
+            return
+        duration = self.ctx.player.get_length()
 
         # 2) contagem regressiva de 10 s
         for remaining in range(self.COUNTDOWN_SECONDS, 0, -1):
             if self._stop_event.is_set():
                 return
+            # nos últimos PLOT_LEAD_SECONDS s da contagem: limpa o traço da faixa anterior e
+            # começa a exibir o sinal já recebido; eixo X = janela de espera + duração da música.
+            if remaining == self.PLOT_LEAD_SECONDS:
+                self._plot_active = True
+                self._plot_origin = None
+                self._plot_begin(self.PLOT_LEAD_SECONDS + duration, self.PLOT_LEAD_SECONDS)
             self._post_status(f"Preparando '{self.music_name}' — iniciando em {remaining}s")
             time.sleep(1.0)
         if self._stop_event.is_set():
             return
 
         # 3) início da música
-        if not self.ctx.player.load(path):
-            experiment_logger.logger.error(f"Falha ao carregar áudio; pulando faixa: {path}")
-            self._post_status(f"Falha ao carregar '{self.music_name}'; pulando faixa.")
-            recorder.stop()
-            recorder.finalize()
-            self._recorder = None
-            return
         ts_start = local_clock()
         recorder.add_marker(MARKER_MUSIC_START, ts_start, music_file=self.music_name, fator=self.music_fator)
         self.ctx.player.play()
@@ -284,6 +311,9 @@ class ExperimentRunner:
         # 5) fim da música + finalização do arquivo
         ts_end = local_clock()
         recorder.add_marker(MARKER_MUSIC_END, ts_end, music_file=self.music_name, fator=self.music_fator)
+        # congela o traço completo no gráfico e bloqueia pushes tardios.
+        self._plot_active = False
+        self._plot_end()
         recorder.stop()
         recorder.finalize()
         self._recorder = None
@@ -308,6 +338,48 @@ class ExperimentRunner:
         if not self._stop_event.is_set():
             experiment_logger.logger.info("Experimento finalizado.")
             self._post_status("Experimento finalizado.")
+
+    # ------------------------------------------------------------------ #
+    # Controle do gráfico do sinal (fachada opcional em ctx.signal_plot).
+    # begin/end/reset_idle tocam o canvas -> agendados na thread da GUI.
+    # push é thread-safe -> chamado direto da thread de aquisição.
+    def _plot_begin(self, duration, lead) -> None:
+        p = getattr(self.ctx, "signal_plot", None)
+        if p is not None:
+            self.ctx.run_after(lambda: p.begin(duration, lead))
+
+    def _plot_end(self) -> None:
+        p = getattr(self.ctx, "signal_plot", None)
+        if p is not None:
+            self.ctx.run_after(p.end)
+
+    def _plot_reset(self) -> None:
+        p = getattr(self.ctx, "signal_plot", None)
+        if p is not None:
+            self.ctx.run_after(p.reset_idle)
+
+    def _plot_push(self, t, v) -> None:
+        """Encaminha uma amostra ao gráfico (chamado da thread de aquisição).
+
+        `t` vem do `LSLRecorder` relativo ao início da gravação (antes da contagem),
+        mas o eixo X do gráfico começa em 0 na abertura da janela (`_plot_begin`). Por
+        isso a primeira amostra aceita após a janela abrir define `_plot_origin`, e as
+        amostras seguintes são reposicionadas em relação a ela.
+        """
+        if not self._plot_active:
+            return
+        p = getattr(self.ctx, "signal_plot", None)
+        if p is None:
+            return
+        try:
+            t = float(t)
+            if self._plot_origin is None:
+                self._plot_origin = t
+            rel_t = t - self._plot_origin
+            # arredonda só para o gráfico; o CSV mantém o valor bruto.
+            p.push(round(rel_t, 3), round(float(v), 2))
+        except (TypeError, ValueError):
+            pass
 
     # ------------------------------------------------------------------ #
     def _set_button(self, state: str) -> None:

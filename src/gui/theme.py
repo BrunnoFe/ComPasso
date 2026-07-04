@@ -83,11 +83,95 @@ PALETTE_AMBER = {
     "danger_border": "#7A3F2D",
 }
 
+# ---------------------------------------------------------------------------
+# CLARO · frio — acento azul-céu suave
+# ---------------------------------------------------------------------------
+PALETTE_SERENO = {
+    "win_bg":        "#F6F8FB",   # fundo da janela (branco-azulado)
+    "bar_bg":        "#FFFFFF",   # barra de título / menu / cartões
+    "footer_bg":     "#EEF2F7",   # rodapé
+    "border":        "#E2E7EF",   # bordas de cartões e campos
+    "border_win":    "#D6DDE7",   # borda externa da janela / placeholder
+    "input_bg":      "#FFFFFF",   # fundo de campos e botões secundários
+
+    "text":          "#1B2430",   # texto principal (azul-noite)
+    "muted":         "#5A6675",   # texto secundário
+    "faint":         "#8A94A3",   # rótulos / caption
+    "faint2":        "#B4BCC7",   # números apagados (/12)
+
+    "accent":        "#4F86E8",   # acento (azul-céu suave)
+    "accent_ink":    "#FFFFFF",   # texto sobre o acento
+    "accent_tint":   "#E8F1FE",   # fundo tênue do acento (badges, chips)
+    "accent_border": "#C6DBF9",   # borda do pill conectado
+
+    "success":       "#1FA97C",   # ponto "conectado" / checks
+    "danger":        "#E04B54",   # gravando / parar
+    "danger_tint":   "#FCECEE",
+    "danger_border": "#F3C4C8",
+}
+
+# ---------------------------------------------------------------------------
+# CLARO · quente — acento coral-pêssego suave
+# ---------------------------------------------------------------------------
+PALETTE_AURORA = {
+    "win_bg":        "#FBF7F4",   # fundo da janela (marfim quente)
+    "bar_bg":        "#FFFFFF",   # barra de título / menu / cartões
+    "footer_bg":     "#F5EEE9",   # rodapé
+    "border":        "#ECE3DC",   # bordas de cartões e campos
+    "border_win":    "#E1D6CD",   # borda externa da janela / placeholder
+    "input_bg":      "#FFFFFF",   # fundo de campos e botões secundários
+
+    "text":          "#2A211E",   # texto principal (marrom-quase-preto)
+    "muted":         "#6E605A",   # texto secundário
+    "faint":         "#9A8B83",   # rótulos / caption
+    "faint2":        "#C6B9B1",   # números apagados (/12)
+
+    "accent":        "#E2865F",   # acento (coral-pêssego suave)
+    "accent_ink":    "#2A140B",   # texto sobre o acento
+    "accent_tint":   "#FBEAE1",   # fundo tênue do acento (badges, chips)
+    "accent_border": "#F2D0BF",   # borda do pill conectado
+
+    "success":       "#4FA97C",   # ponto "conectado" / checks
+    "danger":        "#D6455A",   # gravando / parar
+    "danger_tint":   "#FBE8EB",
+    "danger_border": "#F0BFC7",
+}
+
+# ---------------------------------------------------------------------------
+# ESCURO — acento verde-esmeralda / menta suave
+# ---------------------------------------------------------------------------
+PALETTE_FLORESTA = {
+    "win_bg":        "#0F1512",   # fundo da janela (verde-quase-preto)
+    "bar_bg":        "#161E1A",   # barra de título / menu / cartões
+    "footer_bg":     "#121814",   # rodapé
+    "border":        "#232E27",   # bordas de cartões e campos
+    "border_win":    "#2A362E",   # borda externa da janela / placeholder
+    "input_bg":      "#0F1512",   # fundo de campos e botões secundários
+
+    "text":          "#E8F0EA",   # texto principal (branco-esverdeado)
+    "muted":         "#93A399",   # texto secundário
+    "faint":         "#6E7D73",   # rótulos / caption
+    "faint2":        "#4A564E",   # números apagados (/12)
+
+    "accent":        "#5ED6A0",   # acento (verde-menta suave)
+    "accent_ink":    "#04140C",   # texto sobre o acento
+    "accent_tint":   "#0E2A1F",   # fundo tênue do acento (badges, chips)
+    "accent_border": "#1C4736",   # borda do pill conectado
+
+    "success":       "#4ADE80",   # ponto "conectado" / checks
+    "danger":        "#F0868A",   # gravando / parar
+    "danger_tint":   "#2A1618",
+    "danger_border": "#7A3038",
+}
+
 # Registro de paletas disponíveis, indexadas pelo nome exibido no menu "Tema".
 PALETTES = {
     "Teal":  PALETTE_TEAL,
     "Iris":  PALETTE_IRIS,
     "Amber": PALETTE_AMBER,
+    "Sereno":   PALETTE_SERENO,
+    "Aurora":   PALETTE_AURORA,
+    "Floresta": PALETTE_FLORESTA
 }
 THEME_NAMES = list(PALETTES)
 

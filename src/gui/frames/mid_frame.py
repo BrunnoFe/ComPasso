@@ -370,13 +370,13 @@ class PlayerBar(Card):
         vol.pack(side=ctk.LEFT, padx=(0, 22))
         ctk.CTkLabel(vol, text="Volume", text_color=MUTED,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side=ctk.LEFT, padx=(0, 8))
-        self.music_volume = ctk.CTkSlider(vol, width=90, height=16, from_=0, to=100,
+        self.music_volume = ctk.CTkSlider(vol, width=120, height=16, from_=0, to=100,
                                           number_of_steps=100, progress_color=ACCENT,
                                           button_color=ACCENT, button_hover_color=ACCENT,
                                           fg_color=BORDER, command=self._on_volume_change)
-        self.music_volume.pack(side=ctk.LEFT)
+        self.music_volume.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
         self.music_volume_label = mono(vol, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
-        self.music_volume_label.pack(side=ctk.LEFT, padx=(8, 0))
+        self.music_volume_label.pack(side=ctk.LEFT, padx=(8, 0), fill=ctk.X, expand=True)
 
         # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
         v = int(round(get_system_volume()))

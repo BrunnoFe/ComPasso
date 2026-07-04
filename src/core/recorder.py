@@ -75,11 +75,15 @@ class LSLRecorder:
     FSYNC_INTERVAL = 0.5     # s — intervalo entre fsyncs (durabilidade)
     DRAIN_AFTER_STOP = 2.0   # s — janela para capturar marcadores pendentes após o stop
 
-    def __init__(self, inlet, channel: int, csv_path: str):
+    def __init__(self, inlet, channel: int, csv_path: str, on_sample=None):
         self.inlet = inlet
         self.channel = int(channel) if channel is not None else 0
         self.csv_path = csv_path
         self.xlsx_path = os.path.splitext(csv_path)[0] + ".xlsx"
+
+        # callback opcional chamado por amostra (timestamp, valor) — usado pelo gráfico
+        # em tempo real. Roda na thread de aquisição; deve ser thread-safe e leve.
+        self._on_sample = on_sample
 
         self.t0 = None
         # instante (time.monotonic) da última amostra recebida; lido pelo watchdog de conexão
@@ -172,14 +176,23 @@ class LSLRecorder:
                         # Descarta amostras anteriores a t0 (timestamp negativo): garante
                         # que a primeira linha gravada tenha timestamp >= 0.
                         if ts >= self.t0:
+                            timestamp = ts - self.t0
+                            signal_value = self._signal_value(sample)
                             marker, music_file, fator = self._take_marker_for(ts)
-                            writer.writerow([ts - self.t0, self._signal_value(sample), marker,
+                            writer.writerow([timestamp, signal_value, marker,
                                             music_file if music_file is not None else "",
                                             fator if fator is not None else ""])
                             f.flush()
                             if time.time() - last_fsync >= self.FSYNC_INTERVAL:
                                 os.fsync(f.fileno())
                                 last_fsync = time.time()
+                            # encaminha a amostra ao gráfico (nunca deixa o gráfico
+                            # derrubar ou atrasar a aquisição — só loga em caso de erro).
+                            if self._on_sample is not None:
+                                try:
+                                    self._on_sample(timestamp, signal_value)
+                                except Exception as e:
+                                    recorder_logger.logger.warning(f"Callback on_sample falhou: {e}")
 
                     # condição de término: stop pedido e todos os marcadores já anexados
                     if self._stop_event.is_set() and not self._has_pending():

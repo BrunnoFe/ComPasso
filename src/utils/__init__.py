@@ -1,4 +1,4 @@
-from .configs import (ENCODING_FORMAT, APP_NAME, PROJECT_URL, LOG_FORMAT, DATA_DIRNAME,
+from .configs import (ENCODING_FORMAT, APP_NAME, PROJECT_URL, LOG_FORMAT, DATA_DIRNAME, PROJECT_GITSITE,
                      LOGS_DIRNAME, EXPERIMENT_FILES_DIRNAME, ERRORS_LOG_FILENAME,
                      PREFS_FILENAME, ICON_FILENAME, LOG_TIMESTAMP_FORMAT)
 from .paths import (get_documents_dir, get_app_data_dir, get_data_dir,
@@ -37,5 +37,6 @@ __all__ = [
     'validar_idade',
     'MIN_IDADE',
     'MAX_IDADE',
-    'format_time'
+    'format_time',
+    'PROJECT_GITSITE'
 ]

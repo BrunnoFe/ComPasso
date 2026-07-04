@@ -12,13 +12,13 @@ from . import set_window_configs
 from . import theme
 from .context import AppContext
 from .assets import ASSETS_DIR
-from .theme import ACCENT, ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
+from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
 from .widgets import show_message
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
-                     PlayerBar, GraphPlaceholder, DownFrame)
+                     PlayerBar, GraphFrame, DownFrame)
 from .experiment_config_window import ExperimentConfigWindow
 from src.core import config_manager, set_system_volume
-from src.utils import ICON_FILENAME, PROJECT_URL, get_logs_dir, open_path
+from src.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
 
 # Volume principal do sistema aplicado uma única vez no arranque do app.
 _INIT_VOLUME = 50
@@ -123,7 +123,8 @@ class ComPasso(ctk.CTk):
             border_width=2
         )
         self.dropdown_ajuda.add_option(option="Abrir pasta de logs", command=self._on_open_logs)
-        self.dropdown_ajuda.add_option(option="Página do projeto (GitHub)", command=self._on_open_github)
+        self.dropdown_ajuda.add_option(option="Página do projeto (GitHub)", command=lambda: self._on_open_github(PROJECT_URL))
+        self.dropdown_ajuda.add_option(option="Site do projeto (GitHub Pages)", command=lambda: self._on_open_github(PROJECT_GITSITE))
 
     def _on_open_logs(self):
         """Abre a pasta de logs (`<app-data>/ComPasso/logs`) no gerenciador de arquivos do SO."""
@@ -136,11 +137,11 @@ class ComPasso(ctk.CTk):
             gui_logger.logger.warning(f"Falha ao abrir a pasta de logs: {e}")
             show_message("Ajuda", f"Não foi possível abrir a pasta de logs:\n{path}", icon="warning")
 
-    def _on_open_github(self):
+    def _on_open_github(self, url):
         """Abre a página do projeto no navegador padrão."""
         try:
-            webbrowser.open(PROJECT_URL)
-            gui_logger.logger.info(f"Página do projeto aberta: {PROJECT_URL}")
+            webbrowser.open(url)
+            gui_logger.logger.info(f"Página do projeto aberta: {url}")
         except Exception as e:
             gui_logger.logger.warning(f"Falha ao abrir a página do projeto: {e}")
             show_message("Ajuda", "Não foi possível abrir a página do projeto no navegador.", icon="warning")
@@ -352,8 +353,8 @@ class MainFrame(ctk.CTkFrame):
 
         content = ctk.CTkScrollableFrame(self, fg_color=WIN_BG,
                                          scrollbar_fg_color=TRANSPARENTE, 
-                                         scrollbar_button_color=ACCENT_TINT,
-                                         scrollbar_button_hover_color=ACCENT)
+                                         scrollbar_button_color=BAR_BG,
+                                         scrollbar_button_hover_color=FAINT2)
         content.pack(fill="both", expand=True, padx=22, pady=(5, 0))
 
         self.connection_frame = ConnectionFrame(content, ctx)
@@ -376,7 +377,7 @@ class MainFrame(ctk.CTkFrame):
         self.player_bar = PlayerBar(content, ctx)
         self.player_bar.pack(fill="x", pady=(0, 16))
 
-        self.graph = GraphPlaceholder(content, ctx)
+        self.graph = GraphFrame(content, ctx)
         self.graph.pack(fill="x", pady=(0, 16))
 
         # rodapé preso embaixo (criado antes do content para reservar o espaço inferior)

@@ -16,7 +16,7 @@ from src.core import connectar_bitalino, ConnectionWatchdog
 # Altura-alvo (px) do logo no topo da barra de conexão. A coluna do MAC (rótulo +
 # campo INPUT_H) é a mais alta da linha (~61 px); manter o logo abaixo disso preserva
 # a altura atual do ConnectionFrame.
-_LOGO_HEIGHT = 48
+_LOGO_HEIGHT = 60
 
 
 @lru_cache(maxsize=1)

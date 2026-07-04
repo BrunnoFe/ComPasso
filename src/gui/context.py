@@ -33,6 +33,11 @@ class AppContext:
         self.signal_channel: int = 0       # índice do canal LSL usado na coluna 'signal'
         self.runner = None            # ExperimentRunner | None
 
+        # fachada do gráfico do sinal (GraphFrame), registrada pelo próprio frame.
+        # None quando não há UI do gráfico; o runner alimenta/controla via os métodos
+        # thread-safe push/begin/end/reset_idle (ver src/gui/frames/graph_frame.py).
+        self.signal_plot = None
+
         # callback registrado pelo DownFrame para alternar o estado do botão principal
         # ("comecar" | "rodando" | "continuar"); chamado pelo runner via post().
         self.set_button_state = None

@@ -1,8 +1,9 @@
 from .top_frame import ConnectionFrame
 from .stepper_frame import StepperFrame
 from .mid_frame import ParticipantCard, FilesCard, PlayerBar
-from .graph_frame import GraphPlaceholder
+from .graph_frame import GraphFrame
 from .bottom_frame import DownFrame
+from .signal_plot import SignalPlot
 
 __all__ = [
     'ConnectionFrame',
@@ -10,6 +11,7 @@ __all__ = [
     'ParticipantCard',
     'FilesCard',
     'PlayerBar',
-    'GraphPlaceholder',
+    'GraphFrame',
     'DownFrame',
+    'SignalPlot'
 ]
