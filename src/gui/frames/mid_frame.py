@@ -7,7 +7,7 @@ from .. import gui_logger
 from ..theme import (BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
                      TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
-from ..widgets import (show_message, title, caption, mono, ghost_button,
+from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
                        styled_entry, circle, check_icon, danger_button, Card)
 from src.core import (scan_music_files, match_conditions, MissingConditionError,
                       set_system_volume, get_system_volume, session_totals)
@@ -52,6 +52,9 @@ class ParticipantCard(Card):
 
         # expõe ao DownFrame o salvamento silencioso quando o form está preenchido mas não salvo
         self.ctx.save_participant_infos_if_filled = self.save_infos_if_filled
+        # expõe ao ExperimentRunner a possibilidade de bloquear a edição durante a sessão
+        self.ctx.set_participant_editable = self.set_editable
+        self.edit_button = None
 
     def _field(self, master, label, placeholder):
         row = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
@@ -119,9 +122,9 @@ class ParticipantCard(Card):
         ctk.CTkLabel(info, text=nome, text_color=TEXT,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_2XL, weight="bold")).pack(anchor="w")
         mono(info, f"{idade} anos · {genero}", FONT_BASE, MUTED).pack(anchor="w")
-        eb = ghost_button(self.summary_frame, "Editar", command=self.edit_infos)
-        eb.configure(width=80, height=36)
-        eb.pack(side="right")
+        self.edit_button = ghost_button(self.summary_frame, "Editar", command=self.edit_infos)
+        self.edit_button.configure(width=80, height=36)
+        self.edit_button.pack(side="right")
 
     def edit_infos(self):
         gui_logger.logger.info("Habilitando edição das informações do participante.")
@@ -129,6 +132,11 @@ class ParticipantCard(Card):
         self.summary_frame.pack_forget()
         self.form_frame.pack(fill=ctk.BOTH, expand=True)
         self.ctx.notify_stepper()
+
+    def set_editable(self, enabled: bool) -> None:
+        """Habilita/desabilita o botão 'Editar' (bloqueado durante o experimento)."""
+        if self.edit_button is not None:
+            self.edit_button.configure(state="normal" if enabled else "disabled")
 
     def restore_summary(self):
         """Reexibe o resumo a partir do contexto (usado após reconstruir a UI, ex.: troca de tema)."""
@@ -340,20 +348,26 @@ class PlayerBar(Card):
         left = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
         left.pack(side=ctk.LEFT)
 
+        # rec_frame e condition_chip ficam sempre "packed" (nunca pack_forget) para que o
+        # cartão tenha altura fixa desde o início — só o texto/cor mudam em _update_progress,
+        # reservando o espaço mesmo quando não há gravação/condição ativa.
         self.rec_frame = ctk.CTkFrame(left, fg_color=TRANSPARENTE)
-        ctk.CTkLabel(self.rec_frame, text="●", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side=ctk.LEFT, padx=(0, 7))
-        ctk.CTkLabel(self.rec_frame, text="GRAVANDO", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold")).pack(side=ctk.LEFT)
-        # rec_frame é mostrado/escondido em _update_progress conforme a aquisição
+        self.rec_frame.pack(anchor=ctk.W, pady=(4, 4))
+        self.rec_dot = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS))
+        self.rec_dot.pack(side=ctk.LEFT, padx=(0, 7))
+        self.rec_label = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
+        self.rec_label.pack(side=ctk.LEFT)
 
         ctk.CTkLabel(left, textvariable=self.ctx.current_music_text, text_color=TEXT,
-                     width=240, anchor=ctk.W,
+                     width=240, wraplength=240, anchor=ctk.W,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).pack(anchor=ctk.W, pady=(4, 4))
         self.condition_chip = ctk.CTkLabel(left, textvariable=self.ctx.current_condition_text,
-                                           fg_color=ACCENT_TINT, text_color=ACCENT, corner_radius=CORNER_CHIP,
+                                           fg_color=TRANSPARENTE, text_color=ACCENT, corner_radius=CORNER_CHIP,
                                            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
-        # o chip é mostrado/escondido conforme houver condição (em _update_progress)
+        self.condition_chip.pack(anchor=ctk.W, pady=(4, 4))
+        # cor/texto do chip são atualizados em _update_progress conforme houver condição
 
         # ----- centro: progresso -----
         prog = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
@@ -392,7 +406,8 @@ class PlayerBar(Card):
         """Para o experimento (se houver um em curso) e a reprodução de áudio."""
         runner = self.ctx.runner
         if runner is not None and runner.is_running():
-            runner.stop()
+            if confirm("Parar experimento", "Tem certeza que deseja parar o experimento?"):
+                runner.stop()
             return
         try:
             self.ctx.player.stop()
@@ -444,19 +459,15 @@ class PlayerBar(Card):
         except Exception:
             pass
 
-        # indicador de gravação + chip de condição refletem o estado da aquisição
+        # indicador de gravação + chip de condição refletem o estado da aquisição; ambos
+        # ficam sempre "packed" (altura fixa do cartão) — só texto/cor mudam aqui.
         try:
             runner = self.ctx.runner
             acquiring = runner is not None and runner.is_acquiring()
-            if acquiring and not self.rec_frame.winfo_ismapped():
-                self.rec_frame.pack(anchor=ctk.W, pady=(4, 4))
-            elif not acquiring and self.rec_frame.winfo_ismapped():
-                self.rec_frame.pack_forget()
+            self.rec_dot.configure(text="●" if acquiring else "")
+            self.rec_label.configure(text="GRAVANDO" if acquiring else "")
             has_cond = bool(self.ctx.current_condition_text.get().strip())
-            if has_cond and not self.condition_chip.winfo_ismapped():
-                self.condition_chip.pack(anchor=ctk.W, pady=(4, 4))
-            elif not has_cond and self.condition_chip.winfo_ismapped():
-                self.condition_chip.pack_forget()
+            self.condition_chip.configure(fg_color=ACCENT_TINT if has_cond else TRANSPARENTE)
         except Exception:
             pass
 

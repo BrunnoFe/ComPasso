@@ -46,6 +46,10 @@ class AppContext:
         # se o formulário estiver preenchido mas não salvo (usado pelo botão "começar").
         self.save_participant_infos_if_filled = None
 
+        # callback registrado pela ParticipantCard: habilita/desabilita o botão "Editar"
+        # (bloqueado pelo ExperimentRunner enquanto uma sessão está em andamento).
+        self.set_participant_editable = None
+
         # watchdog de conexão do BITalino e callback de perda de conexão (top_frame).
         self.watchdog = None
         self.handle_connection_lost = None

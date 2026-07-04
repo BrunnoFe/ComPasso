@@ -178,7 +178,7 @@ def _formatar_mmss_com_sinal(segundos):
     começar)."""
     negativo = segundos < -1e-9
     segundos_inteiros = abs(int(round(segundos)))
-    formatado = "%d:%02d" % (segundos_inteiros // 60, segundos_inteiros % 60)
+    formatado = "%d:%02d" % (segundos_inteiros // 60, segundos_inteiros % 60) #formatar como mm:ss
     return ("-" + formatado) if negativo else formatado
 
 

@@ -180,6 +180,7 @@ class ExperimentRunner:
         self._stop_event.clear() #limpa o evento de parada antes de iniciar
         self._continue_event.clear()
         self._running = True
+        self._set_participant_editable(False)
         experiment_logger.logger.info(f"Iniciando experimento com {len(self._order)} faixa(s) (ordem aleatória).")
         self._thread = threading.Thread(target=self._run_experiment, daemon=True)
         self._thread.start()
@@ -207,6 +208,7 @@ class ExperimentRunner:
         self._plot_active = False
         self._plot_reset()
         self._set_button("comecar")
+        self._set_participant_editable(True)
         self._post_condition("")
         self._post_status("Experimento interrompido.")
 
@@ -254,6 +256,7 @@ class ExperimentRunner:
         cat = _classify_condition(self.music_fator)
 
         self._set_button("rodando")
+        self._post_current_music(f"Preparando: {self.music_name}")
 
         # 1) aquisição + captura de t0 (drena buffer -> t0 -> primeira linha, sem lacuna)
         filename = build_track_filename(order, len(self._order), self.music_name)
@@ -334,6 +337,7 @@ class ExperimentRunner:
     def _finish(self) -> None:
         self._running = False
         self._set_button("comecar")
+        self._set_participant_editable(True)
         self._post_condition("")
         if not self._stop_event.is_set():
             experiment_logger.logger.info("Experimento finalizado.")
@@ -386,6 +390,11 @@ class ExperimentRunner:
         cb = getattr(self.ctx, "set_button_state", None)
         if cb is not None:
             self.ctx.run_after(lambda: cb(state))
+
+    def _set_participant_editable(self, enabled: bool) -> None:
+        cb = getattr(self.ctx, "set_participant_editable", None)
+        if cb is not None:
+            self.ctx.run_after(lambda: cb(enabled))
 
     def _post_status(self, text: str) -> None:
         self.ctx.run_after(lambda: self.ctx.status_text.set(text))

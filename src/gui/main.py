@@ -94,6 +94,17 @@ class ComPasso(ctk.CTk):
         self.editar_option = self.dropdown_experimento.add_option(  # type: ignore[func-returns-value]
             option="Editar", command=self._on_editar, state="disabled")
 
+        self.btn_configs = self.menu_bar.add_cascade("Configurações",
+                                                     hover_color=ACCENT_TINT,
+                                                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
+        self.dropdown_configs = CustomDropdownMenu(widget=self.btn_configs,
+                                                    bg_color=WIN_BG,
+                                                    hover_color=ACCENT_TINT,
+                                                    border_color=BAR_BG,
+                                                    border_width=2)
+        
+        self.dropdown_configs.add_option(option="Gráfico", command= lambda: print("Configurações do gráfico (em breve)"))
+
         # Menu "Tema": uma opção por paleta disponível; troca a aparência ao vivo.
         self.btn_tema = self.menu_bar.add_cascade("Tema",
                                                   hover_color=ACCENT_TINT,
