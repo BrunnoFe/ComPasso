@@ -12,7 +12,7 @@
 
 ---
 
-<img width="1263" height="814" alt="ui" src="https://github.com/user-attachments/assets/105450bb-c452-425d-bdfa-80cee88764b9" />
+<img width="1273" height="825" alt="ui" src="https://github.com/user-attachments/assets/6b98ac8d-3784-4ef9-9614-1602e40b31a8" />
 
 
 ## Sumário
@@ -82,7 +82,7 @@ A conexão com o BITalino **só funciona** se o OpenSignals estiver compartilhan
 O menu **Experimento** (barra de menus da janela principal) centraliza toda a configuração do experimento em arquivos `.config` reutilizáveis. Cada `.config` é um arquivo JSON que armazena caminhos, quantidades esperadas e parâmetros do BITalino — basta abri-lo em sessões futuras para restaurar toda a configuração de uma vez.
 
 
-<img width="700" height="499" alt="configs" src="https://github.com/user-attachments/assets/dd4003c8-acf3-42ee-8c6b-71b3e9aee3f2" />
+<img width="704" height="530" alt="configs" src="https://github.com/user-attachments/assets/91b43053-6089-4816-bc6b-ea10a1ffca57" />
 
 
 > **Carga automática ao iniciar:** o ComPasso carrega silenciosamente o último `.config` usado (se o arquivo ainda existir e for válido) e aplica todos os campos automaticamente. Em sessões recorrentes com o mesmo protocolo, basta abrir o programa e clicar em **Começar**.
@@ -111,13 +111,18 @@ Abre um seletor de arquivos para carregar um `.config` existente da pasta `Docum
 
 Disponível somente após um **Novo** ou **Abrir** bem-sucedido. Reabre a janela de configuração pré-preenchida com os valores do `.config` atual. Ao salvar, solicita confirmação antes de sobrescrever o arquivo.
 
-### 🎨 Tema
+### 🎨 Temas
 
 Novidade da interface redesenhada: o menu **Tema** troca a paleta de cores da aplicação inteira ao vivo, sem reiniciar o programa. Três opções disponíveis — **Teal** (padrão), **Iris** e **Amber** — a escolha é lembrada entre execuções.
 
 > A troca de tema só é permitida com a aplicação **ociosa** (sem BITalino conectado e sem experimento em andamento), pois reconstrói toda a interface.
 
-<!-- SCREENSHOT: menu "Tema" aberto, mostrando as 3 opções de paleta (Teal/Iris/Amber) -->
+
+<img width="1270" height="824" alt="iris" src="https://github.com/user-attachments/assets/746422aa-91c0-44e9-a4fe-48944c241222" />
+
+
+<img width="1274" height="820" alt="ambar" src="https://github.com/user-attachments/assets/166bc524-956b-4759-8c71-0d1c041a55ae" />
+
 
 ---
 
@@ -136,20 +141,14 @@ Uma planilha Excel que associa cada arquivo de música à sua **condição/fator
 | Coluna | Descrição |
 | --- | --- |
 | `musica` | Nome do arquivo de áudio **com a extensão** (ex.: `faixa_01.mp3`) |
-| `fator` | Condição daquela faixa (ex.: `musica`, `ruido`, ou outros rótulos) |
+| `fator` | Condição daquela faixa (ex.: `intenso`, `orgânico`, `ruido`, ou outros rótulos) |
 
 Exemplo:
-
-| musica | fator |
-| --- | --- |
-| faixa_01.mp3 | intenso |
-| branco_01.wav | ruido |
-
 
 <img width="497" height="122" alt="fatores" src="https://github.com/user-attachments/assets/980f1e33-5da6-4e78-a25a-7db569695c06" />
 
 
-> **Importante:** o valor da coluna `musica` deve bater exatamente com o nome do arquivo na pasta. Se uma música não tiver linha correspondente, o programa avisa e interrompe a verificação — corrija a planilha e recarregue. Os contadores **Música / Ruído** são calculados a partir da coluna `fator`: valores que contêm "ruido"/"ruído" contam como ruído; qualquer outro valor conta como música.
+> **Importante:** o valor da coluna `música` deve bater exatamente com o nome do arquivo na pasta. Se uma música não tiver linha correspondente, o programa avisa e interrompe a verificação — corrija a planilha e recarregue. Os contadores **Música / Ruído** são calculados a partir da coluna `fator`: valores que contêm "ruido"/"ruído" contam como ruído; qualquer outro valor conta como música.
 
 ---
 
@@ -170,10 +169,10 @@ A interface foi redesenhada em cartões escuros com um indicador de progresso em
 ### Barra de conexão — BITalino
 
 
-<img width="1219" height="109" alt="bit_conect" src="https://github.com/user-attachments/assets/dceb5366-353b-4206-8f35-cbf82716692a" />
+<img width="1224" height="112" alt="conc" src="https://github.com/user-attachments/assets/20f4a719-5d1a-4b9d-b206-de9267ab4a46" />
 
 
-<img width="1233" height="110" alt="contedado" src="https://github.com/user-attachments/assets/b75c39f7-55de-4f9a-9aef-b6357ac3ec1a" />
+<img width="1518" height="121" alt="conectado" src="https://github.com/user-attachments/assets/1acfe196-eaf0-4b87-9f77-c3e1498e3b7e" />
 
 
 1. **Endereço MAC** — campo de texto para digitar o endereço MAC do BITalino no formato `XX:XX:XX:XX:XX:XX`. É por ele que o ComPasso localiza a *stream* LSL publicada pelo OpenSignals.
@@ -193,7 +192,9 @@ Logo abaixo da barra de conexão, uma faixa com 4 etapas — **Conectar → Part
 
 ### Painel do participante
 
-<img width="486" height="360" alt="participantes" src="https://github.com/user-attachments/assets/6aac6a2a-c4b6-4d3b-84ac-706c84e1d0dc" />
+
+<img width="488" height="307" alt="partic_info" src="https://github.com/user-attachments/assets/fbc951a0-6ea4-4e7e-bead-706f69baa17b" />
+
 
 Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**. Regras de validação:
 
@@ -203,9 +204,15 @@ Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**.
 
 Após salvar, o cartão muda para um resumo (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo.
 
+
+<img width="489" height="309" alt="partic_card" src="https://github.com/user-attachments/assets/b4d4f495-fafa-4660-927a-58721aa30633" />
+
+
 ### Painel de arquivos e diretório de saída
 
-<img width="728" height="359" alt="arquivos" src="https://github.com/user-attachments/assets/24246385-d591-4ae7-863e-4ad7902a9725" />
+
+<img width="732" height="307" alt="arquivos" src="https://github.com/user-attachments/assets/ba3d5178-c9e8-467c-9d08-4562ff2e9914" />
+
 
 Três seleções, que também são preenchidas automaticamente ao carregar um `.config` pelo menu **Experimento**:
 
@@ -217,7 +224,9 @@ Cada linha tem um ícone de check que fica verde assim que o respectivo item é 
 
 ### Player
 
-<img width="1259" height="299" alt="comecar" src="https://github.com/user-attachments/assets/6d69ac3e-5a44-4301-98b6-ed887bf81586" />
+
+<img width="1560" height="244" alt="gravando" src="https://github.com/user-attachments/assets/6fc273c7-6d83-43fc-b245-c87d181c2cc3" />
+
 
 - **Nome da faixa atual** (com um chip indicando a condição/fator) e um indicador **● GRAVANDO** enquanto a aquisição de sinal está ativa.
 - **Barra de progresso** com tempos de início/fim da faixa.
@@ -326,11 +335,6 @@ Documentos/ComPasso/data/
 ## 🚀 Releases
 
 Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são publicados na [página de Releases do repositório](https://github.com/BrunnoFe/Compasso/releases).
-
-| Plataforma | Artefato | Como usar |
-| --- | --- | --- |
-| Windows | `ComPasso-win.zip` (onedir) | Extraia e execute `ComPasso.exe` — mantenha a pasta `_internal` junto. |
-| macOS | `ComPasso-mac.zip` (`ComPasso.app`) | Extraia e abra `ComPasso.app`. |
 
 - Não há instalador: é um app "portátil" (onedir) — copie a pasta inteira para onde preferir.
 - Versionamento segue tags `vAAAA.M.P` (ano.minor.patch); o histórico completo de mudanças de cada versão fica em [`CHANGELOG.md`](CHANGELOG.md), além da descrição de cada release no GitHub.
