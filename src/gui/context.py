@@ -50,6 +50,10 @@ class AppContext:
         # (bloqueado pelo ExperimentRunner enquanto uma sessão está em andamento).
         self.set_participant_editable = None
 
+        # callback registrado pelo MainFrame: ao iniciar o experimento (True) recolhe os
+        # cards e trava o botão de recolher; ao finalizar/parar (False) expande e libera.
+        self.set_experiment_ui_lock = None
+
         # watchdog de conexão do BITalino e callback de perda de conexão (top_frame).
         self.watchdog = None
         self.handle_connection_lost = None

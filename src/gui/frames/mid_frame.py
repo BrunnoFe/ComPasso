@@ -1,10 +1,10 @@
 import os
 
 import customtkinter as ctk
-from tkinter import filedialog
+from tkinter import filedialog, TclError
 
 from .. import gui_logger
-from ..theme import (BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
+from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
                      TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
@@ -18,7 +18,159 @@ _POLL_MS = 100             # re-checagem da seleção de arquivos até tudo esta
 _PROGRESS_MS = 500         # atualização da barra de progresso / indicador de gravação
 _VOLUME_DEBOUNCE_MS = 150  # espera após o último passo do slider antes de aplicar o volume
 
-class ParticipantCard(Card):
+# Animação de recolher/expandir os cards (Participante + Arquivos).
+_COLLAPSE_MS = 100         # duração total da animação de slide
+_COLLAPSE_STEP_MS = 16     # intervalo entre quadros (~60 fps)
+
+
+class _CollapsibleCard:
+    """Mixin que dá a um `Card` a capacidade de recolher/expandir o próprio corpo (`_body`).
+
+    Estratégia "ocultar conteúdo + spacer opaco": em vez de recortar o `_body` transparente
+    (o que deixava pixels "presos"/ghost dentro do `CTkScrollableFrame`), o conteúdo real é
+    removido (`pack_forget`) e um frame-espaçador OPACO (cor do card → invisível) anima a
+    altura no lugar dele. Como nada de transparente é recortado, não há como sobrar pixel; o
+    espaçador pinta sólido a cada quadro. O cabeçalho (`title`) fica fora do `_body` e
+    permanece sempre visível. Não roda o laço de animação por conta própria: o
+    `CardsCollapseController` coordena os passos (`_collapse_prepare`/`_collapse_apply`/
+    `_collapse_settle`) para que os dois cards animem em lockstep. Requer que a subclasse
+    defina `self._body` e o empacote em seu container (`inner`) com `fill="x"`.
+    """
+
+    _body: "ctk.CTkFrame"
+    _collapse_spacer: "ctk.CTkFrame | None" = None
+    _collapse_nat: int = 0
+
+    def _ensure_spacer(self) -> "ctk.CTkFrame":
+        """Cria (lazy) o espaçador opaco, irmão do `_body` dentro do `inner`."""
+        if self._collapse_spacer is None:
+            self._collapse_spacer = ctk.CTkFrame(self._body.master, fg_color=BAR_BG,
+                                                 height=1, corner_radius=0)
+        return self._collapse_spacer
+
+    def _collapse_prepare(self, collapsing: bool) -> None:
+        """Prepara a animação. `collapsing`: True recolhe, False expande."""
+        spacer = self._ensure_spacer()
+        spacer.pack_propagate(False)
+        if collapsing:
+            # mede a altura natural do conteúdo visível, remove o conteúdo (não pode
+            # fantasmar) e coloca o espaçador no lugar, no mesmo tamanho (troca sem salto).
+            self._body.update_idletasks()
+            self._collapse_nat = max(1, self._body.winfo_height())
+            self._body.pack_forget()
+            spacer.configure(height=self._collapse_nat)
+            spacer.pack(fill=ctk.X)
+        else:
+            # expandindo: conteúdo já está removido; o espaçador começa em 1px e cresce.
+            spacer.configure(height=1)
+            if not spacer.winfo_ismapped():
+                spacer.pack(fill=ctk.X)
+
+    def _collapse_apply(self, visible_fraction: float) -> None:
+        """Aplica a fração visível (0..1) à altura do espaçador."""
+        h = max(1, int(self._collapse_nat * visible_fraction))
+        if self._collapse_spacer is not None:
+            self._collapse_spacer.configure(height=h)
+
+    def _collapse_settle(self, collapsed: bool) -> None:
+        """Estado final: só o header (recolhido) ou devolve o conteúdo real (expandido)."""
+        if self._collapse_spacer is not None:
+            self._collapse_spacer.pack_forget()
+        if not collapsed:
+            # devolve o conteúdo real no lugar do espaçador; expand=True é necessário para
+            # que o corpo ocupe toda a altura disponível em `inner` (e não só a do próprio
+            # conteúdo) — sem isso, form_frame/summary_frame (que já usam fill=BOTH,
+            # expand=True) ficam "presos" no topo do card em vez de centralizados quando o
+            # card é esticado por um irmão mais alto no grid (sticky="nsew").
+            self._body.pack(fill=ctk.BOTH, expand=True)
+            self._body.pack_propagate(True)
+
+
+class CardsCollapseController:
+    """Recolhe/expande vários `_CollapsibleCard` juntos com um slide coordenado (after()).
+
+    Um único botão "^" alterna todos os cards em lockstep: um laço `after()` na thread da GUI
+    calcula um progresso suavizado (ease-out) e aplica a mesma fração de altura a cada corpo
+    no mesmo quadro. Como os corpos encolhem juntos, a linha de grid dos cards diminui a cada
+    frame e os widgets abaixo (PlayerBar/gráfico) sobem sem "pulo". Cliques durante a animação
+    são ignorados (reentrância protegida).
+    """
+
+    CHEVRON_EXPANDED = "▴"    # aponta para cima quando expandido
+    CHEVRON_COLLAPSED = "▾"   # aponta para baixo quando recolhido
+
+    def __init__(self, cards, button):
+        self._cards = list(cards)
+        self._button = button
+        self._collapsed = False
+        self._animating = False
+        self._anim_id = None
+        self._button.configure(text=self.CHEVRON_EXPANDED)
+
+    def toggle(self) -> None:
+        """Inicia a animação de recolher (se expandido) ou expandir (se recolhido)."""
+        if self._animating:
+            return
+        self._animating = True
+        collapsing = not self._collapsed
+        for c in self._cards:
+            c._collapse_prepare(collapsing)
+        total = max(1, _COLLAPSE_MS // _COLLAPSE_STEP_MS)
+        self._run(collapsing, 0, total)
+
+    def _run(self, collapsing: bool, step: int, total: int) -> None:
+        p = step / total
+        eased = 1 - (1 - p) ** 2  # ease-out
+        visible = (1 - eased) if collapsing else eased
+        try:
+            for c in self._cards:
+                c._collapse_apply(visible)
+            # força geometria + repintura limpa deste quadro (evita resíduo no vão exposto
+            # do CTkScrollableFrame). update_idletasks é global — 1× por quadro basta.
+            self._button.update_idletasks()
+        except TclError:
+            self._animating = False
+            self._anim_id = None
+            return
+        if step >= total:
+            self._finish(collapsing)
+            return
+        self._anim_id = self._button.after(
+            _COLLAPSE_STEP_MS, lambda: self._run(collapsing, step + 1, total))
+
+    def _finish(self, collapsing: bool) -> None:
+        try:
+            for c in self._cards:
+                c._collapse_settle(collapsing)
+            self._button.configure(
+                text=self.CHEVRON_COLLAPSED if collapsing else self.CHEVRON_EXPANDED)
+            self._button.update_idletasks()  # repintura limpa do estado final
+        except TclError:
+            pass
+        self._collapsed = collapsing
+        self._animating = False
+        self._anim_id = None
+
+    # ---- controle programático (usado pelo ExperimentRunner via ctx) ---- #
+    def collapse(self) -> None:
+        """Recolhe os cards se estiverem expandidos (no-op se já recolhido/animando)."""
+        if not self._collapsed and not self._animating:
+            self.toggle()
+
+    def expand(self) -> None:
+        """Expande os cards se estiverem recolhidos (no-op se já expandido/animando)."""
+        if self._collapsed and not self._animating:
+            self.toggle()
+
+    def set_enabled(self, enabled: bool) -> None:
+        """Habilita/desabilita o botão de recolher (travado durante o experimento)."""
+        try:
+            self._button.configure(state="normal" if enabled else "disabled")
+        except TclError:
+            pass
+
+
+class ParticipantCard(_CollapsibleCard, Card):
     """Cartão do participante com dois estados: formulário e resumo.
 
     - Formulário (padrão / após "Editar"): campos Nome/Idade/Gênero + "Salvar informações".
@@ -33,6 +185,10 @@ class ParticipantCard(Card):
         inner.pack(fill="both", expand=True, padx=20, pady=5)
         title(inner, "Participante").pack(anchor=ctk.W, pady=(5,0))
 
+        # corpo com fill=BOTH, expand=True: ocupa toda a altura disponível em `inner` (para
+        # que form_frame/summary_frame fiquem centralizados verticalmente quando o card é
+        # esticado por um irmão mais alto no grid) — o mixin _CollapsibleCard mede a altura
+        # atual (já esticada) antes de recolher, então isso não atrapalha a animação.
         self._body = ctk.CTkFrame(inner, fg_color=TRANSPARENTE)
         self._body.pack(fill=ctk.BOTH, expand=True)
 
@@ -147,7 +303,7 @@ class ParticipantCard(Card):
         self.summary_frame.pack(fill=ctk.BOTH, expand=True)
 
 
-class FilesCard(Card):
+class FilesCard(_CollapsibleCard, Card):
     """Carregamento da pasta de músicas, do Excel de condições e do diretório de saída."""
 
     _MUSIC_HINT = "Pasta contendo os arquivos de música"
@@ -160,18 +316,29 @@ class FilesCard(Card):
 
         inner = ctk.CTkFrame(self, fg_color=TRANSPARENTE)
         inner.pack(fill=ctk.BOTH, expand=True, padx=20, pady=18)
-        title(inner, "Arquivos & Dados").pack(anchor=ctk.W, pady=(0, 12))
+
+        # cabeçalho: título à esquerda; a direita (self.header) recebe o botão "^" de recolher
+        # (montado pelo MainFrame), e fica sempre visível mesmo com o corpo recolhido.
+        self.header = ctk.CTkFrame(inner, fg_color=TRANSPARENTE)
+        self.header.pack(fill=ctk.X, pady=(0, 12))
+        title(self.header, "Arquivos & Dados").pack(side=ctk.LEFT, anchor=ctk.W)
 
         self.music_file_folder_var = ctk.StringVar(value=self._MUSIC_HINT)
         self.conditions_file_var = ctk.StringVar(value=self._COND_HINT)
         self.salvar_arquivos_var = ctk.StringVar(value=self._SAVE_HINT)
 
+        # corpo recolhível: as 3 linhas ficam num container próprio que o mixin anima.
+        # expand=True por consistência com _collapse_settle (mesmo padrão do ParticipantCard);
+        # como as linhas internas usam fill=X (não expand), não há mudança visual aqui.
+        self._body = ctk.CTkFrame(inner, fg_color=TRANSPARENTE)
+        self._body.pack(fill=ctk.BOTH, expand=True)
+
         self._checks = {}
-        self._checks["music"] = self._row(inner, "Músicas", self.music_file_folder_var,
+        self._checks["music"] = self._row(self._body, "Músicas", self.music_file_folder_var,
                                            "Carregar", self.load_music_folder, first=True)
-        self._checks["cond"] = self._row(inner, "Condições (.xlsx)", self.conditions_file_var,
+        self._checks["cond"] = self._row(self._body, "Condições (.xlsx)", self.conditions_file_var,
                                          "Buscar", self.load_conditions_file)
-        self._checks["save"] = self._row(inner, "Salvar dados em", self.salvar_arquivos_var,
+        self._checks["save"] = self._row(self._body, "Salvar dados em", self.salvar_arquivos_var,
                                          "Escolher", self._choose_save_directory)
 
     def _row(self, master, label, var, btn_text, command, first=False):
@@ -341,55 +508,73 @@ class PlayerBar(Card):
         super().__init__(master)
         self.ctx = ctx
 
-        row = ctk.CTkFrame(self, fg_color=TRANSPARENTE, height=300)
-        row.pack(fill=ctk.BOTH, padx=20, pady=16, expand=True)
+        # Frame principal em grid (4 colunas: faixa | progresso | volume | parar). Um
+        # container só pode usar UM gerenciador de geometria para seus filhos diretos —
+        # por isso `row` e `left` (que também tem filhos próprios) usam grid, enquanto
+        # sub-frames "folha" (rec_frame/prog/vol, cujos filhos não são compartilhados com
+        # mais ninguém) continuam em pack internamente, sem misturar os dois no mesmo pai.
+        main_player_frame = ctk.CTkFrame(self, fg_color=TRANSPARENTE, height=300)
+        main_player_frame.pack(fill=ctk.BOTH, padx=20, pady=16, expand=True)
+        main_player_frame.grid_columnconfigure(0, weight=1)  # faixa: largura fixa
+        main_player_frame.grid_columnconfigure(1, weight=3)  # progresso: ocupa o espaço restante
+        main_player_frame.grid_columnconfigure(2, weight=0)  # volume
+        main_player_frame.grid_columnconfigure(3, weight=0)  # parar
+        main_player_frame.grid_rowconfigure(0, weight=1)
+        main_player_frame.grid_rowconfigure(1, weight=2)
+        main_player_frame.grid_rowconfigure(2, weight=1)
 
-        # ----- esquerda: faixa -----
-        left = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        left.pack(side=ctk.LEFT)
+        # ----- esquerda: faixa (3 linhas empilhadas, altura fixa desde o início) -----
+        rec_cond_frame = ctk.CTkFrame(main_player_frame, fg_color=TRANSPARENTE)
+        rec_cond_frame.grid(row=1, rowspan=2, column=0, columnspan=2, sticky="nsw")
+        rec_cond_frame.grid_columnconfigure(0, weight=0)
+        rec_cond_frame.grid_rowconfigure(0, weight=0)
+        rec_cond_frame.grid_rowconfigure(1, weight=0)
 
-        # rec_frame e condition_chip ficam sempre "packed" (nunca pack_forget) para que o
+        # rec_frame e condition_chip ficam sempre "grid"-ados (nunca removidos) para que o
         # cartão tenha altura fixa desde o início — só o texto/cor mudam em _update_progress,
         # reservando o espaço mesmo quando não há gravação/condição ativa.
-        self.rec_frame = ctk.CTkFrame(left, fg_color=TRANSPARENTE)
-        self.rec_frame.pack(anchor=ctk.W, pady=(4, 4))
+        ctk.CTkLabel(main_player_frame, textvariable=self.ctx.current_music_text, text_color=TEXT, anchor=ctk.W,
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).grid(
+                     row=0, column=0, columnspan=2, sticky=ctk.W, pady=(4, 4))
+
+        self.rec_frame = ctk.CTkFrame(rec_cond_frame, fg_color=TRANSPARENTE)
+        self.rec_frame.grid(row=0, column=0, sticky=ctk.W, pady=(4, 4))
+
         self.rec_dot = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS))
         self.rec_dot.pack(side=ctk.LEFT, padx=(0, 7))
+
         self.rec_label = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
         self.rec_label.pack(side=ctk.LEFT)
 
-        ctk.CTkLabel(left, textvariable=self.ctx.current_music_text, text_color=TEXT,
-                     width=240, wraplength=240, anchor=ctk.W,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).pack(anchor=ctk.W, pady=(4, 4))
-        self.condition_chip = ctk.CTkLabel(left, textvariable=self.ctx.current_condition_text,
+        self.condition_chip = ctk.CTkLabel(rec_cond_frame, textvariable=self.ctx.current_condition_text,
                                            fg_color=TRANSPARENTE, text_color=ACCENT, corner_radius=CORNER_CHIP,
                                            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
-        self.condition_chip.pack(anchor=ctk.W, pady=(4, 4))
+        self.condition_chip.grid(row=1, column=0, sticky=ctk.W, pady=(4, 4))
         # cor/texto do chip são atualizados em _update_progress conforme houver condição
 
         # ----- centro: progresso -----
-        prog = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        prog.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=22)
-        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side=ctk.LEFT)
-        self.music_progress = ctk.CTkProgressBar(prog, height=6, corner_radius=CORNER_PILL,
+        progress_frame = ctk.CTkFrame(main_player_frame, fg_color=TRANSPARENTE)
+        progress_frame.grid(row=1, column=1, sticky=ctk.EW, padx=22)
+        mono(progress_frame, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side=ctk.LEFT)
+        self.music_progress = ctk.CTkProgressBar(progress_frame, height=6, corner_radius=CORNER_PILL,
                                                  progress_color=ACCENT, fg_color=BORDER)
         self.music_progress.set(0.0)
         self.music_progress.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
-        mono(prog, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side=ctk.LEFT)
+        mono(progress_frame, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side=ctk.LEFT)
 
         # ----- volume -----
-        vol = ctk.CTkFrame(row, fg_color=TRANSPARENTE)
-        vol.pack(side=ctk.LEFT, padx=(0, 22))
-        ctk.CTkLabel(vol, text="Volume", text_color=MUTED,
+        volume_frame = ctk.CTkFrame(main_player_frame, fg_color=TRANSPARENTE)
+        volume_frame.grid(row=1, column=2, padx=(0, 22))
+        ctk.CTkLabel(volume_frame, text="Volume", text_color=MUTED,
                      font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side=ctk.LEFT, padx=(0, 8))
-        self.music_volume = ctk.CTkSlider(vol, width=120, height=16, from_=0, to=100,
+        self.music_volume = ctk.CTkSlider(volume_frame, width=120, height=16, from_=0, to=100,
                                           number_of_steps=100, progress_color=ACCENT,
                                           button_color=ACCENT, button_hover_color=ACCENT,
                                           fg_color=BORDER, command=self._on_volume_change)
         self.music_volume.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
-        self.music_volume_label = mono(vol, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
+        self.music_volume_label = mono(volume_frame, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
         self.music_volume_label.pack(side=ctk.LEFT, padx=(8, 0), fill=ctk.X, expand=True)
 
         # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
@@ -398,7 +583,9 @@ class PlayerBar(Card):
         self.ctx.volume_text.set(f"{v}%")
 
         # ----- parar -----
-        danger_button(row, "Parar", command=self._on_stop, width=90, height=BTN_H).pack(side=ctk.LEFT)
+        danger_button(main_player_frame, "Parar", 
+                      command=self._on_stop, 
+                      width=90, height=BTN_H).grid(row=1, column=3, sticky="e")
 
         self.after(_PROGRESS_MS, self._update_progress)
 

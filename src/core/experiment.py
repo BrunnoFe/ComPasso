@@ -181,6 +181,7 @@ class ExperimentRunner:
         self._continue_event.clear()
         self._running = True
         self._set_participant_editable(False)
+        self._set_experiment_ui_lock(True)  # recolhe os cards e trava o botão de recolher
         experiment_logger.logger.info(f"Iniciando experimento com {len(self._order)} faixa(s) (ordem aleatória).")
         self._thread = threading.Thread(target=self._run_experiment, daemon=True)
         self._thread.start()
@@ -209,6 +210,7 @@ class ExperimentRunner:
         self._plot_reset()
         self._set_button("comecar")
         self._set_participant_editable(True)
+        self._set_experiment_ui_lock(False)  # expande os cards e libera o botão de recolher
         self._post_condition("")
         self._post_status("Experimento interrompido.")
 
@@ -338,6 +340,7 @@ class ExperimentRunner:
         self._running = False
         self._set_button("comecar")
         self._set_participant_editable(True)
+        self._set_experiment_ui_lock(False)  # expande os cards e libera o botão de recolher
         self._post_condition("")
         if not self._stop_event.is_set():
             experiment_logger.logger.info("Experimento finalizado.")
@@ -395,6 +398,12 @@ class ExperimentRunner:
         cb = getattr(self.ctx, "set_participant_editable", None)
         if cb is not None:
             self.ctx.run_after(lambda: cb(enabled))
+
+    def _set_experiment_ui_lock(self, active: bool) -> None:
+        """Recolhe/expande os cards e trava/destrava o botão de recolher (via MainFrame)."""
+        cb = getattr(self.ctx, "set_experiment_ui_lock", None)
+        if cb is not None:
+            self.ctx.run_after(lambda: cb(active))
 
     def _post_status(self, text: str) -> None:
         self.ctx.run_after(lambda: self.ctx.status_text.set(text))

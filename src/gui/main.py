@@ -13,9 +13,9 @@ from . import theme
 from .context import AppContext
 from .assets import ASSETS_DIR
 from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
-from .widgets import show_message
+from .widgets import show_message, ghost_button
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
-                     PlayerBar, GraphFrame, DownFrame)
+                     PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
 from .experiment_config_window import ExperimentConfigWindow
 from src.core import config_manager, set_system_volume
 from src.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
@@ -385,6 +385,20 @@ class MainFrame(ctk.CTkFrame):
         self.files_card = FilesCard(cards, ctx)
         self.files_card.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
 
+        # botão "^" (canto superior direito do bloco de cards) recolhe/expande os DOIS cards
+        # juntos, via animação de slide coordenada (CardsCollapseController).
+        self.collapse_button = ghost_button(self.files_card.header, "▴", 
+                                            width=32, height=28,
+                                            size=16)
+        self.collapse_button.pack(side="right")
+        self.cards_collapser = CardsCollapseController(
+            [self.participant_card, self.files_card], self.collapse_button)
+        self.collapse_button.configure(command=self.cards_collapser.toggle)
+
+        # trava/destrava dos cards conforme o experimento (chamado pelo ExperimentRunner):
+        # ao iniciar recolhe + desabilita o botão; ao finalizar/parar expande + reabilita.
+        ctx.set_experiment_ui_lock = self._set_experiment_ui_lock
+
         self.player_bar = PlayerBar(content, ctx)
         self.player_bar.pack(fill="x", pady=(0, 16))
 
@@ -396,6 +410,19 @@ class MainFrame(ctk.CTkFrame):
         self.down_frame.pack(fill="x", side="bottom") 
 
         self.after(100, self.files_card.check_music_file_infos)
+
+    def _set_experiment_ui_lock(self, active: bool):
+        """Trava/destrava os cards colapsáveis conforme o experimento (thread da GUI).
+
+        `active=True` (experimento iniciado): recolhe os cards (se abertos) e desabilita o
+        botão de recolher. `active=False` (finalizado/parado): reabilita o botão e expande.
+        """
+        if active:
+            self.cards_collapser.collapse()
+            self.cards_collapser.set_enabled(False)
+        else:
+            self.cards_collapser.set_enabled(True)
+            self.cards_collapser.expand()
 
 if __name__ == "__main__":
     app = ComPasso()
