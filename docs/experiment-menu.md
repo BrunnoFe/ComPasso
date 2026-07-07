@@ -1,8 +1,9 @@
-# 🗂️ Menus Experimento / Tema / Ajuda
+# 🗂️ Menus Experimento / Configurações / Tema / Ajuda
 
-A barra de menus da janela principal tem três cascatas: **Experimento**, **Tema** e **Ajuda**.
+A barra de menus da janela principal tem quatro cascatas: **Experimento**, **Configurações**,
+**Tema** e **Ajuda**.
 
-<!-- SCREENSHOT: barra de menus com Experimento / Tema / Ajuda -->
+<!-- SCREENSHOT: barra de menus com Experimento / Configurações / Tema / Ajuda -->
 
 ## 📁 Menu Experimento
 
@@ -65,6 +66,23 @@ Ao **abrir** um arquivo, há ainda verificações de estrutura: se o JSON estive
 (`Arquivo de configuração inválido ou ilegível (JSON malformado)`), se faltar a versão
 (`Campo ausente: versão da configuração (config_version)`), ou se algum campo obrigatório estiver
 ausente/vazio (`Campo ausente: ...` / `Campo vazio: ...`).
+
+## ⚙️ Menu Configurações
+
+Por enquanto tem uma única opção: **Gráfico**, que abre a janela **Configurações do Gráfico** —
+ajusta os parâmetros de exibição do gráfico do sinal em tempo real (escala do eixo Y, média
+móvel, taxa de atualização, espessura da linha, grade e rótulos dos eixos). Detalhes completos
+na seção [📈 Gráfico do sinal em tempo real](running-an-experiment.md#-gráfico-do-sinal-em-tempo-real)
+de "Executando um experimento".
+
+<!-- SCREENSHOT: janela "Configurações do Gráfico" com todos os controles visíveis -->
+
+As mudanças têm **preview ao vivo** (aparecem no gráfico na hora, se um gráfico estiver visível)
+e são persistidas em `prefs.json` — carregadas automaticamente na próxima abertura do programa,
+junto com o tema. A **escala do eixo Y** fica desabilitada durante um experimento em andamento
+(é fixa durante a sessão); as demais configurações podem ser ajustadas a qualquer momento. Botões:
+**Salvar** (aplica e persiste), **Restaurar padrões** (volta aos valores de fábrica) e
+**Cancelar** (fecha sem salvar, revertendo qualquer preview aplicado).
 
 ## 🎨 Menu Tema
 

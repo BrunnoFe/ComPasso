@@ -21,6 +21,9 @@ Esta página descreve o fluxo completo de uma sessão de coleta, do preparo ao e
   [Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo.
 - **Rodapé** — contadores **ESTÍMULOS** / **RUÍDO**, status e barra de progresso da sessão, e o
   botão principal (**Começar** / **Executando…** / **Continuar →**).
+- **Recolher os painéis Participante/Arquivos** — um botão **▴/▾** no canto superior direito do
+  painel "Arquivos & Dados" recolhe/expande os dois painéis juntos (animação de slide), liberando
+  espaço para o player e o gráfico depois que os formulários já foram preenchidos.
 
 ## Informações do participante
 
@@ -35,6 +38,10 @@ gênero") com um botão **Editar**.
 
 > Se você clicar em **Começar** com o formulário preenchido mas ainda não salvo, o ComPasso tenta
 > salvá-lo automaticamente antes de validar os pré-requisitos.
+>
+> ⚠️ Durante um experimento em andamento, o botão **Editar** fica desabilitado (evita alterar as
+> informações do participante no meio de uma sessão de coleta) e os painéis Participante/Arquivos
+> recolhem automaticamente, com o botão **▴/▾** travado até a sessão terminar ou ser interrompida.
 
 ## Pré-requisitos para iniciar
 
@@ -70,9 +77,11 @@ Para cada faixa da sequência:
 1. **Início da aquisição** — o gravador LSL começa a capturar o sinal e captura o instante `t0`;
    é registrado o marcador **`INICIO_CONTAGEM`**. O botão principal vai para **Executando…**
    (desabilitado).
-2. **Contagem regressiva de 10 segundos** — a gravação já está em curso durante a contagem. Nos
-   **5 segundos finais**, o gráfico do sinal já se abre e começa a mostrar o que está sendo
-   captado (veja [📈 Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo).
+2. **Contagem regressiva de 10 segundos** — a gravação já está em curso durante a contagem, e o
+   rótulo do player mostra **"Preparando: {nome da música}"** (inclusive logo após clicar em
+   **Continuar →**, antes da faixa seguinte começar de fato). Nos **5 segundos finais**, o
+   gráfico do sinal já se abre e começa a mostrar o que está sendo captado (veja
+   [📈 Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo).
 3. **Reprodução** — ao iniciar o áudio, é registrado o marcador **`INICIO_MUSICA`** (com o nome
    do arquivo e o fator). O indicador **● GRAVANDO** e o chip de condição (música/ruído) ficam
    visíveis. A faixa toca até o fim.
@@ -100,8 +109,8 @@ plausível (sem precisar abrir o CSV depois):
   clara.
 - A linha se forma **continuamente**, com um ponteiro que acompanha a formação e mostra o valor
   atual (µV) no canto superior direito do cartão.
-- O eixo vertical é fixo em **±30 µV** (a faixa típica do sinal do BITalino) e só se ajusta
-  automaticamente se um pico ultrapassar esse intervalo.
+- O eixo vertical é **sempre fixo** na escala configurada (padrão **±30 µV**), com marcas e linhas
+  de grade de **10 em 10 µV** — não há mais reescala automática pelos dados.
 - Ao final da faixa, o registro completo permanece visível durante a pausa "Continuar →" e some
   ~1 segundo antes do início da contagem da próxima faixa.
 - Ao clicar em **Parar**, o gráfico volta imediatamente ao estado ocioso ("Aguardando gravação…").
@@ -109,11 +118,31 @@ plausível (sem precisar abrir o CSV depois):
 > 💡 O gráfico é só uma conferência visual — os arquivos CSV/XLSX sempre gravam o valor **bruto**
 > do sinal, sem qualquer suavização aplicada à exibição. Veja [Dados de saída](output-data.md).
 
+### ⚙️ Configurações do gráfico
+
+O menu **Configurações → Gráfico** (veja [Menus](experiment-menu.md#-menu-configurações)) abre
+uma janela para ajustar como o gráfico é exibido, com **preview ao vivo** e persistência entre
+execuções:
+
+| Configuração | Faixa | Padrão |
+| --- | --- | --- |
+| Escala do eixo Y (µV, simétrica) | ±10 a ±50 (passo 10) | ±30 |
+| Média móvel (suavização visual) | liga/desliga + janela de 1 a 15 colunas | ligada, janela 5 |
+| Atualização (FPS) | 10 / 15 / 30 / 60 | 60 |
+| Espessura da linha | 0.5 a 4.0 px | 1.5 |
+| Linhas de grade | liga/desliga | ligadas |
+| Rótulos dos eixos | liga/desliga | ligados |
+
+> ⚠️ A **escala do eixo Y** fica travada durante um experimento em andamento; as demais
+> configurações podem ser ajustadas a qualquer momento. Botões: **Salvar**, **Restaurar padrões**
+> e **Cancelar**.
+
 ## Interrompendo a sessão
 
-O botão **Parar** (no player) encerra a sessão a qualquer momento: interrompe a reprodução,
-registra o marcador **`PARADA_FORCADA`**, finaliza o arquivo da faixa em andamento e volta o botão
-principal para **Começar**.
+O botão **Parar** (no player) encerra a sessão a qualquer momento: pede confirmação ("Tem certeza
+que deseja parar o experimento?") e, se confirmado, interrompe a reprodução, registra o marcador
+**`PARADA_FORCADA`**, finaliza o arquivo da faixa em andamento, volta o botão principal para
+**Começar** e reabre os painéis Participante/Arquivos (se estavam recolhidos).
 
 > A perda de conexão detectada pelo watchdog (15 s sem amostras) também interrompe a sessão da
 > mesma forma. Veja [Conexão com o BITalino](bitalino-connection.md).

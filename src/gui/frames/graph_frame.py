@@ -18,7 +18,7 @@ import tkinter as tk
 import customtkinter as ctk
 
 from .. import theme
-from ..theme import (ACCENT, FAINT, TRANSPARENTE, DISPLAY_FAMILY, MONO_FAMILY,
+from ..theme import (ACCENT, TRANSPARENTE, DISPLAY_FAMILY, MONO_FAMILY,
                      FONT_MD, PAD_MD, PAD_SM)
 from ..widgets import Card, caption, mono
 from .signal_plot import GraficoSinal
@@ -27,6 +27,28 @@ from .signal_plot import GraficoSinal
 _ALTURA_GRAFICO = 300
 # intervalo (ms) de atualização da leitura ao vivo do valor atual
 _INTERVALO_LEITURA_MS = 500
+
+# mapa das chaves de ctx.graph_settings -> kwargs do construtor de GraficoSinal
+_MAPA_SETTINGS_GRAFICO = {
+    "y_scale": "escala_y",
+    "smoothing_enabled": "suavizacao_ativa",
+    "smoothing_window": "janela_suavizacao",
+    "fps": "fps",
+    "line_width": "largura_linha",
+    "grid_visible": "grade_visivel",
+    "axis_labels_visible": "rotulos_visiveis",
+}
+
+
+def _kwargs_grafico(settings) -> dict:
+    """Traduz um dict ``graph_settings`` nos kwargs do construtor de ``GraficoSinal``.
+
+    Chaves ausentes/inválidas são omitidas, deixando o widget usar seus próprios
+    defaults (que já são os valores hardcoded originais)."""
+    if not isinstance(settings, dict):
+        return {}
+    return {kwarg: settings[chave] for chave, kwarg in _MAPA_SETTINGS_GRAFICO.items()
+            if chave in settings}
 
 
 class GraphFrame(Card):
@@ -46,10 +68,14 @@ class GraphFrame(Card):
         self._rotulo_valor = mono(cabecalho, "—", size=FONT_MD, color=ACCENT)
         self._rotulo_valor.pack(side="right")
 
-        # o gráfico propriamente dito (Canvas puro, recebe a paleta ativa por parâmetro)
+        # o gráfico propriamente dito (Canvas puro, recebe a paleta ativa por parâmetro).
+        # As configurações de exibição vêm do hub (ctx.graph_settings, populado no arranque
+        # e ajustável pela janela "Configurações do Gráfico"); ausentes -> defaults do widget.
+        settings = getattr(ctx, "graph_settings", None) if ctx is not None else None
         self._grafico = GraficoSinal(self, paleta=theme.THEME,
                                      familia_display=DISPLAY_FAMILY, familia_mono=MONO_FAMILY,
-                                     height=_ALTURA_GRAFICO)
+                                     height=_ALTURA_GRAFICO,
+                                     **_kwargs_grafico(settings))
         self._grafico.pack(fill="x", expand=True, padx=PAD_MD, pady=(PAD_SM, PAD_MD))
 
         # nasce ocioso ("Aguardando gravação…")
@@ -99,6 +125,13 @@ class GraphFrame(Card):
     def reset_idle(self) -> None:
         """Volta o gráfico ao estado ocioso."""
         self._grafico.voltar_ao_ocioso()
+
+    def apply_settings(self, settings: dict) -> None:
+        """Aplica configurações de exibição ao vivo (janela "Configurações do Gráfico").
+
+        `settings` usa as chaves de `ctx.graph_settings` (ver `_MAPA_SETTINGS_GRAFICO`)
+        — a escala Y só muda com o gráfico fora de gravação (ver `GraficoSinal`)."""
+        self._grafico.aplicar_configuracoes(settings)
 
     def destroy(self):
         if self._id_after_leitura:

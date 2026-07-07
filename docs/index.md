@@ -25,7 +25,8 @@ faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento ali
 
 1. [Primeiros passos](getting-started.md) — requisitos, instalação e como executar.
 2. [Conexão com o BITalino](bitalino-connection.md) — OpenSignals, LSL e o watchdog de conexão.
-3. [Menus Experimento / Tema / Ajuda](experiment-menu.md) — criação e uso de configurações.
+3. [Menus Experimento / Configurações / Tema / Ajuda](experiment-menu.md) — criação e uso de
+   configurações, incluindo as opções do gráfico do sinal.
 4. [Arquivo de configuração `.config`](configuration-file.md) — o schema real dos campos.
 5. [Arquivos de entrada](input-files.md) — pasta de músicas e planilha de condições.
 6. [Executando um experimento](running-an-experiment.md) — passo a passo completo de uma sessão,
@@ -34,6 +35,3 @@ faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento ali
 8. [Solução de problemas](troubleshooting.md) — erros comuns e como resolvê-los.
 
 ---
-
-> Documentação gerada a partir do código-fonte do projeto. Para o funcionamento interno e
-> convenções de desenvolvimento, veja o `README.md` e o `CLAUDE.md` na raiz do repositório.

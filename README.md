@@ -19,7 +19,7 @@
 - [📋 Requisitos](#-requisitos)
 - [📦 Instalação](#-instalação)
 - [🔌 Antes de abrir o programa](#-antes-de-abrir-o-programa)
-- [📁 Menu "Experimento" e "Tema"](#-menu-experimento-e-tema)
+- [📁 Menu "Experimento", "Configurações" e "Tema"](#-menu-experimento-configurações-e-tema)
 - [📂 Arquivos que você precisa preparar](#-arquivos-que-você-precisa-preparar)
 - [🎬 Como executar](#-como-executar)
 - [🧭 A interface, painel por painel](#-a-interface-painel-por-painel)
@@ -74,7 +74,7 @@ A conexão com o BITalino **só funciona** se o OpenSignals estiver compartilhan
 
 ---
 
-## 📁 Menu "Experimento" e "Tema"
+## 📁 Menu "Experimento", "Configurações" e "Tema"
 
 O menu **Experimento** (barra de menus da janela principal) centraliza toda a configuração do experimento em arquivos `.config` reutilizáveis. Cada `.config` é um arquivo JSON que armazena caminhos, quantidades esperadas e parâmetros do BITalino — basta abri-lo em sessões futuras para restaurar toda a configuração de uma vez.
 
@@ -105,6 +105,10 @@ Abre um seletor de arquivos para carregar um `.config` existente da pasta `Docum
 ### Editar
 
 Disponível somente após um **Novo** ou **Abrir** bem-sucedido. Reabre a janela de configuração pré-preenchida com os valores do `.config` atual. Ao salvar, solicita confirmação antes de sobrescrever o arquivo.
+
+### ⚙️ Configurações → Gráfico
+
+Abre a janela **Configurações do Gráfico**, para ajustar como o gráfico do sinal em tempo real é exibido — veja a seção [📈 Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) para a lista completa de opções, faixas e padrões. As mudanças são salvas em `prefs.json` e recarregadas automaticamente na próxima abertura do programa.
 
 ### 🎨 Temas
 
@@ -189,6 +193,18 @@ Logo abaixo da barra de conexão, uma faixa com 4 etapas — **Conectar → Part
 
 <!-- SCREENSHOT: stepper de 4 etapas, com pelo menos uma etapa concluída e outra "AGORA" -->
 
+### Recolher os cartões Participante / Arquivos & Dados
+
+Um botão **▴/▾** no canto superior direito do cartão "Arquivos & Dados" recolhe os dois cartões
+juntos (Participante + Arquivos & Dados) numa animação de slide suave, deixando visível só o
+título de cada um — útil para dar mais espaço ao player e ao gráfico do sinal depois que os
+formulários já foram preenchidos. Ao clicar em **Começar**, os cartões recolhem automaticamente
+(se ainda abertos) e o botão fica travado durante toda a sessão; ao finalizar o experimento
+(sozinho, ao fim das faixas, ou pelo botão **Parar**) eles reabrem sozinhos e o botão volta a
+funcionar.
+
+<!-- SCREENSHOT/GIF: botão ▴/▾ recolhendo os dois cartões -->
+
 ### Painel do participante
 
 <img width="488" height="307" alt="partic_info" src="https://github.com/user-attachments/assets/fbc951a0-6ea4-4e7e-bead-706f69baa17b" />
@@ -199,7 +215,7 @@ Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**.
 - **Idade**: número inteiro entre **18 e 100**.
 - Todos os campos são obrigatórios.
 
-Após salvar, o cartão muda para um resumo (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo.
+Após salvar, o cartão muda para um resumo (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo. O botão **Editar** fica desabilitado durante um experimento em andamento (evita alterar as informações do participante no meio de uma sessão de coleta) e volta a funcionar assim que o experimento finaliza ou é interrompido.
 
 <img width="489" height="309" alt="partic_card" src="https://github.com/user-attachments/assets/b4d4f495-fafa-4660-927a-58721aa30633" />
 
@@ -219,10 +235,10 @@ Cada linha tem um ícone de check que fica verde assim que o respectivo item é 
 
 <img width="1560" height="244" alt="gravando" src="https://github.com/user-attachments/assets/6fc273c7-6d83-43fc-b245-c87d181c2cc3" />
 
-- **Nome da faixa atual** (com um chip indicando a condição/fator) e um indicador **● GRAVANDO** enquanto a aquisição de sinal está ativa.
+- **Nome da faixa atual** (com um chip indicando a condição/fator) e um indicador **● GRAVANDO** enquanto a aquisição de sinal está ativa. Durante a contagem regressiva antes de cada faixa (inclusive logo após clicar em **Continuar →**), o rótulo mostra "Preparando: {nome da música}" até a reprodução começar de fato.
 - **Barra de progresso** com tempos de início/fim da faixa.
 - **Volume** — slider que controla o volume principal do sistema; ao abrir o programa, o volume é ajustado automaticamente para 50%.
-- **Parar** — interrompe **a qualquer momento** o experimento e a reprodução, gravando o marcador `stop` e finalizando o arquivo da faixa atual.
+- **Parar** — interrompe **a qualquer momento** o experimento e a reprodução, gravando o marcador `stop` e finalizando o arquivo da faixa atual. Pede confirmação ("Tem certeza que deseja parar o experimento?") antes de interromper, para evitar cliques acidentais em uma sessão em andamento.
 
 ### 📈 Gráfico do sinal em tempo real
 
@@ -232,11 +248,26 @@ Abaixo do player, um cartão desenha o sinal do BITalino do canal selecionado **
 
 - O gráfico se abre nos **últimos 5 segundos** da contagem regressiva (eixo de tempo começa em `-0:05`) e mostra a música inteira até o fim (`0:00` = início da faixa, destacado por uma linha mais clara).
 - A linha se forma **continuamente e sem travar a interface**, com um ponteiro que acompanha a formação em tempo real e mostra o valor atual (µV) no canto superior.
-- O eixo Y é fixo em **±30 µV** (a escala típica do sinal do BITalino) e só se ajusta automaticamente se um pico ultrapassar essa faixa.
+- O eixo Y é **sempre fixo** na escala configurada (padrão **±30 µV**), com marcas e linhas de grade de **10 em 10 µV** — não há mais ajuste automático pelos dados.
 - Ao final de cada faixa, o registro completo permanece visível até ~1 segundo antes da próxima música começar, quando o gráfico se limpa para a faixa seguinte.
 - Ao **parar** o experimento, o gráfico volta ao estado ocioso ("Aguardando gravação…").
 
 > 💡 O gráfico é só uma conferência visual em tempo real — os dados salvos em CSV/XLSX sempre trazem o valor **bruto** do sinal, sem qualquer suavização aplicada à exibição.
+
+#### ⚙️ Configurações do gráfico
+
+O menu **Configurações → Gráfico** abre uma janela para ajustar como o gráfico é exibido, com **preview ao vivo** (as mudanças aparecem no gráfico na hora) e persistência entre execuções:
+
+| Configuração | Faixa | Padrão |
+| --- | --- | --- |
+| Escala do eixo Y (µV, simétrica) | ±10 a ±50 (passo 10) | ±30 |
+| Média móvel (suavização visual) | liga/desliga + janela de 1 a 15 colunas | ligada, janela 5 |
+| Atualização (FPS) | 10 / 15 / 30 / 60 | 60 |
+| Espessura da linha | 0.5 a 4.0 px | 1.5 |
+| Linhas de grade | liga/desliga | ligadas |
+| Rótulos dos eixos | liga/desliga | ligados |
+
+> ⚠️ A **escala do eixo Y** não pode ser alterada enquanto um experimento está em andamento (fica travada durante a sessão, para não mudar a referência visual no meio de uma gravação); as demais configurações podem ser ajustadas a qualquer momento. Os botões **Salvar**, **Restaurar padrões** e **Cancelar** funcionam como nas demais janelas do app.
 
 ### Rodapé — Progresso e início do experimento
 
@@ -371,4 +402,7 @@ barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
 - Cartão do gráfico do sinal em tempo real, durante uma gravação real (linha se formando + ponteiro
   + chip de tempo visíveis) — um GIF curto comunica bem a fluidez da animação.
 - Ícone/logo do app em alta resolução para o topo do README.
+- GIF do botão "▴/▾" recolhendo/expandindo os cartões Participante + Arquivos & Dados (animação de
+  slide de ~100 ms), incluindo o momento em que o experimento inicia (cartões recolhem e o botão
+  trava sozinho) e finaliza/para (reabrem e o botão destrava).
 -->

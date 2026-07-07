@@ -17,6 +17,7 @@ from .widgets import show_message, ghost_button
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
 from .experiment_config_window import ExperimentConfigWindow
+from .graph_settings_window import GraphSettingsWindow
 from src.core import config_manager, set_system_volume
 from src.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
 
@@ -49,6 +50,10 @@ class ComPasso(ctk.CTk):
             gui_logger.logger.warning(f"Não foi possível ajustar a janela : {e}")
 
         self.ctx = AppContext(self)
+
+        # configurações de exibição do gráfico (persistidas em prefs.json); lidas antes de
+        # construir o MainFrame para que o GraphFrame já nasça com os valores salvos.
+        self.ctx.graph_settings = config_manager.get_graph_prefs()
 
         # menu "Experimento" + sistema de configuração (.config)
         self._loaded_config_path = None
@@ -103,7 +108,7 @@ class ComPasso(ctk.CTk):
                                                     border_color=BAR_BG,
                                                     border_width=2)
         
-        self.dropdown_configs.add_option(option="Gráfico", command= lambda: print("Configurações do gráfico (em breve)"))
+        self.dropdown_configs.add_option(option="Gráfico", command=self._on_graph_settings)
 
         # Menu "Tema": uma opção por paleta disponível; troca a aparência ao vivo.
         self.btn_tema = self.menu_bar.add_cascade("Tema",
@@ -147,6 +152,10 @@ class ComPasso(ctk.CTk):
         except Exception as e:
             gui_logger.logger.warning(f"Falha ao abrir a pasta de logs: {e}")
             show_message("Ajuda", f"Não foi possível abrir a pasta de logs:\n{path}", icon="warning")
+
+    def _on_graph_settings(self):
+        """Abre a janela modal "Configurações do Gráfico" (menu Configurações → Gráfico)."""
+        GraphSettingsWindow(self, self.ctx)
 
     def _on_open_github(self, url):
         """Abre a página do projeto no navegador padrão."""

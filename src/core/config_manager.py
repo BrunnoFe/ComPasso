@@ -214,3 +214,53 @@ def get_theme_pref():
     """Retorna o nome da paleta de tema salva, ou None se não houver."""
     name = _read_prefs().get("theme")
     return name if name else None
+
+
+# Configurações de exibição do gráfico do sinal em tempo real (ver
+# src/gui/frames/signal_plot.py). Os defaults são exatamente os valores hardcoded
+# atuais do gráfico; são usados na primeira execução e sempre que uma chave estiver
+# ausente ou inválida no prefs.json.
+DEFAULT_GRAPH_SETTINGS = {
+    "y_scale": 30,               # escala Y simétrica (µV): ±20/±30/±40/±50
+    "smoothing_enabled": True,   # média móvel de exibição ligada?
+    "smoothing_window": 5,       # janela da média móvel (colunas de exibição, 1–15)
+    "fps": 60,                   # quadros por segundo do gráfico: 10/15/30/60
+    "line_width": 1.5,           # espessura da linha do sinal (px)
+    "grid_visible": True,        # mostrar linhas de grade?
+    "axis_labels_visible": True, # mostrar rótulos dos eixos?
+}
+
+
+def get_graph_prefs() -> dict:
+    """Retorna as configurações do gráfico, mesclando os defaults com o que houver salvo.
+
+    Parte de uma cópia de ``DEFAULT_GRAPH_SETTINGS`` e sobrepõe apenas as chaves
+    conhecidas presentes (e do tipo esperado) em ``prefs["graph"]`` — assim chaves
+    ausentes na primeira execução caem no default e valores inesperados são ignorados.
+    """
+    result = dict(DEFAULT_GRAPH_SETTINGS)
+    stored = _read_prefs().get("graph")
+    if isinstance(stored, dict):
+        for key, default_value in DEFAULT_GRAPH_SETTINGS.items():
+            if key not in stored:
+                continue
+            value = stored[key]
+            if isinstance(default_value, bool):
+                if isinstance(value, bool):        # bool antes de int (bool é subclasse de int)
+                    result[key] = value
+            elif isinstance(default_value, (int, float)):
+                if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    result[key] = value
+    return result
+
+
+def set_graph_prefs(settings: dict) -> None:
+    """Persiste as configurações do gráfico em ``prefs["graph"]`` (preserva tema/last_config).
+
+    Grava somente as chaves de ``DEFAULT_GRAPH_SETTINGS``, caindo no default quando
+    uma delas estiver ausente em ``settings``.
+    """
+    prefs = _read_prefs()
+    prefs["graph"] = {key: settings.get(key, default_value)
+                      for key, default_value in DEFAULT_GRAPH_SETTINGS.items()}
+    _write_prefs(prefs)

@@ -38,6 +38,11 @@ class AppContext:
         # thread-safe push/begin/end/reset_idle (ver src/gui/frames/graph_frame.py).
         self.signal_plot = None
 
+        # configurações de exibição do gráfico (ver src/core/config_manager.py e a janela
+        # "Configurações do Gráfico"). Populado no arranque a partir de get_graph_prefs();
+        # o GraphFrame lê este dict ao construir o GraficoSinal (sobrevive à troca de tema).
+        self.graph_settings: dict = {}
+
         # callback registrado pelo DownFrame para alternar o estado do botão principal
         # ("comecar" | "rodando" | "continuar"); chamado pelo runner via post().
         self.set_button_state = None

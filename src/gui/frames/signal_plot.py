@@ -14,10 +14,12 @@ Eixos:
     DESTACADO por uma linha mais clara. Marcas com intervalo ADAPTATIVO ancoradas
     no 0; rótulos que ficariam colados nas bordas (início/fim da faixa) são
     descartados a favor delas (ver ``_escolher_rotulos_eixo_x``).
-  * Y (sinal): eixo FIXO em ``_LIMITES_EIXO_Y_PADRAO`` (±30 µV nesta versão), com
-    reescala automática (rara) só quando um pico ultrapassa a borda em ~10% — ver
-    ``_talvez_reescalar_eixo_y``. Um eixo fixo faz o trecho já desenhado da linha
-    do sinal nunca precisar ser redesenhado por mudança de escala (ver "Desempenho").
+  * Y (sinal): eixo SEMPRE FIXO na escala configurada (default ``_ESCALA_Y_PADRAO_UV``,
+    ±30 µV), com marcas/linhas de grade de 10 em 10 µV (``_PASSO_EIXO_Y_UV``). A escala
+    é definida no construtor e ajustável pela janela "Configurações do Gráfico" (ver
+    ``aplicar_configuracoes``), nunca automaticamente pelos dados — assim o trecho já
+    desenhado da linha do sinal nunca precisa ser redesenhado por mudança de escala
+    (ver "Desempenho").
 
 Fluidez (linha e ponteiro sempre juntos, sem travar):
   * Um único RELÓGIO DE EXIBIÇÃO (``_tempo_exibicao``) rege ao mesmo tempo o
@@ -106,10 +108,10 @@ _LARGURA_BLOCO_PX = 200
 # (mesma heurística usada na etiqueta do ponteiro, ver _reposicionar_etiqueta_ponteiro).
 _ESPACO_MINIMO_ROTULO_X_PX = 34
 
-# Eixo Y fixo (mínimo, máximo, passo) -> marcas em -30, -15, 0, +15, +30 µV. Cobre a
-# faixa típica do sinal do BITalino sem precisar reescalar a cada amostra; reescala
-# (rara) só ocorre se um pico ultrapassar a borda em ~10% — ver _talvez_reescalar_eixo_y.
-_LIMITES_EIXO_Y_PADRAO = (-30.0, 30.0, 15.0)
+# Escala Y padrão (µV, simétrica) usada quando nenhuma configuração é passada ao
+# construtor. O eixo é SEMPRE fixo nessa escala (marcas de 10 em 10 µV, ver
+# _PASSO_EIXO_Y_UV); a janela "Configurações do Gráfico" ajusta esse valor.
+_ESCALA_Y_PADRAO_UV = 30.0
 
 # Paleta de reserva (usada só se nenhuma paleta de tema for passada ao construtor).
 _PALETA_RESERVA = {
@@ -120,41 +122,39 @@ _PALETA_RESERVA = {
 
 
 # ---------------------------------------------------------------------------
-# Funções auxiliares de escala "redonda" e formatação de tempo
+# Conversão das configurações de exibição (janela "Configurações do Gráfico")
 # ---------------------------------------------------------------------------
-def _arredondar_passo_para_cima(passo_aproximado):
-    """Menor passo "bonito" (1, 2, 5 ou 10 × potência de 10) que seja >= `passo_aproximado`."""
-    if passo_aproximado <= 0 or not math.isfinite(passo_aproximado):
-        return 1.0
-    ordem_grandeza = 10 ** math.floor(math.log10(passo_aproximado))
-    for multiplicador in (1, 2, 5, 10):
-        if multiplicador * ordem_grandeza >= passo_aproximado:
-            return multiplicador * ordem_grandeza
-    return 10 * ordem_grandeza
+# Passo fixo (µV) entre as marcas/linhas de grade do eixo Y — sempre de 10 em 10.
+_PASSO_EIXO_Y_UV = 10.0
 
 
-def _calcular_limites_eixo_y(valor_minimo, valor_maximo, fracao_folga=0.10, divisoes_alvo=4):
-    """Calcula limites Y "redondos" com folga, a partir do mínimo/máximo real dos dados.
+def _limites_y_para_escala(escala_uv):
+    """Converte a escala Y simétrica (µV) na tupla ``(mín, máx, passo)`` do eixo.
 
-    Usado só quando o eixo fixo precisa reescalar (``_talvez_reescalar_eixo_y``).
-
-    :return: tupla ``(minimo, maximo, passo)`` já arredondados a múltiplos de um
-        passo "bonito" (ver ``_arredondar_passo_para_cima``).
-    """
-    if not math.isfinite(valor_minimo) or not math.isfinite(valor_maximo):
-        return -1.0, 1.0, 0.5
-    if valor_maximo - valor_minimo < 1e-9:
-        valor_minimo -= 1.0
-        valor_maximo += 1.0
-    amplitude = valor_maximo - valor_minimo
-    folga = amplitude * fracao_folga
-    minimo, maximo = valor_minimo - folga, valor_maximo + folga
-    passo = _arredondar_passo_para_cima((maximo - minimo) / divisoes_alvo)
-    minimo = math.floor(minimo / passo) * passo
-    maximo = math.ceil(maximo / passo) * passo
-    return minimo, maximo, passo
+    Passo FIXO de ``_PASSO_EIXO_Y_UV`` (10 µV): ±10 dá marcas a -10/0/10; ±30 dá
+    -30/-20/-10/0/10/20/30; ±50 vai de -50 a 50 de 10 em 10."""
+    try:
+        escala = abs(float(escala_uv))
+    except (TypeError, ValueError):
+        escala = 30.0
+    if not math.isfinite(escala) or escala < 1.0:
+        escala = 30.0
+    return (-escala, escala, _PASSO_EIXO_Y_UV)
 
 
+def _intervalo_ms_para_fps(fps):
+    """Converte FPS no intervalo (ms) entre quadros, limitado a uma faixa sensata."""
+    try:
+        quadros_por_s = float(fps)
+    except (TypeError, ValueError):
+        quadros_por_s = 60.0
+    quadros_por_s = min(max(quadros_por_s, 1.0), 120.0)
+    return max(1, int(round(1000.0 / quadros_por_s)))
+
+
+# ---------------------------------------------------------------------------
+# Funções auxiliares de formatação de tempo do eixo X
+# ---------------------------------------------------------------------------
 # Intervalos permitidos para as marcas de tempo do eixo X (segundos).
 _PASSOS_MARCA_TEMPO_PERMITIDOS = [1, 2, 5, 10, 15, 30, 60, 120, 300, 600]
 
@@ -199,7 +199,11 @@ class GraficoSinal(tk.Canvas):
 
     def __init__(self, master, paleta=None, familia_display="Segoe UI",
                  familia_mono="Consolas", unidade="µV",
-                 mensagem_ociosa="Aguardando gravação…", **kwargs_canvas):
+                 mensagem_ociosa="Aguardando gravação…",
+                 escala_y=_ESCALA_Y_PADRAO_UV, suavizacao_ativa=True,
+                 janela_suavizacao=_JANELA_SUAVIZACAO_COLUNAS, fps=None,
+                 largura_linha=1.5, grade_visivel=True, rotulos_visiveis=True,
+                 **kwargs_canvas):
         """
         :param master: widget pai (tipicamente o ``GraphFrame``).
         :param paleta: dict de cores do tema ativo (ver ``theme.py``); usa
@@ -209,6 +213,18 @@ class GraficoSinal(tk.Canvas):
         :param familia_mono: família de fonte monoespaçada para rótulos numéricos.
         :param unidade: unidade exibida junto aos rótulos do eixo Y (ex.: ``"µV"``).
         :param mensagem_ociosa: texto mostrado no centro do canvas quando ocioso.
+
+        Configurações de exibição (janela "Configurações do Gráfico"; defaults =
+        valores hardcoded anteriores, ver ``aplicar_configuracoes``):
+
+        :param escala_y: escala Y simétrica em µV (ex.: ``30`` -> eixo ±30 µV).
+        :param suavizacao_ativa: liga a média móvel leve de exibição.
+        :param janela_suavizacao: janela da média móvel (colunas de exibição).
+        :param fps: quadros por segundo do gráfico (converte para o intervalo do loop);
+            ``None`` mantém o intervalo padrão ``_INTERVALO_QUADRO_MS``.
+        :param largura_linha: espessura (px) da linha do sinal.
+        :param grade_visivel: desenha as linhas de grade (fora a linha do zero/início).
+        :param rotulos_visiveis: desenha os rótulos numéricos/de tempo dos eixos.
         """
         cores = paleta or _PALETA_RESERVA
         super().__init__(master, bg=cores["bar_bg"], highlightthickness=0, bd=0,
@@ -219,13 +235,21 @@ class GraficoSinal(tk.Canvas):
         self.unidade = unidade
         self.mensagem_ociosa = mensagem_ociosa
 
+        # --- configurações de exibição (ajustáveis em runtime; ver aplicar_configuracoes) ---
+        self._escala_y = escala_y
+        self._limites_eixo_y_padrao = _limites_y_para_escala(escala_y)
+        self._suavizacao_ativa = bool(suavizacao_ativa)
+        self._janela_suavizacao = max(1, int(janela_suavizacao))
+        self._intervalo_quadro_ms = _INTERVALO_QUADRO_MS if fps is None else _intervalo_ms_para_fps(fps)
+        self._largura_linha = float(largura_linha)
+        self._grade_visivel = bool(grade_visivel)
+        self._rotulos_visiveis = bool(rotulos_visiveis)
+
         # --- amostras acumuladas da faixa atual ---
         self._amostras_pendentes = deque()   # fila (tempo_s, valor) vinda de qualquer thread
         self._trava_amostras_pendentes = threading.Lock()
         self._tempos_amostras = []            # tempos acumulados (s), em ordem de chegada
         self._valores_amostras = []           # valores acumulados, mesmo índice dos tempos
-        self._valor_minimo_dados = math.inf   # mín/máx monotônicos da faixa atual (só crescem)
-        self._valor_maximo_dados = -math.inf
         self._duracao_total_s = 0.0           # duração da janela (antecedência + música)
         self._gravando = False
         self._finalizado = False
@@ -263,7 +287,7 @@ class GraficoSinal(tk.Canvas):
         self._ultimo_estado_ocioso = None      # se o último quadro estava ocioso
         self._precisa_redesenho_completo = True  # força reconstrução da grade/eixos/blocos
 
-        self._limites_eixo_y = _LIMITES_EIXO_Y_PADRAO  # (mín, máx, passo) — quase sempre fixo
+        self._limites_eixo_y = self._limites_eixo_y_padrao  # (mín, máx, passo) — fixo na escala configurada
 
         # blocos da linha do sinal (ver docstring do módulo, seção "Desempenho")
         self._itens_blocos = {}                # índice do bloco -> id do item de linha
@@ -293,7 +317,6 @@ class GraficoSinal(tk.Canvas):
         with self._trava_amostras_pendentes:
             self._amostras_pendentes.clear()
         self._tempos_amostras, self._valores_amostras = [], []
-        self._valor_minimo_dados, self._valor_maximo_dados = math.inf, -math.inf
         self._duracao_total_s = float(duracao_s) if duracao_s and duracao_s > 0 else 1.0
         self._antecedencia_s = float(antecedencia_s) if antecedencia_s and antecedencia_s > 0 else 0.0
         self._ultimo_valor = None
@@ -342,7 +365,6 @@ class GraficoSinal(tk.Canvas):
         with self._trava_amostras_pendentes:
             self._amostras_pendentes.clear()
         self._tempos_amostras, self._valores_amostras = [], []
-        self._valor_minimo_dados, self._valor_maximo_dados = math.inf, -math.inf
         self._gravando = False
         self._finalizado = False
         self._ultimo_valor = None
@@ -351,6 +373,49 @@ class GraficoSinal(tk.Canvas):
         self._ponteiro_manual = None
         self._reiniciar_estado_desenho()
         self._desenhar_quadro()
+
+    def aplicar_configuracoes(self, settings):
+        """Aplica novas configurações de exibição (preview ao vivo / persistência).
+
+        Chamar na thread da GUI. A **escala Y** só é reaplicada quando NÃO se está
+        gravando (fica fixa durante uma faixa em andamento — muda só na próxima
+        ``iniciar()``); as demais valem imediatamente. Força um redesenho completo
+        para refletir a nova escala/grade/rótulos/espessura/suavização.
+
+        :param settings: dict com qualquer subconjunto das chaves ``y_scale``,
+            ``smoothing_enabled``, ``smoothing_window``, ``fps``, ``line_width``,
+            ``grid_visible``, ``axis_labels_visible``.
+        """
+        if not isinstance(settings, dict):
+            return
+        if "y_scale" in settings:
+            self._escala_y = settings["y_scale"]
+            self._limites_eixo_y_padrao = _limites_y_para_escala(settings["y_scale"])
+            if not self._gravando:
+                self._limites_eixo_y = self._limites_eixo_y_padrao
+        if "smoothing_enabled" in settings:
+            self._suavizacao_ativa = bool(settings["smoothing_enabled"])
+        if "smoothing_window" in settings:
+            try:
+                self._janela_suavizacao = max(1, int(settings["smoothing_window"]))
+            except (TypeError, ValueError):
+                pass
+        if "fps" in settings:
+            self._intervalo_quadro_ms = _intervalo_ms_para_fps(settings["fps"])
+        if "line_width" in settings:
+            try:
+                self._largura_linha = float(settings["line_width"])
+            except (TypeError, ValueError):
+                pass
+        if "grid_visible" in settings:
+            self._grade_visivel = bool(settings["grid_visible"])
+        if "axis_labels_visible" in settings:
+            self._rotulos_visiveis = bool(settings["axis_labels_visible"])
+        self._solicitar_redesenho_completo()
+
+    def _janela_suavizacao_efetiva(self):
+        """Janela da média móvel de exibição, ou 1 (sem suavização) quando desligada."""
+        return self._janela_suavizacao if self._suavizacao_ativa else 1
 
     @property
     def valor_atual(self):
@@ -373,9 +438,8 @@ class GraficoSinal(tk.Canvas):
     def _processar_amostras_pendentes(self):
         """Move as amostras enfileiradas por `adicionar_amostra()` para os arrays acumulados.
 
-        Chamado uma vez por quadro, na thread da GUI. Atualiza também o mínimo/máximo
-        monotônico da faixa (usado tanto pela auto-escala do eixo Y quanto pela
-        leitura ao vivo do valor atual)."""
+        Chamado uma vez por quadro, na thread da GUI. Guarda também a última amostra
+        recebida para a leitura ao vivo do valor atual."""
         with self._trava_amostras_pendentes:
             if not self._amostras_pendentes:
                 return
@@ -384,10 +448,6 @@ class GraficoSinal(tk.Canvas):
         for tempo_s, valor in pendentes:
             self._tempos_amostras.append(tempo_s)
             self._valores_amostras.append(valor)
-            if valor < self._valor_minimo_dados:
-                self._valor_minimo_dados = valor
-            if valor > self._valor_maximo_dados:
-                self._valor_maximo_dados = valor
             self._ultimo_valor = valor
 
     # -- loop de animação ---------------------------------------------------
@@ -400,7 +460,7 @@ class GraficoSinal(tk.Canvas):
         try:
             self._processar_amostras_pendentes()
             self._desenhar_quadro()
-            self._id_after_animacao = self.after(_INTERVALO_QUADRO_MS, self._executar_quadro_animacao)
+            self._id_after_animacao = self.after(self._intervalo_quadro_ms, self._executar_quadro_animacao)
         except tk.TclError:
             return
 
@@ -477,24 +537,6 @@ class GraficoSinal(tk.Canvas):
 
         self._tempo_exibicao = min(max(novo_tempo_exibicao, 0.0), self._duracao_total_s)
 
-    def _talvez_reescalar_eixo_y(self):
-        """Reescala o eixo Y só quando um pico ultrapassa a borda atual em ~10% (evento raro).
-
-        Com o eixo praticamente fixo, os blocos da linha já desenhados nunca
-        precisam ser refeitos por causa de escala (ver docstring do módulo). Quando
-        a reescala realmente ocorre, expande os limites para conter os dados e força
-        uma reconstrução completa (grade nova + todos os blocos redesenhados na nova
-        escala)."""
-        if self._valor_minimo_dados is math.inf:
-            return
-        minimo, maximo, _ = self._limites_eixo_y
-        pico_ultrapassa_limites = (self._valor_maximo_dados > maximo * 1.1
-                                   or self._valor_minimo_dados < minimo * 1.1)
-        if pico_ultrapassa_limites:
-            self._limites_eixo_y = _calcular_limites_eixo_y(
-                min(self._valor_minimo_dados, minimo), max(self._valor_maximo_dados, maximo))
-            self._solicitar_redesenho_completo()
-
     # -- eixo X: escolha dos rótulos de tempo -------------------------------
     def _escolher_rotulos_eixo_x(self, antecedencia_s, duracao_musica_s, largura_desenho_px):
         """Escolhe quais rótulos de tempo mostrar no eixo X, evitando sobreposição.
@@ -565,10 +607,9 @@ class GraficoSinal(tk.Canvas):
         if not ocioso:
             self._processar_novas_amostras(x0, x1)
             self._avancar_relogio_exibicao()
-            self._talvez_reescalar_eixo_y()
 
-        # eixo Y fixo (reescala rara, ver _talvez_reescalar_eixo_y); ocioso usa um
-        # eixo discreto simples (só a linha de base, sem valores).
+        # eixo Y sempre fixo na escala configurada; ocioso usa um eixo discreto simples
+        # (só a linha de base, sem valores).
         minimo_y, maximo_y, passo_y = (-1.0, 1.0, 1.0) if ocioso else self._limites_eixo_y
 
         retangulo_desenho = (x0, y0, x1, y1)
@@ -630,7 +671,7 @@ class GraficoSinal(tk.Canvas):
 
         self._criar_itens_ponteiro(x0, y0, y1, cores)
 
-        # redesenha todos os blocos já percorridos (1º quadro, resize ou reescala de Y)
+        # redesenha todos os blocos já percorridos (1º quadro, resize ou mudança de configuração)
         self._redesenhar_todos_blocos(x0, tempo_para_x, valor_para_y)
         self._ultimo_corte_px_redesenhado = int(tempo_para_x(self._tempo_exibicao))
         self._reposicionar_ponteiro(x0, y0, x1, y1, tempo_para_x)
@@ -644,8 +685,9 @@ class GraficoSinal(tk.Canvas):
         vertical (topo do gráfico) e se sobrepunham visualmente (bug corrigido)."""
         if ocioso:
             self.create_line(x0, y1, x1, y1, fill=cor_grade_fraca)
-            self.create_text(x0 - 8, (y0 + y1) / 2, text="0", anchor="e",
-                             fill=cores["faint2"], font=(self.familia_mono, 10))
+            if self._rotulos_visiveis:
+                self.create_text(x0 - 8, (y0 + y1) / 2, text="0", anchor="e",
+                                 fill=cores["faint2"], font=(self.familia_mono, 10))
             return
 
         limite_linhas_grade = 40  # proteção contra loop infinito por erro de ponto flutuante
@@ -655,14 +697,18 @@ class GraficoSinal(tk.Canvas):
             y_linha_grade = valor_para_y(valor_y)
             linha_zero = abs(valor_y) < 1e-6
             linha_topo = abs(valor_y - maximo_y) < 1e-6
-            self.create_line(x0, y_linha_grade, x1, y_linha_grade,
-                             fill=(cores["border"] if linha_zero else cor_grade_fraca),
-                             width=(2 if linha_zero else 1))
-            texto_rotulo = self._formatar_valor_y(valor_y)
-            if linha_topo:
-                texto_rotulo = f"{texto_rotulo} {self.unidade}"  # unidade só na marca do topo
-            self.create_text(x0 - 8, y_linha_grade, text=texto_rotulo, anchor="e",
-                             fill=cores["faint"], font=(self.familia_mono, 10))
+            # linha do zero sempre desenhada (base de referência); demais linhas de grade
+            # só quando a grade está ligada.
+            if linha_zero or self._grade_visivel:
+                self.create_line(x0, y_linha_grade, x1, y_linha_grade,
+                                 fill=(cores["border"] if linha_zero else cor_grade_fraca),
+                                 width=(2 if linha_zero else 1))
+            if self._rotulos_visiveis:
+                texto_rotulo = self._formatar_valor_y(valor_y)
+                if linha_topo:
+                    texto_rotulo = f"{texto_rotulo} {self.unidade}"  # unidade só na marca do topo
+                self.create_text(x0 - 8, y_linha_grade, text=texto_rotulo, anchor="e",
+                                 fill=cores["faint"], font=(self.familia_mono, 10))
             valor_y += passo_y
             quantidade_linhas_grade += 1
 
@@ -682,13 +728,17 @@ class GraficoSinal(tk.Canvas):
                 continue
             x_rotulo = tempo_para_x(tempo_eixo)
             inicio_musica = abs(rotulo) < 1e-6
-            self.create_line(x_rotulo, y0, x_rotulo, y1,
-                             fill=(cores["faint"] if inicio_musica else cor_grade_fraca),
-                             width=(2 if inicio_musica else 1))
-            self.create_text(x_rotulo, y1 + 13, text=_formatar_mmss_com_sinal(rotulo),
-                             anchor="n",
-                             fill=(cores["muted"] if inicio_musica else cores["faint"]),
-                             font=(self.familia_mono, 10))
+            # marca do início da música sempre desenhada (referência 0:00); demais linhas
+            # verticais só quando a grade está ligada.
+            if inicio_musica or self._grade_visivel:
+                self.create_line(x_rotulo, y0, x_rotulo, y1,
+                                 fill=(cores["faint"] if inicio_musica else cor_grade_fraca),
+                                 width=(2 if inicio_musica else 1))
+            if self._rotulos_visiveis:
+                self.create_text(x_rotulo, y1 + 13, text=_formatar_mmss_com_sinal(rotulo),
+                                 anchor="n",
+                                 fill=(cores["muted"] if inicio_musica else cores["faint"]),
+                                 font=(self.familia_mono, 10))
 
     def _criar_itens_ponteiro(self, x0, y0, y1, cores):
         """Cria os itens persistentes do ponteiro (linha, ponto e etiqueta de tempo)."""
@@ -709,7 +759,7 @@ class GraficoSinal(tk.Canvas):
         return max(indice, 0)
 
     def _redesenhar_todos_blocos(self, x0, tempo_para_x, valor_para_y):
-        """Redesenha do zero todos os blocos até o ativo (1º quadro, resize ou reescala Y)."""
+        """Redesenha do zero todos os blocos até o ativo (1º quadro, resize ou mudança de config)."""
         corte_pixel = tempo_para_x(self._tempo_exibicao)
         bloco_ativo = self._indice_bloco_para_x(corte_pixel, x0)
         for indice_bloco in range(bloco_ativo):
@@ -761,13 +811,14 @@ class GraficoSinal(tk.Canvas):
             self._ocultar_bloco(indice_bloco)
             return
 
-        colunas_halo = _JANELA_SUAVIZACAO_COLUNAS // 2
+        janela_suavizacao = self._janela_suavizacao_efetiva()
+        colunas_halo = janela_suavizacao // 2
         inicio_halo = max(0, indice_inicio - colunas_halo)
         fim_halo = min(len(colunas_pixel), indice_fim + colunas_halo)
         colunas_com_halo = colunas_pixel[inicio_halo:fim_halo]
         valores_brutos = [self._baldes_pixel[px][0] / self._baldes_pixel[px][1]
                           for px in colunas_com_halo]
-        valores_suavizados = self._aplicar_media_movel(valores_brutos, _JANELA_SUAVIZACAO_COLUNAS)
+        valores_suavizados = self._aplicar_media_movel(valores_brutos, janela_suavizacao)
 
         coordenadas = []
         for k in range(indice_inicio - inicio_halo, indice_fim - inicio_halo):
@@ -791,11 +842,11 @@ class GraficoSinal(tk.Canvas):
         item_existente = self._itens_blocos.get(indice_bloco)
         if item_existente is None:
             self._itens_blocos[indice_bloco] = self.create_line(
-                *coordenadas, fill=self._cores["accent"], width=1.5,
+                *coordenadas, fill=self._cores["accent"], width=self._largura_linha,
                 joinstyle=tk.ROUND, capstyle=tk.ROUND, smooth=False)
         else:
             self.coords(item_existente, *coordenadas)
-            self.itemconfigure(item_existente, state="normal")
+            self.itemconfigure(item_existente, width=self._largura_linha, state="normal")
 
     def _ocultar_bloco(self, indice_bloco):
         """Oculta o item de um bloco sem pontos suficientes para desenhar (ex.: bloco vazio)."""
