@@ -1,4 +1,4 @@
-from src.utils import SetLogger
+from compasso.utils import SetLogger
 
 gui_logger = SetLogger(category='gui', namelogger='guiLogger')
 

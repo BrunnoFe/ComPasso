@@ -11,7 +11,7 @@ from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, ACCENT,
                      INPUT_H, BTN_H, FONT_XS, FONT_MD)
 from ..widgets import show_message, caption, ghost_button, styled_button, Card
 from ..canvas_widgets import LiveEqualizer
-from src.core import connectar_bitalino, ConnectionWatchdog
+from compasso.core import connectar_bitalino, ConnectionWatchdog
 
 # Altura-alvo (px) do logo no topo da barra de conexão. A coluna do MAC (rótulo +
 # campo INPUT_H) é a mais alta da linha (~61 px); manter o logo abaixo disso preserva

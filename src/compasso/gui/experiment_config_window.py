@@ -1,7 +1,7 @@
 """Janela modal de configuração do experimento (compartilhada por "Novo" e "Editar").
 
 Segue o tema escuro da janela principal (cores/fontes de `theme.py`, widgets de `widgets.py`).
-Salva/edita arquivos `.config` via `src.core.config_manager`.
+Salva/edita arquivos `.config` via `compasso.core.config_manager`.
 """
 
 import os
@@ -10,14 +10,14 @@ import pywinstyles
 import customtkinter as ctk
 from tkinter import filedialog
 
-from src.gui.assets import ASSETS_DIR
-from src.utils.configs import ICON_FILENAME
+from compasso.gui.assets import ASSETS_DIR
+from compasso.utils.configs import ICON_FILENAME
 
 from . import gui_logger
 from .theme import (WIN_BG, BAR_BG, BORDER, TRANSPARENTE, BASE_FONT, CORNER)
 from .widgets import (show_message, confirm, styled_label, styled_button, styled_entry,
                      styled_combobox, ghost_button)
-from src.core.config_manager import (save_config, validate_values, get_experiment_files_dir,
+from compasso.core.config_manager import (save_config, validate_values, get_experiment_files_dir,
                                      CHANNEL_OPTIONS, PRE_STIMULUS_MIN, PRE_STIMULUS_MAX,
                                      PRE_STIMULUS_DEFAULT)
 

@@ -1,6 +1,6 @@
 """Persistência e validação das configurações de experimento (.config = JSON).
 
-Sem dependências externas. Reaproveita os caminhos cross-platform de `src.utils.paths`.
+Sem dependências externas. Reaproveita os caminhos cross-platform de `compasso.utils.paths`.
 As mensagens de erro são específicas por campo (em português) para serem exibidas direto
 ao usuário.
 """
@@ -10,7 +10,7 @@ import re
 import json
 
 from . import config_logger
-from src.utils import (ENCODING_FORMAT, APP_NAME, EXPERIMENT_FILES_DIRNAME, PREFS_FILENAME,
+from compasso.utils import (ENCODING_FORMAT, APP_NAME, EXPERIMENT_FILES_DIRNAME, PREFS_FILENAME,
                       get_documents_dir, get_app_data_dir)
 
 CONFIG_VERSION = 1

@@ -8,9 +8,9 @@ from collections import Counter
 
 import pytest
 
-from src.core.experiment import (_distribute, expand_playlist, count_totals,
+from compasso.core.experiment import (_distribute, expand_playlist, count_totals,
                                  session_totals, pseudo_random_order, _classify_condition)
-from src.core.constants import CONDITION_MUSICA, CONDITION_RUIDO
+from compasso.core.constants import CONDITION_MUSICA, CONDITION_RUIDO
 
 
 @pytest.fixture(autouse=True)

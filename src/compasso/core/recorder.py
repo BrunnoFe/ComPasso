@@ -9,7 +9,7 @@ from pylsl import local_clock
 
 from . import recorder_logger
 from .constants import SESSION_TIMESTAMP_FORMAT, TRACK_ORDER_MIN_WIDTH
-from src.utils import ENCODING_FORMAT
+from compasso.utils import ENCODING_FORMAT
 
 # Cabeçalho exato exigido pela especificação (ordem das colunas importa).
 CSV_HEADER = ["timestamp", "signal", "markers", "music_file", "fator"]

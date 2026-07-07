@@ -1,4 +1,4 @@
-from src.utils import SetLogger
+from compasso.utils import SetLogger
 
 connection_logger = SetLogger(category='connections', namelogger='connectionLogger')
 player_logger = SetLogger(category='player', namelogger='playerLogger')

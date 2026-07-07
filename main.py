@@ -2,8 +2,8 @@ import sys
 
 import customtkinter as ctk
 
-from src.gui import ComPasso
-from src.utils import SetLogger
+from compasso.gui import ComPasso
+from compasso.utils import SetLogger
 
 main_logger = SetLogger(category='main', namelogger='mainLogger')
 
@@ -19,7 +19,7 @@ def _show_splash():
     vez da própria `ComPasso`) porque construir o `ComPasso` já monta toda a UI (menu,
     frames...), o que é lento e ficaria visível antes de um `withdraw()` surtir efeito.
     """
-    from src.gui.loading_screen import run_splash
+    from compasso.gui.loading_screen import run_splash
 
     splash_root = ctk.CTk()
     splash_root.withdraw()

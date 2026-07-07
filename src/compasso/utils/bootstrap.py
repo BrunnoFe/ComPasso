@@ -2,7 +2,7 @@
 arquivo central de erros (``errors.log``).
 
 Idempotente — pode ser chamado várias vezes com segurança. É invocado automaticamente
-quando o pacote ``src.utils`` é importado, garantindo que as pastas existam antes de
+quando o pacote ``compasso.utils`` é importado, garantindo que as pastas existam antes de
 qualquer ``SetLogger`` ser criado.
 """
 

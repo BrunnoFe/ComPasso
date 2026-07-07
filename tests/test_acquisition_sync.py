@@ -13,7 +13,7 @@ import csv
 
 import pytest
 
-from src.core.recorder import LSLRecorder, CSV_HEADER
+from compasso.core.recorder import LSLRecorder, CSV_HEADER
 
 T0 = 1000.0  # valor fixo de local_clock() para o início da captura
 
@@ -21,7 +21,7 @@ T0 = 1000.0  # valor fixo de local_clock() para o início da captura
 @pytest.fixture
 def patch_clock(mocker):
     """Fixa ``recorder.local_clock`` em T0 (usado por ``start()`` para definir t0)."""
-    mocker.patch("src.core.recorder.local_clock", return_value=T0)
+    mocker.patch("compasso.core.recorder.local_clock", return_value=T0)
 
 
 def _drive(recorder, inlet):

@@ -9,7 +9,7 @@ que o limiar de TIMEOUT é alcançado de forma determinística em poucos ticks. 
 import time as _t
 import types
 
-from src.core.bitalino_connect import ConnectionWatchdog
+from compasso.core.bitalino_connect import ConnectionWatchdog
 
 
 def _make_ctx(fired, **kwargs):
@@ -32,7 +32,7 @@ def _patch_clock(mocker, step):
         state["v"] += step
         return v
 
-    mocker.patch("src.core.bitalino_connect.time",
+    mocker.patch("compasso.core.bitalino_connect.time",
                  types.SimpleNamespace(monotonic=monotonic))
     return state
 

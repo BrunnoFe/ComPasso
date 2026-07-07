@@ -8,10 +8,10 @@ diretório de trabalho atual) — funciona tanto em desenvolvimento quanto empac
 import sys
 from pathlib import Path
 
-# Em desenvolvimento: .../src/gui/assets.py -> parents[2] = raiz do repositório -> /assets.
+# Em desenvolvimento: .../src/compasso/gui/assets.py -> parents[3] = raiz do repositório -> /assets.
 # Empacotado (PyInstaller): os dados ficam em sys._MEIPASS/assets. O comportamento em
 # desenvolvimento é idêntico ao anterior.
 if getattr(sys, "frozen", False):
     ASSETS_DIR = Path(getattr(sys, "_MEIPASS", ".")) / "assets"
 else:
-    ASSETS_DIR = Path(__file__).resolve().parents[2] / "assets"
+    ASSETS_DIR = Path(__file__).resolve().parents[3] / "assets"

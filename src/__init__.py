@@ -1,4 +1,4 @@
-# Intencionalmente sem re-exports: importar `src.gui.app` aqui forçaria toda a stack
-# de GUI (customtkinter, pywinstyles, CTkMenuBar) a carregar mesmo para quem só precisa
-# de `src.core`/`src.utils` (ex.: testes de lógica pura). Importe direto do submódulo
-# desejado, ex.: `from src.gui import ComPasso`, `from src.core import connectar_bitalino`.
+# `src/` é apenas o diretório de layout (convenção "src-layout"); o pacote importável de
+# verdade é `compasso` (em `src/compasso/`). Este arquivo é mantido vazio de propósito —
+# NÃO reexportar nada aqui. Importe sempre pelo pacote real, ex.:
+# `from compasso.gui import ComPasso`, `from compasso.core import connectar_bitalino`.

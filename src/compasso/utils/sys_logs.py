@@ -1,8 +1,8 @@
 import time
 import logging
 
-from src.utils.configs import ENCODING_FORMAT, LOG_FORMAT, LOG_TIMESTAMP_FORMAT
-from src.utils.paths import get_logs_dir
+from compasso.utils.configs import ENCODING_FORMAT, LOG_FORMAT, LOG_TIMESTAMP_FORMAT
+from compasso.utils.paths import get_logs_dir
 
 
 class SetLogger():

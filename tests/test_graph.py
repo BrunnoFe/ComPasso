@@ -4,7 +4,7 @@ import tkinter as tk
 # Intervalo (ms) entre quadros do redesenho (~25 fps por padrão).
 _INTERVALO_QUADRO_MS = 30
 
-from src.gui.frames.signal_plot import GraficoSinal
+from compasso.gui.frames.signal_plot import GraficoSinal
 
 # ---------------------------------------------------------------------------
 # Demo ao vivo

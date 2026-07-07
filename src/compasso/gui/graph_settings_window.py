@@ -14,15 +14,15 @@ fica desabilitada enquanto uma sessão está em andamento (é fixa durante o exp
 import pywinstyles
 import customtkinter as ctk
 
-from src.gui.assets import ASSETS_DIR
-from src.utils.configs import ICON_FILENAME
+from compasso.gui.assets import ASSETS_DIR
+from compasso.utils.configs import ICON_FILENAME
 
 from . import gui_logger
 from .theme import (WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT,
                    ACCENT_TINT, TEXT, MUTED, FAINT, BASE_FONT, CORNER, CORNER_SM,
                    DISPLAY_FAMILY, MONO_FAMILY, FONT_MD, FONT_SM)
 from .widgets import styled_label, styled_button, ghost_button, mono
-from src.core import config_manager
+from compasso.core import config_manager
 
 # opções de FPS oferecidas no menu (quadros por segundo do gráfico)
 _OPCOES_FPS = ["10", "15", "30", "60"]

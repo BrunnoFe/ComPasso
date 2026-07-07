@@ -3,7 +3,7 @@
 Centraliza literais que antes apareciam duplicados entre `recorder.py` e `experiment.py`
 (marcadores de evento, palavras-chave de condição) e os formatos de nome de sessão/faixa.
 Módulo de literais puros — não importa nada do projeto, então pode ser importado por
-qualquer módulo de `src.core` sem risco de ciclo.
+qualquer módulo de `compasso.core` sem risco de ciclo.
 """
 
 # ---------------------------------------------------------------------------

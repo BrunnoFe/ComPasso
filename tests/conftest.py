@@ -8,7 +8,7 @@ Como rodar (a partir da raiz do repositório)::
 
 Princípios:
 - Nenhum teste toca hardware real (BITalino/LSL), rede ou diálogos de arquivo.
-- Nenhuma escrita de DADOS fora de ``tmp_path``. (Importar ``src.core``/``src.utils`` tem
+- Nenhuma escrita de DADOS fora de ``tmp_path``. (Importar ``compasso.core``/``compasso.utils`` tem
   o efeito colateral pré-existente de criar arquivos de log em app-data — é a infraestrutura
   de logging do próprio app, não dado de teste; ver tests/README.md.)
 - O hardware é substituído por fakes determinísticos (``FakeInlet``, ``FakeClock``).

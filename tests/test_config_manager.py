@@ -4,7 +4,7 @@ import json
 
 import pytest
 
-from src.core import config_manager as cm
+from compasso.core import config_manager as cm
 
 
 # ------------------------------ _is_int ------------------------------------ #
@@ -131,7 +131,7 @@ def test_load_empty_value_is_reported(tmp_path):
 # --------------------------- preferências ---------------------------------- #
 def test_prefs_round_trip(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     assert cm.get_last_config_path() is None
     cm.set_last_config("/algum/caminho.config")
     assert cm.get_last_config_path() == "/algum/caminho.config"
@@ -140,21 +140,21 @@ def test_prefs_round_trip(tmp_path, mocker):
 def test_prefs_corrupt_file_returns_none(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
     prefs_path.write_text("{ broken", encoding="utf-8")
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     assert cm.get_last_config_path() is None
 
 
 # --------------------------- preferências do gráfico ----------------------- #
 def test_graph_prefs_defaults_when_absent(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     # sem arquivo -> todos os defaults
     assert cm.get_graph_prefs() == cm.DEFAULT_GRAPH_SETTINGS
 
 
 def test_graph_prefs_round_trip(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     settings = dict(cm.DEFAULT_GRAPH_SETTINGS)
     settings.update({"y_scale": 50, "smoothing_enabled": False, "fps": 30, "line_width": 2.5})
     cm.set_graph_prefs(settings)
@@ -166,7 +166,7 @@ def test_graph_prefs_merges_missing_and_ignores_invalid(tmp_path, mocker):
     # chave conhecida válida, uma ausente (cai no default) e uma com tipo errado (ignorada)
     prefs_path.write_text(json.dumps({"theme": "Teal", "graph": {
         "y_scale": 20, "grid_visible": "sim"}}), encoding="utf-8")
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     result = cm.get_graph_prefs()
     assert result["y_scale"] == 20                                   # respeitada
     assert result["grid_visible"] == cm.DEFAULT_GRAPH_SETTINGS["grid_visible"]  # tipo errado -> default
@@ -175,7 +175,7 @@ def test_graph_prefs_merges_missing_and_ignores_invalid(tmp_path, mocker):
 
 def test_graph_prefs_preserves_theme_and_last_config(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
-    mocker.patch("src.core.config_manager.get_prefs_path", return_value=prefs_path)
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     cm.set_theme_pref("Iris")
     cm.set_last_config("/x/y.config")
     cm.set_graph_prefs(cm.DEFAULT_GRAPH_SETTINGS)

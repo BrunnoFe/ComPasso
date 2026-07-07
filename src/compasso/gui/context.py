@@ -3,7 +3,7 @@ import threading
 import customtkinter as ctk
 
 from . import gui_logger
-from src.core.player import Player
+from compasso.core.player import Player
 
 class AppContext:
     """Estado compartilhado da aplicação ComPasso.

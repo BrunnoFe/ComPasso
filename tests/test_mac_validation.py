@@ -1,8 +1,8 @@
 """Validação/normalização de endereço MAC nos dois módulos que a fazem.
 
-- ``src.core.bitalino_connect.MAC_RE``: aceita separadores ``:``, espaço e ``-`` e é
+- ``compasso.core.bitalino_connect.MAC_RE``: aceita separadores ``:``, espaço e ``-`` e é
   usada por ``connectar_bitalino`` para NORMALIZAR para a forma ``AA:BB:..`` maiúscula.
-- ``src.core.config_manager.MAC_REGEX``: validação do campo no .config (``:`` ou espaço).
+- ``compasso.core.config_manager.MAC_REGEX``: validação do campo no .config (``:`` ou espaço).
 
 Os caminhos de hardware de ``connectar_bitalino`` são exercitados só o suficiente para
 provar a normalização e a rejeição — ``resolve_byprop``/``StreamInlet`` são mockados.
@@ -10,8 +10,8 @@ provar a normalização e a rejeição — ``resolve_byprop``/``StreamInlet`` s�
 
 import pytest
 
-from src.core.bitalino_connect import MAC_RE, connectar_bitalino
-from src.core.config_manager import MAC_REGEX
+from compasso.core.bitalino_connect import MAC_RE, connectar_bitalino
+from compasso.core.config_manager import MAC_REGEX
 
 
 # ----------------------- MAC_RE (bitalino_connect) ------------------------- #
@@ -45,9 +45,9 @@ def test_connectar_normalizes_mac_to_upper_colon(mocker):
     fake_inlet.info.return_value.channel_count.return_value = 6
     fake_inlet.pull_sample.return_value = ([1.0], 123.0)
 
-    resolve = mocker.patch("src.core.bitalino_connect.resolve_byprop",
+    resolve = mocker.patch("compasso.core.bitalino_connect.resolve_byprop",
                            return_value=[object()])
-    mocker.patch("src.core.bitalino_connect.StreamInlet", return_value=fake_inlet)
+    mocker.patch("compasso.core.bitalino_connect.StreamInlet", return_value=fake_inlet)
 
     result = connectar_bitalino("aa bb cc dd ee ff")
 
@@ -58,7 +58,7 @@ def test_connectar_normalizes_mac_to_upper_colon(mocker):
 
 def test_connectar_invalid_mac_returns_error_string(mocker):
     # MAC inválido não deve nem tentar resolver
-    resolve = mocker.patch("src.core.bitalino_connect.resolve_byprop")
+    resolve = mocker.patch("compasso.core.bitalino_connect.resolve_byprop")
     result = connectar_bitalino("not-a-mac")
     assert isinstance(result, str)
     assert "inválido" in result.lower()
@@ -70,8 +70,8 @@ def test_connectar_returns_error_when_pull_fails(mocker):
     fake_inlet.info.return_value.nominal_srate.return_value = 100.0
     fake_inlet.info.return_value.channel_count.return_value = 6
     fake_inlet.pull_sample.side_effect = Exception("sem amostras")
-    mocker.patch("src.core.bitalino_connect.resolve_byprop", return_value=[object()])
-    mocker.patch("src.core.bitalino_connect.StreamInlet", return_value=fake_inlet)
+    mocker.patch("compasso.core.bitalino_connect.resolve_byprop", return_value=[object()])
+    mocker.patch("compasso.core.bitalino_connect.StreamInlet", return_value=fake_inlet)
 
     result = connectar_bitalino("20:17:09:18:60:29")
     assert isinstance(result, str)

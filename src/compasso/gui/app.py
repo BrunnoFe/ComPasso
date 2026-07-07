@@ -18,8 +18,8 @@ from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
 from .experiment_config_window import ExperimentConfigWindow
 from .graph_settings_window import GraphSettingsWindow
-from src.core import config_manager, set_system_volume
-from src.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
+from compasso.core import config_manager, set_system_volume
+from compasso.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
 
 # Volume principal do sistema aplicado uma única vez no arranque do app.
 _INIT_VOLUME = 50

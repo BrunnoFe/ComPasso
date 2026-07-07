@@ -5,7 +5,7 @@ import types
 
 import pytest
 
-from src.core.recorder import _sanitize, build_session_dirname, build_track_filename
+from compasso.core.recorder import _sanitize, build_session_dirname, build_track_filename
 
 
 # --------------------------- _sanitize ------------------------------------- #
@@ -69,6 +69,6 @@ def test_session_dirname_pattern():
 def test_session_dirname_uses_fixed_timestamp(mocker):
     fixed = mocker.MagicMock()
     fixed.strftime.return_value = "01-02-2026_03-04-05"
-    mocker.patch("src.core.recorder.datetime").now.return_value = fixed
+    mocker.patch("compasso.core.recorder.datetime").now.return_value = fixed
     ctx = types.SimpleNamespace(nome="Ana", idade="30", genero="F")
     assert build_session_dirname(ctx) == "Ana_30_F_01-02-2026_03-04-05"

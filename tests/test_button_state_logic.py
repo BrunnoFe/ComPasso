@@ -7,7 +7,7 @@
 
 import types
 
-from src.gui.frames.bottom_frame import DownFrame
+from compasso.gui.frames.bottom_frame import DownFrame
 
 _validar = DownFrame._validar_prerequisitos
 

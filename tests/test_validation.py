@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.utils.validation import validar_nome_genero, validar_idade
+from compasso.utils.validation import validar_nome_genero, validar_idade
 
 
 @pytest.mark.parametrize("nome, genero, esperado", [

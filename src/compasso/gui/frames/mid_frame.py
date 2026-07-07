@@ -9,9 +9,9 @@ from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, A
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
                        styled_entry, circle, check_icon, danger_button, Card)
-from src.core import (scan_music_files, match_conditions, MissingConditionError,
+from compasso.core import (scan_music_files, match_conditions, MissingConditionError,
                       set_system_volume, get_system_volume, session_totals)
-from src.utils import validar_nome_genero, validar_idade, format_time, get_data_dir, MIN_IDADE, MAX_IDADE
+from compasso.utils import validar_nome_genero, validar_idade, format_time, get_data_dir, MIN_IDADE, MAX_IDADE
 
 # Intervalos (ms) do laço da GUI deste frame.
 _POLL_MS = 100             # re-checagem da seleção de arquivos até tudo estar pronto

@@ -4,7 +4,7 @@ from ..theme import (FOOTER_BG, BORDER, TEXT, MUTED, FAINT, FAINT2, ACCENT,
                      ACCENT_INK, TRANSPARENTE, DISPLAY_FAMILY, CORNER_PILL, ACTION_BTN_H,
                      FONT_BASE, FONT_LG, FONT_XL, FONT_4XL)
 from ..widgets import show_message, mono, caption
-from src.core import ExperimentRunner
+from compasso.core import ExperimentRunner
 
 
 class DownFrame(ctk.CTkFrame):

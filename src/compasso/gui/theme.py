@@ -233,7 +233,7 @@ def set_theme(name: str) -> bool:
 
     Como os frames importam as constantes por valor (`from ..theme import WIN_BG`), reescrever
     apenas este módulo não bastaria; por isso as novas cores são injetadas no namespace de cada
-    módulo `src.gui.*` já carregado. Widgets construídos depois disso (após reconstruir a UI)
+    módulo `compasso.gui.*` já carregado. Widgets construídos depois disso (após reconstruir a UI)
     passam a usar a nova paleta.
 
     :param name: nome da paleta (chave de `PALETTES`, ex.: "Teal").
@@ -252,7 +252,7 @@ def set_theme(name: str) -> bool:
 
     novos = {nome: globals()[nome] for nome in _COLOR_MAP.values()}
     for modname, mod in list(sys.modules.items()):
-        if mod is None or modname == __name__ or not modname.startswith("src.gui"):
+        if mod is None or modname == __name__ or not modname.startswith("compasso.gui"):
             continue
         for nome, valor in novos.items():
             if hasattr(mod, nome):

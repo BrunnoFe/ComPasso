@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.core.experiment import _classify_condition
+from compasso.core.experiment import _classify_condition
 
 
 @pytest.mark.parametrize("fator, esperado", [

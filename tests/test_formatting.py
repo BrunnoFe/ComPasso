@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.utils.formatting import format_time
+from compasso.utils.formatting import format_time
 
 
 @pytest.mark.parametrize("secs, esperado", [

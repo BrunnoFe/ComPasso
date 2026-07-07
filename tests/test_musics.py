@@ -4,8 +4,8 @@ import os
 
 import pytest
 
-from src.core import musics
-from src.core.musics import (scan_music_files, match_conditions,
+from compasso.core import musics
+from compasso.core.musics import (scan_music_files, match_conditions,
                              MissingConditionError, AUDIO_EXTENSIONS)
 
 
