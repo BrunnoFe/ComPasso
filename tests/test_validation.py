@@ -19,9 +19,10 @@ def test_validar_nome_genero(nome, genero, esperado):
 
 
 @pytest.mark.parametrize("idade, esperado", [
-    ("0", True),
+    ("0", False),      # abaixo do limite mínimo (MIN_IDADE = 18)
+    ("18", True),      # limite mínimo
     ("27", True),
-    ("100", True),
+    ("100", True),     # limite máximo
     ("101", False),    # acima do limite
     ("-1", False),     # isdigit() é False para '-1'
     ("abc", False),

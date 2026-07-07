@@ -8,13 +8,13 @@ modo que nenhum diretório real do usuário é tocado. O caminho Windows com cty
 from pathlib import Path
 
 from compasso.utils import paths
-from compasso.utils.configs import APP_NAME
+from compasso.utils.configs import APP_NAME, DATA_DIRNAME
 
 
 def test_get_data_dir_structure(mocker, tmp_path):
     docs = tmp_path / "Documents"
     mocker.patch("compasso.utils.paths.get_documents_dir", return_value=docs)
-    assert paths.get_data_dir() == docs / APP_NAME / "data"
+    assert paths.get_data_dir() == docs / APP_NAME / DATA_DIRNAME
 
 
 def test_get_logs_dir_structure(mocker, tmp_path):
@@ -39,7 +39,7 @@ def test_ensure_app_dirs_creates_data_and_logs(mocker, tmp_path):
 
     assert result["data"].is_dir()
     assert result["logs"].is_dir()
-    assert result["data"] == docs / APP_NAME / "data"
+    assert result["data"] == docs / APP_NAME / DATA_DIRNAME
     assert result["logs"] == appdata / APP_NAME / "logs"
     assert result["errors"] == appdata / APP_NAME / "errors.log"
 
@@ -50,7 +50,7 @@ def test_ensure_app_dirs_is_idempotent(mocker, tmp_path):
     paths.ensure_app_dirs()
     # segunda chamada não deve levantar (exist_ok=True)
     paths.ensure_app_dirs()
-    assert (tmp_path / "D" / APP_NAME / "data").is_dir()
+    assert (tmp_path / "D" / APP_NAME / DATA_DIRNAME).is_dir()
 
 
 def test_app_data_dir_returns_path():

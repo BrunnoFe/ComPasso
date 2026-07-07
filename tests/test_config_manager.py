@@ -86,10 +86,10 @@ def test_save_then_load_round_trip(tmp_path, valid_config_values, mocker):
     path = tmp_path / "exp.config"
     cm.save_config(str(path), valid_config_values)
 
-    # gravou JSON com versão de schema e apenas as chaves obrigatórias
+    # gravou JSON com versão de schema, chaves obrigatórias e as opcionais (default-adas)
     raw = json.loads(path.read_text(encoding="utf-8"))
     assert raw["config_version"] == cm.CONFIG_VERSION
-    assert set(raw) == set(["config_version"] + cm.REQUIRED_KEYS)
+    assert set(raw) == set(["config_version"] + cm.REQUIRED_KEYS + cm.OPTIONAL_KEYS)
 
     data, errors = cm.load_config(str(path))
     assert errors == []
