@@ -41,10 +41,10 @@ musicas/
 Thumbs.db
 
 #arquivos ia
-compasso_context.md
 CLAUDE.MD
+CONVENCOES.md
+RELEASE.md
 
 #pastas de screnchots
-screenshots/
 files/
-release notes/
+release_notes/

@@ -47,8 +47,8 @@ As dependências Python estão em [`requirements.txt`](requirements.txt) (Custom
 
 ```bash
 # 1. Crie e ative um ambiente virtual
-python -m venv venv
-venv\Scripts\activate          # Windows
+python -m venv .venv
+.venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS/Linux
 
 # 2. Instale as dependências

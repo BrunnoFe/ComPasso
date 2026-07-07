@@ -25,6 +25,18 @@ REQUIRED_KEYS = [
     "bitalino_mac",
 ]
 
+# Chaves opcionais: gravadas no `.config`, mas ausentes nos arquivos antigos. NÃO entram em
+# REQUIRED_KEYS para não invalidar `.config`s salvos antes de sua introdução (compat retroativa);
+# são default-adas na leitura.
+OPTIONAL_KEYS = [
+    "pre_stimulus_seconds",
+]
+
+# Faixa aceita para o tempo pré-estímulo (contagem regressiva antes de cada faixa), em segundos.
+PRE_STIMULUS_MIN = 5
+PRE_STIMULUS_MAX = 120
+PRE_STIMULUS_DEFAULT = 5
+
 CHANNEL_OPTIONS = ["A1", "A2", "A3", "A4", "A5", "A6"]
 
 MAC_REGEX = re.compile(r"^([0-9A-Fa-f]{2}[:\s]){5}[0-9A-Fa-f]{2}$")
@@ -38,6 +50,7 @@ _FIELD_LABELS = {
     "data_save_path": "Pasta de salvamento dos dados",
     "bitalino_channel": "Canal ativo do BITalino",
     "bitalino_mac": "Endereço MAC do BITalino",
+    "pre_stimulus_seconds": "Tempo pré-estímulo",
 }
 
 
@@ -62,6 +75,7 @@ def default_config() -> dict:
         "data_save_path": "",
         "bitalino_channel": "",
         "bitalino_mac": "",
+        "pre_stimulus_seconds": PRE_STIMULUS_DEFAULT,
     }
 
 
@@ -123,6 +137,15 @@ def validate_values(values: dict) -> list:
     elif not MAC_REGEX.match(mac):
         errors.append("Endereço MAC do BITalino: formato inválido (use XX:XX:XX:XX:XX:XX).")
 
+    # Chave opcional: só valida quando presente (arquivos antigos não a possuem).
+    if "pre_stimulus_seconds" in values:
+        pre_stimulus = str(values.get("pre_stimulus_seconds")).strip()
+        if not (_is_int(pre_stimulus, PRE_STIMULUS_MIN)
+                and int(pre_stimulus) <= PRE_STIMULUS_MAX):
+            errors.append(
+                f"Tempo pré-estímulo: informe um inteiro entre {PRE_STIMULUS_MIN} e "
+                f"{PRE_STIMULUS_MAX} segundos.")
+
     return errors
 
 
@@ -131,6 +154,9 @@ def save_config(path: str, values: dict) -> None:
     data = {"config_version": CONFIG_VERSION}
     for key in REQUIRED_KEYS:
         data[key] = values.get(key, "")
+    defaults = default_config()
+    for key in OPTIONAL_KEYS:
+        data[key] = values.get(key, defaults.get(key))
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding=ENCODING_FORMAT) as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -162,6 +188,12 @@ def load_config(path: str):
             errors.append(f"Campo ausente: {_FIELD_LABELS.get(key, key)}.")
         elif str(data.get(key)).strip() == "":
             errors.append(f"Campo vazio: {_FIELD_LABELS.get(key, key)}.")
+
+    # Chaves opcionais ausentes (arquivos antigos) caem no default silenciosamente.
+    defaults = default_config()
+    for key in OPTIONAL_KEYS:
+        if key not in data:
+            data[key] = defaults.get(key)
 
     # validação de valores apenas se todas as chaves obrigatórias estão presentes
     if not any(msg.startswith("Campo ausente") for msg in errors):
@@ -228,6 +260,12 @@ DEFAULT_GRAPH_SETTINGS = {
     "line_width": 1.5,           # espessura da linha do sinal (px)
     "grid_visible": True,        # mostrar linhas de grade?
     "axis_labels_visible": True, # mostrar rótulos dos eixos?
+    "value_mode": "raw",         # modo do rótulo de valor: "raw" (bruto) ou "mean" (média)
+}
+
+# Valores aceitos para configurações de gráfico do tipo string (validação em get_graph_prefs).
+GRAPH_ENUM_OPTIONS = {
+    "value_mode": {"raw", "mean"},
 }
 
 
@@ -250,6 +288,10 @@ def get_graph_prefs() -> dict:
                     result[key] = value
             elif isinstance(default_value, (int, float)):
                 if isinstance(value, (int, float)) and not isinstance(value, bool):
+                    result[key] = value
+            elif isinstance(default_value, str):
+                # chaves-enumeração: só aceita string dentro do conjunto permitido
+                if isinstance(value, str) and value in GRAPH_ENUM_OPTIONS.get(key, {value}):
                     result[key] = value
     return result
 

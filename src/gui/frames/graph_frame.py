@@ -65,8 +65,17 @@ class GraphFrame(Card):
         self._legenda_canal = caption(cabecalho, self._texto_cabecalho())
         self._legenda_canal.pack(side="left")
 
+        # largura fixa + alinhado à direita: o texto varia de comprimento (modo média/bruto,
+        # com mín/máx ou DP) e não deve redimensionar o cabeçalho a cada atualização.
         self._rotulo_valor = mono(cabecalho, "—", size=FONT_MD, color=ACCENT)
+        self._rotulo_valor.configure(width=300, anchor="e")
         self._rotulo_valor.pack(side="right")
+
+        # modo do rótulo de valor: "raw" (valor bruto + mín/máx) ou "mean" (média + DP).
+        settings_iniciais = getattr(ctx, "graph_settings", None) if ctx is not None else None
+        self._value_mode = "raw"
+        if isinstance(settings_iniciais, dict):
+            self._value_mode = settings_iniciais.get("value_mode", "raw")
 
         # o gráfico propriamente dito (Canvas puro, recebe a paleta ativa por parâmetro).
         # As configurações de exibição vêm do hub (ctx.graph_settings, populado no arranque
@@ -97,11 +106,37 @@ class GraphFrame(Card):
         return f"SINAL DO BITALINO · CANAL {self._rotulo_canal()}"
 
     # -- leitura ao vivo do valor atual ----------------------------------
+    def _texto_leitura(self) -> str:
+        """Monta o texto do rótulo de valor conforme o modo configurado.
+
+        - "mean": ``Média: ##.## µV (##.## µV)`` — média + desvio-padrão da janela da música.
+        - "raw" : ``Valor: ##.## µV (##.## - ##.##)`` — último valor + (mín – máx) da janela.
+        Retorna ``"—"`` enquanto não há dado aplicável.
+        """
+        unidade = self._grafico.unidade
+        if self._value_mode == "mean":
+            media = self._grafico.valor_medio
+            if media is None:
+                return "—"
+            texto = f"Média: {media:.2f} {unidade}"
+            desvio = self._grafico.desvio_padrao
+            if desvio is not None:
+                texto += f" ({desvio:.2f} {unidade})"
+            return texto
+
+        # modo "raw" (padrão)
+        atual = self._grafico.valor_atual
+        if atual is None:
+            return "—"
+        texto = f"Valor: {atual:.2f} {unidade}"
+        minimo, maximo = self._grafico.valor_minimo, self._grafico.valor_maximo
+        if minimo is not None and maximo is not None:
+            texto += f" ({minimo:.2f} - {maximo:.2f})"
+        return texto
+
     def _atualizar_leitura_valor(self) -> None:
         try:
-            valor = self._grafico.valor_atual
-            texto = f"{valor:+.2f} {self._grafico.unidade}" if valor is not None else "—"
-            self._rotulo_valor.configure(text=texto)
+            self._rotulo_valor.configure(text=self._texto_leitura())
             self._id_after_leitura = self.after(_INTERVALO_LEITURA_MS, self._atualizar_leitura_valor)
         except tk.TclError:
             return
@@ -131,6 +166,9 @@ class GraphFrame(Card):
 
         `settings` usa as chaves de `ctx.graph_settings` (ver `_MAPA_SETTINGS_GRAFICO`)
         — a escala Y só muda com o gráfico fora de gravação (ver `GraficoSinal`)."""
+        # o modo do rótulo é tratado aqui (o widget não o usa); reflete no próximo tick.
+        if isinstance(settings, dict) and "value_mode" in settings:
+            self._value_mode = settings["value_mode"]
         self._grafico.aplicar_configuracoes(settings)
 
     def destroy(self):

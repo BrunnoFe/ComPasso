@@ -255,6 +255,11 @@ class GraficoSinal(tk.Canvas):
         self._finalizado = False
         self._ultimo_valor = None             # última amostra recebida (leitura ao vivo externa)
 
+        # estatísticas incrementais da janela da MÚSICA (amostras com tempo >= antecedencia_s),
+        # do INICIO_MUSICA até o instante atual — alimentam o rótulo de valor (média/mín/máx/DP).
+        # Média/variância por Welford (estável); mín/máx acompanhados à parte.
+        self._reiniciar_estatisticas_janela()
+
         # --- relógio de exibição: rege o ponteiro E até onde a linha foi revelada ---
         # (ver docstring do módulo, seção "Fluidez"). _antecedencia_s = duração do
         # trecho inicial de contagem regressiva mostrado antes da música; os rótulos
@@ -297,6 +302,25 @@ class GraficoSinal(tk.Canvas):
 
         self._itens_ponteiro = ()              # (linha, ponto, retângulo da etiqueta, texto)
 
+    def _reiniciar_estatisticas_janela(self):
+        """Zera os acumuladores de estatística da janela da música (chamado por faixa)."""
+        self._est_contagem = 0
+        self._est_media = 0.0        # média corrente (Welford)
+        self._est_m2 = 0.0           # soma dos quadrados dos desvios (Welford) -> variância
+        self._est_minimo = None
+        self._est_maximo = None
+
+    def _acumular_estatistica(self, valor):
+        """Atualiza os acumuladores da janela com uma amostra da música (Welford + mín/máx)."""
+        self._est_contagem += 1
+        delta = valor - self._est_media
+        self._est_media += delta / self._est_contagem
+        self._est_m2 += delta * (valor - self._est_media)
+        if self._est_minimo is None or valor < self._est_minimo:
+            self._est_minimo = valor
+        if self._est_maximo is None or valor > self._est_maximo:
+            self._est_maximo = valor
+
     def _solicitar_redesenho_completo(self):
         """Marca que o próximo quadro deve reconstruir grade/eixos/blocos do zero."""
         self._precisa_redesenho_completo = True
@@ -325,6 +349,7 @@ class GraficoSinal(tk.Canvas):
         self._relogio_ultimo_quadro = time.monotonic()
         self._gravando = True
         self._finalizado = False
+        self._reiniciar_estatisticas_janela()
         self._reiniciar_estado_desenho()
         self._desenhar_quadro()
 
@@ -371,6 +396,7 @@ class GraficoSinal(tk.Canvas):
         self._tempo_exibicao = 0.0
         self._relogio_ultimo_quadro = None
         self._ponteiro_manual = None
+        self._reiniciar_estatisticas_janela()
         self._reiniciar_estado_desenho()
         self._desenhar_quadro()
 
@@ -422,6 +448,28 @@ class GraficoSinal(tk.Canvas):
         """Última amostra recebida (ou ``None`` se nenhuma), para um leitor externo opcional."""
         return self._ultimo_valor
 
+    @property
+    def valor_medio(self):
+        """Média das amostras da janela da música até agora (``None`` se ainda não há)."""
+        return self._est_media if self._est_contagem > 0 else None
+
+    @property
+    def desvio_padrao(self):
+        """Desvio-padrão populacional da janela da música (``None`` se < 2 amostras)."""
+        if self._est_contagem < 2:
+            return None
+        return math.sqrt(self._est_m2 / self._est_contagem)
+
+    @property
+    def valor_minimo(self):
+        """Menor valor da janela da música até agora (``None`` se ainda não há)."""
+        return self._est_minimo
+
+    @property
+    def valor_maximo(self):
+        """Maior valor da janela da música até agora (``None`` se ainda não há)."""
+        return self._est_maximo
+
     def destroy(self):
         """Cancela o loop de animação antes de destruir o widget (evita ``after`` órfão).
 
@@ -449,6 +497,9 @@ class GraficoSinal(tk.Canvas):
             self._tempos_amostras.append(tempo_s)
             self._valores_amostras.append(valor)
             self._ultimo_valor = valor
+            # estatísticas só a partir do início da música (após a antecedência da contagem)
+            if tempo_s >= self._antecedencia_s:
+                self._acumular_estatistica(valor)
 
     # -- loop de animação ---------------------------------------------------
     def _executar_quadro_animacao(self):

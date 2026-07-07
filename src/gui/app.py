@@ -340,6 +340,17 @@ class ComPasso(ctk.CTk):
             self.ctx.noise_quantity = 0
             gui_logger.logger.warning(f"apply_config (quantidade de ruído): {e}")
 
+        # Tempo pré-estímulo (s): contagem regressiva antes de cada faixa. Chave opcional —
+        # arquivos antigos não a têm; cai no padrão. Clampado à faixa aceita por segurança.
+        try:
+            ps = data.get("pre_stimulus_seconds", config_manager.PRE_STIMULUS_DEFAULT)
+            ps = int(ps) if str(ps).strip().lstrip("-").isdigit() else config_manager.PRE_STIMULUS_DEFAULT
+            self.ctx.pre_stimulus_seconds = max(config_manager.PRE_STIMULUS_MIN,
+                                                min(config_manager.PRE_STIMULUS_MAX, ps))
+        except Exception as e:
+            self.ctx.pre_stimulus_seconds = config_manager.PRE_STIMULUS_DEFAULT
+            gui_logger.logger.warning(f"apply_config (tempo pré-estímulo): {e}")
+
         # marca que há uma configuração carregada (pré-requisito para iniciar o experimento)
         self.ctx.config_loaded = True
 

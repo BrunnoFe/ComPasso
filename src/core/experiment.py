@@ -127,13 +127,17 @@ class ExperimentRunner:
     de interface são agendadas via `ctx.run_after`.
     """
 
-    COUNTDOWN_SECONDS = 10
+    # Fallback do tempo pré-estímulo (s) quando o ctx não informa um valor configurado.
+    COUNTDOWN_SECONDS = 5
     # janela de antecedência (s) do gráfico: quantos segundos finais da contagem regressiva
-    # já aparecem no traço antes da música começar (eixo X total = PLOT_LEAD_SECONDS + duração).
+    # já aparecem no traço antes da música começar (eixo X total = lead + duração). O lead
+    # efetivo é clampado ao tempo pré-estímulo (não pode ser maior que a própria contagem).
     PLOT_LEAD_SECONDS = 5
 
     def __init__(self, ctx):
         self.ctx = ctx
+        # tempo pré-estímulo configurável (menu Experimento / .config); cai no fallback da classe.
+        self.countdown_seconds = int(getattr(ctx, "pre_stimulus_seconds", self.COUNTDOWN_SECONDS))
         self._stop_event = threading.Event()
         self._continue_event = threading.Event()
         self._order = []
@@ -285,16 +289,19 @@ class ExperimentRunner:
             return
         duration = self.ctx.player.get_length()
 
-        # 2) contagem regressiva de 10 s
-        for remaining in range(self.COUNTDOWN_SECONDS, 0, -1):
+        # 2) contagem regressiva (tempo pré-estímulo configurável)
+        # lead do gráfico nunca maior que a própria contagem (evita não disparar quando
+        # countdown < PLOT_LEAD_SECONDS).
+        lead = min(self.PLOT_LEAD_SECONDS, self.countdown_seconds)
+        for remaining in range(self.countdown_seconds, 0, -1):
             if self._stop_event.is_set():
                 return
-            # nos últimos PLOT_LEAD_SECONDS s da contagem: limpa o traço da faixa anterior e
-            # começa a exibir o sinal já recebido; eixo X = janela de espera + duração da música.
-            if remaining == self.PLOT_LEAD_SECONDS:
+            # nos últimos `lead` s da contagem: limpa o traço da faixa anterior e começa a
+            # exibir o sinal já recebido; eixo X = janela de espera + duração da música.
+            if remaining == lead:
                 self._plot_active = True
                 self._plot_origin = None
-                self._plot_begin(self.PLOT_LEAD_SECONDS + duration, self.PLOT_LEAD_SECONDS)
+                self._plot_begin(lead + duration, lead)
             self._post_status(f"Preparando '{self.music_name}' — iniciando em {remaining}s")
             time.sleep(1.0)
         if self._stop_event.is_set():

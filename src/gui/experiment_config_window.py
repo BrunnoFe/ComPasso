@@ -18,7 +18,8 @@ from .theme import (WIN_BG, BAR_BG, BORDER, TRANSPARENTE, BASE_FONT, CORNER)
 from .widgets import (show_message, confirm, styled_label, styled_button, styled_entry,
                      styled_combobox, ghost_button)
 from src.core.config_manager import (save_config, validate_values, get_experiment_files_dir,
-                                     CHANNEL_OPTIONS)
+                                     CHANNEL_OPTIONS, PRE_STIMULUS_MIN, PRE_STIMULUS_MAX,
+                                     PRE_STIMULUS_DEFAULT)
 
 class ExperimentConfigWindow(ctk.CTkToplevel):
     """Janela de configuração do experimento.
@@ -66,6 +67,7 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.data_save_var = ctk.StringVar()
         self.channel_var = ctk.StringVar(value="")
         self.mac_var = ctk.StringVar()
+        self.pre_stimulus_var = ctk.StringVar(value=str(PRE_STIMULUS_DEFAULT))
 
         # 1) Pasta de músicas
         self._path_row(mainframe, 1, "Pasta de músicas:", self.music_folder_var, self._pick_music_folder)
@@ -88,9 +90,13 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.mac_entry = styled_entry(mainframe, textvariable=self.mac_var, width=320, placeholder_text="XX:XX:XX:XX:XX:XX")
         self.mac_entry.grid(row=7, column=1, columnspan=2, padx=15, pady=10, sticky=ctk.EW)
 
+        # 8) Tempo pré-estímulo (contagem regressiva antes de cada faixa)
+        self._entry_row(mainframe, 8, "Tempo pré-estímulo (s):", self.pre_stimulus_var,
+                        f"Inteiro de {PRE_STIMULUS_MIN} a {PRE_STIMULUS_MAX}")
+
         # botões
         button_row = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
-        button_row.grid(row=8, column=0, columnspan=3, padx=15, pady=(20, 15), sticky=ctk.E)
+        button_row.grid(row=9, column=0, columnspan=3, padx=15, pady=(20, 15), sticky=ctk.E)
         self.salvar_button = styled_button(button_row, text="Salvar", width=120, command=self._on_salvar)
         self.salvar_button.grid(row=0, column=0, padx=(0, 10))
         self.cancelar_button = ghost_button(button_row, text="Cancelar", width=120, command=self._on_cancelar)
@@ -147,6 +153,7 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
             "data_save_path": self.data_save_var.get().strip(),
             "bitalino_channel": self.channel_var.get().strip(),
             "bitalino_mac": self.mac_var.get().strip(),
+            "pre_stimulus_seconds": self.pre_stimulus_var.get().strip(),
         }
 
     def _populate(self, data: dict):
@@ -157,6 +164,7 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.data_save_var.set(str(data.get("data_save_path", "")))
         self.channel_var.set(str(data.get("bitalino_channel", "")))
         self.mac_var.set(str(data.get("bitalino_mac", "")))
+        self.pre_stimulus_var.set(str(data.get("pre_stimulus_seconds", PRE_STIMULUS_DEFAULT)))
 
     # ações -------------------------------------------------------------
     def _on_salvar(self):

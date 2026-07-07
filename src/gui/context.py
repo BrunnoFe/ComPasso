@@ -84,6 +84,8 @@ class AppContext:
         # configuração do experimento (.config): quantidade total de reproduções de ruído e
         # se há uma config carregada (pré-requisito para iniciar — ver bottom_frame).
         self.noise_quantity: int = 0
+        # tempo pré-estímulo (s): contagem regressiva antes de cada faixa (padrão em config_manager)
+        self.pre_stimulus_seconds: int = 5
         self.config_loaded: bool = False
 
         # textos reativos dos rótulos (qualquer frame faz .set())

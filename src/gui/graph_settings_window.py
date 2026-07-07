@@ -27,6 +27,11 @@ from src.core import config_manager
 # opções de FPS oferecidas no menu (quadros por segundo do gráfico)
 _OPCOES_FPS = ["10", "15", "30", "60"]
 
+# rótulo de valor do gráfico: mapeia o texto exibido no menu <-> chave persistida (value_mode)
+_OPCOES_VALUE_MODE = ["Valor bruto", "Média"]
+_MAPA_VALUE_MODE = {"Valor bruto": "raw", "Média": "mean"}
+_MAPA_VALUE_MODE_INV = {"raw": "Valor bruto", "mean": "Média"}
+
 # limites/passos dos sliders
 _Y_MIN, _Y_MAX, _Y_PASSOS = 10, 50, 4            # 10/20/30/40/50 µV (passo 10)
 _JANELA_MIN, _JANELA_MAX, _JANELA_PASSOS = 1, 15, 14   # média móvel: 1..15 colunas
@@ -69,6 +74,8 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         self._width_var = ctk.DoubleVar(value=float(self._snapshot["line_width"]))
         self._grid_var = ctk.BooleanVar(value=bool(self._snapshot["grid_visible"]))
         self._labels_var = ctk.BooleanVar(value=bool(self._snapshot["axis_labels_visible"]))
+        self._value_mode_var = ctk.StringVar(
+            value=_MAPA_VALUE_MODE_INV.get(self._snapshot["value_mode"], _OPCOES_VALUE_MODE[0]))
 
         self._sessao_ativa = bool(getattr(ctx, "runner", None) is not None
                                   and ctx.runner.is_running())
@@ -169,9 +176,21 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             row=8, column=0, padx=15, pady=10, sticky=ctk.E)
         self._switch(mainframe, self._labels_var).grid(row=8, column=1, padx=15, pady=10, sticky=ctk.W)
 
+        # 7) Rótulo de valor (valor bruto + mín/máx  vs  média + desvio-padrão) ----
+        styled_label(mainframe, text="Rótulo de valor:").grid(
+            row=9, column=0, padx=15, pady=10, sticky=ctk.E)
+        self._value_mode_menu = ctk.CTkOptionMenu(
+            mainframe, variable=self._value_mode_var, values=_OPCOES_VALUE_MODE, width=160,
+            command=self._on_change, fg_color=INPUT_BG, button_color=INPUT_BG,
+            button_hover_color=BORDER, dropdown_fg_color=BAR_BG,
+            dropdown_hover_color=ACCENT_TINT, text_color=TEXT, dropdown_text_color=TEXT,
+            font=ctk.CTkFont(MONO_FAMILY, FONT_MD), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_MD),
+            corner_radius=CORNER_SM)
+        self._value_mode_menu.grid(row=9, column=1, padx=15, pady=10, sticky=ctk.W)
+
         # botões ------------------------------------------------------------------
         button_row = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
-        button_row.grid(row=9, column=0, columnspan=2, padx=15, pady=(20, 15), sticky=ctk.E)
+        button_row.grid(row=10, column=0, columnspan=2, padx=15, pady=(20, 15), sticky=ctk.E)
         styled_button(button_row, text="Salvar", width=110, command=self._on_salvar).grid(
             row=0, column=0, padx=(0, 10))
         ghost_button(button_row, text="Restaurar padrões", width=150,
@@ -230,6 +249,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             "line_width": self._arredondar_meio(self._width_var.get()),
             "grid_visible": bool(self._grid_var.get()),
             "axis_labels_visible": bool(self._labels_var.get()),
+            "value_mode": _MAPA_VALUE_MODE.get(self._value_mode_var.get(), "raw"),
         }
 
     def _aplicar_preview(self, settings: dict):
@@ -260,6 +280,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         self._width_var.set(float(padrao["line_width"]))
         self._grid_var.set(bool(padrao["grid_visible"]))
         self._labels_var.set(bool(padrao["axis_labels_visible"]))
+        self._value_mode_var.set(_MAPA_VALUE_MODE_INV.get(padrao["value_mode"], _OPCOES_VALUE_MODE[0]))
         self._on_change()
 
     def _on_cancelar(self):
