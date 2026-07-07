@@ -59,9 +59,9 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
   **startup mais lento** que o onedir.
 - **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do
   ComPasso já vão para pastas do usuário (Documentos/ComPasso, app-data) via
-  `src/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
+  `src/compasso/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
 - Recursos lidos (imagens, `lsl.dll`) são resolvidos a partir de `sys._MEIPASS`
-  (`src/gui/assets.py` já trata isso) — não dependa de caminhos relativos ao `.exe`.
+  (`src/compasso/gui/assets.py` já trata isso) — não dependa de caminhos relativos ao `.exe`.
 - Maior chance de **falso-positivo de antivírus** e de o `lsl.dll` ser bloqueado.
 - As saídas têm nomes distintos (`ComPasso-win/` vs `ComPasso.exe`), então coexistem em
   `dist/`. Atenção: `--clean` limpa o cache e o `build/`, mas **não remove a saída da outra

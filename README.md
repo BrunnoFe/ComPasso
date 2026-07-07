@@ -53,6 +53,9 @@ python -m venv .venv
 
 # 2. Instale as dependências
 pip install -r requirements.txt
+
+# 3. Instale o pacote `compasso` em modo editável (habilita `import compasso`, testes e dev)
+pip install -e .
 ```
 
 Para gerar um executável distribuível (`.exe` no Windows, `.app` no macOS), consulte [BUILD.md](BUILD.md), ou baixe um build pronto na seção [🚀 Releases](#-releases).

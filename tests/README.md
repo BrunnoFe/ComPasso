@@ -7,18 +7,19 @@ arquivo; o hardware é substituído por *fakes* determinísticos.
 
 ```bash
 venv\Scripts\activate           # Windows
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"         # instala o pacote `compasso` (editável) + ferramentas de teste
 pytest                          # a partir da raiz do repositório
 ```
 
 Com cobertura:
 
 ```bash
-pytest --cov=src --cov-report=term-missing
+pytest --cov=compasso --cov-report=term-missing
 ```
 
-Configuração em [`pytest.ini`](../pytest.ini): `testpaths = tests`, `pythonpath = .`
-(permite `import src...` a partir da raiz).
+Configuração em [`pyproject.toml`](../pyproject.toml) (`[tool.pytest.ini_options]`):
+`testpaths = ["tests"]`. **Não há `pythonpath`**: a descoberta do pacote `compasso` depende da
+instalação editável (`pip install -e .`), por isso ela é obrigatória antes de rodar `pytest`.
 
 ## O que é coberto
 
@@ -46,7 +47,7 @@ Configuração em [`pytest.ini`](../pytest.ini): `testpaths = tests`, `pythonpat
 - **`valid_config_values`**, **`participant`** — dados de exemplo.
 
 `local_clock`/`time` são *patchados no namespace do próprio módulo* (ex.:
-`src.core.recorder.local_clock`), pois os módulos fazem `from pylsl import local_clock`.
+`compasso.core.recorder.local_clock`), pois os módulos fazem `from pylsl import local_clock`.
 
 ## Deliberadamente NÃO coberto (e por quê)
 
@@ -59,6 +60,6 @@ Configuração em [`pytest.ini`](../pytest.ini): `testpaths = tests`, `pythonpat
 
 ## Efeito colateral conhecido
 
-Importar `src.core`/`src.utils` cria arquivos de log em app-data (infraestrutura de
+Importar `compasso.core`/`compasso.utils` cria arquivos de log em app-data (infraestrutura de
 logging do próprio app, via `bootstrap()`), não dados de teste. Os testes não escrevem
 DADOS fora de `tmp_path`.

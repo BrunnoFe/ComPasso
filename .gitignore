@@ -10,6 +10,9 @@ env/
 /dist/
 /build/
 
+# Metadados da instalação editável (pip install -e .)
+*.egg-info/
+
 # Arquivos compilados do Python
 __pycache__/
 *.py[cod]
