@@ -1,0 +1,69 @@
+# Configuração consolidada do ComPasso.
+#
+# O projeto NÃO é publicado no PyPI — é distribuído como executável via PyInstaller
+# (ver compasso.spec / BUILD.md). Este pyproject serve para: declarar metadados e
+# dependências, habilitar a instalação editável (`pip install -e .`) para desenvolvimento,
+# e centralizar a configuração de testes/cobertura (antes espalhada em pytest.ini).
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "compasso"
+# Versão do APP (fonte: version_info.txt / tag `v2026.2.0`). NÃO confundir com
+# `CONFIG_VERSION` (schema do .config, em src/compasso/core/config_manager.py) — são
+# conceitos independentes (ver RELEASE.md).
+version = "2026.2.0"
+description = "GUI de pesquisa que toca músicas e grava o sinal do BITalino (LSL) sincronizado por um único relógio."
+requires-python = ">=3.12"
+
+# Dependências de runtime — espelham requirements.txt (mantido para o fluxo já documentado).
+# Os markers `; sys_platform == "win32"` de comtypes/pycaw são obrigatórios (Windows-only).
+dependencies = [
+    'comtypes==1.4.16 ; sys_platform == "win32"',
+    "CTkMenuBar==0.9",
+    "CTkMessagebox==2.7",
+    "customtkinter==6.0.0",
+    "darkdetect==0.8.0",
+    "et_xmlfile==2.0.0",
+    "numpy==2.5.0",
+    "openpyxl==3.1.5",
+    "packaging==26.2",
+    "pandas==3.0.3",
+    "pillow==12.3.0",
+    "psutil==7.2.2",
+    'pycaw==20251023 ; sys_platform == "win32"',
+    "pygame-ce==2.5.7",
+    "pylsl==1.18.2",
+    "python-dateutil==2.9.0.post0",
+    "pywinstyles==1.8",
+    "six==1.17.0",
+    "tzdata==2026.2",
+]
+
+[project.optional-dependencies]
+# Ferramentas de build/lint/teste — espelham requirements-dev.txt. Instale com:
+#   pip install -e ".[dev]"
+dev = [
+    "pyinstaller==6.21.0",
+    "pyflakes==3.4.0",
+    "pytest==8.3.4",
+    "pytest-mock==3.14.0",
+    "pytest-cov==6.0.0",
+]
+
+# src-layout: o pacote importável `compasso` mora em src/compasso/.
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Migrado de pytest.ini. Sem `pythonpath` de propósito: a suíte depende da instalação
+# editável (`pip install -e .`), que coloca o pacote `compasso` no ambiente.
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+# Substitui o antigo `--cov=src`; a cobertura passa a medir o pacote `compasso`.
+[tool.coverage.run]
+source = ["compasso"]
