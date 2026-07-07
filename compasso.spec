@@ -65,7 +65,10 @@ collect_name = "ComPasso-win" if is_win else ("ComPasso-mac" if is_mac else "Com
 
 a = Analysis(
     ["main.py"],
-    pathex=["."],
+    # src-layout: o pacote `compasso` mora em src/, não na raiz. "src" no pathex garante
+    # que o PyInstaller resolva `import compasso` a partir do main.py sem depender de uma
+    # instalação editável prévia. "." mantém a raiz acessível (main.py, assets/ via datas).
+    pathex=["src", "."],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
