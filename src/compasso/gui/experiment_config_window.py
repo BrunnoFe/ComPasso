@@ -21,7 +21,8 @@ from .widgets import (show_message, confirm, styled_label, styled_button, styled
 from compasso.core.config_manager import (save_config, validate_values, get_experiment_files_dir,
                                      CHANNEL_OPTIONS, PRE_STIMULUS_MIN, PRE_STIMULUS_MAX,
                                      PRE_STIMULUS_DEFAULT, MUSIC_COLUMN_DEFAULT, FACTOR_COLUMN_DEFAULT,
-                                     BEEP_ENABLED_DEFAULT, BEEP_LEAD_MIN, BEEP_LEAD_MAX, BEEP_LEAD_DEFAULT)
+                                     BEEP_ENABLED_DEFAULT, BEEP_LEAD_MIN, BEEP_LEAD_MAX, BEEP_LEAD_DEFAULT,
+                                     CALIBRATION_ENABLED_DEFAULT)
 from compasso.core.constants import SENSOR_TYPES, SENSOR_DEFAULT
 
 class ExperimentConfigWindow(ctk.CTkToplevel):
@@ -76,6 +77,8 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.pre_stimulus_var = ctk.IntVar(value=PRE_STIMULUS_DEFAULT)
         self.beep_habilitado_var = ctk.BooleanVar(value=BEEP_ENABLED_DEFAULT)
         self.beep_segundos_var = ctk.IntVar(value=BEEP_LEAD_DEFAULT)
+        self.calibracao_habilitada_var = ctk.BooleanVar(value=CALIBRATION_ENABLED_DEFAULT)
+        self.calibracao_arquivo_var = ctk.StringVar()
 
         # 1) Pasta de músicas
         self._path_row(mainframe, 1, "Pasta de músicas:", self.music_folder_var, self._pick_music_folder)
@@ -122,9 +125,12 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         # 12) Beep de aviso: checkbox que habilita o slider da antecedência (t-X, 1 a 10 s)
         self._construir_linha_beep(mainframe, 12)
 
+        # 13) Calibração de volume: checkbox que habilita o carregamento da faixa de calibração
+        self._construir_linha_calibracao(mainframe, 13)
+
         # botões
         button_row = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
-        button_row.grid(row=13, column=0, columnspan=3, padx=15, pady=(20, 15), sticky=ctk.E)
+        button_row.grid(row=14, column=0, columnspan=3, padx=15, pady=(20, 15), sticky=ctk.E)
         self.salvar_button = styled_button(button_row, text="Salvar", width=120, command=self._on_salvar)
         self.salvar_button.grid(row=0, column=0, padx=(0, 10))
         self.cancelar_button = ghost_button(button_row, text="Cancelar", width=120, command=self._on_cancelar)
@@ -241,6 +247,60 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         else:
             self.beep_valor_label.configure(text_color=TEXT if habilitado else BORDER)
 
+    # calibração de volume ----------------------------------------------
+    def _construir_linha_calibracao(self, master, row):
+        """Monta a linha da calibração: checkbox de habilitação + carregador da faixa de áudio.
+
+        O carregador (entry read-only + botão "Procurar") só fica habilitado quando o checkbox
+        está marcado. A borda do entry fica vermelha quando habilitado mas sem arquivo escolhido.
+        """
+        styled_label(master, text="Calibração de volume:").grid(row=row, column=0, padx=15, pady=10, sticky=ctk.E)
+
+        # container-folha: usa pack internamente (o pai usa grid para seus filhos diretos).
+        calib_frame = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
+        calib_frame.grid(row=row, column=1, columnspan=2, padx=15, pady=10, sticky=ctk.EW)
+
+        self.calibracao_checkbox = ctk.CTkCheckBox(
+            calib_frame, text="Habilitar calibração de volume do participante",
+            variable=self.calibracao_habilitada_var, command=self._ao_alternar_calibracao,
+            fg_color=ACCENT, hover_color=ACCENT, text_color=TEXT, border_color=BORDER,
+            corner_radius=CORNER, font=BASE_FONT_MIN)
+        self.calibracao_checkbox.pack(side=ctk.TOP, anchor=ctk.W)
+
+        arquivo_frame = ctk.CTkFrame(calib_frame, fg_color=TRANSPARENTE)
+        arquivo_frame.pack(side=ctk.TOP, anchor=ctk.W, fill=ctk.X, pady=(8, 0))
+        self.calibracao_arquivo_entry = styled_entry(
+            arquivo_frame, textvariable=self.calibracao_arquivo_var, width=240, state="readonly")
+        self.calibracao_arquivo_entry.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
+        self.calibracao_procurar_btn = styled_button(
+            arquivo_frame, text="Procurar", width=90, command=self._pick_calibration_file)
+        self.calibracao_procurar_btn.pack(side=ctk.LEFT, padx=(10, 0))
+
+        self._ao_alternar_calibracao()  # sincroniza o estado inicial (desabilitado por padrão)
+
+    def _ao_alternar_calibracao(self):
+        """Habilita/desabilita o carregador de áudio conforme o checkbox e valida a borda."""
+        habilitado = bool(self.calibracao_habilitada_var.get())
+        self.calibracao_procurar_btn.configure(state="normal" if habilitado else "disabled")
+        # entry é read-only; alterna entre "readonly" (habilitado) e "disabled" (apagado).
+        self.calibracao_arquivo_entry.configure(state="readonly" if habilitado else "disabled")
+        self._validar_calibracao_visual()
+
+    def _validar_calibracao_visual(self):
+        """Pinta a borda do entry de vermelho quando a calibração está habilitada mas sem arquivo."""
+        habilitado = bool(self.calibracao_habilitada_var.get())
+        vazio = not self.calibracao_arquivo_var.get().strip()
+        cor = DANGER if (habilitado and vazio) else BORDER
+        self.calibracao_arquivo_entry.configure(border_color=cor)
+
+    def _pick_calibration_file(self):
+        path = filedialog.askopenfilename(parent=self, title="Selecione a faixa de áudio da calibração",
+                                          filetypes=[("Audio files", "*.wav *.ogg *.mp3")],
+                                          initialdir=str(get_experiment_files_dir().parent))
+        if path:
+            self.calibracao_arquivo_var.set(path)
+            self._validar_calibracao_visual()
+
     # pickers -----------------------------------------------------------
     def _pick_music_folder(self):
         path = filedialog.askdirectory(parent=self, title="Selecione a pasta de músicas", initialdir=str(get_experiment_files_dir().parent))
@@ -323,6 +383,8 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
             "pre_stimulus_seconds": int(self.pre_stimulus_var.get()),
             "beep_enabled": bool(self.beep_habilitado_var.get()),
             "beep_lead_seconds": int(self.beep_segundos_var.get()),
+            "calibration_enabled": bool(self.calibracao_habilitada_var.get()),
+            "calibration_audio": self.calibracao_arquivo_var.get().strip(),
         }
 
     def _populate(self, data: dict):
@@ -350,6 +412,10 @@ class ExperimentConfigWindow(ctk.CTkToplevel):
         self.beep_segundos_var.set(int(data.get("beep_lead_seconds", BEEP_LEAD_DEFAULT)))
         self._ao_mudar_segundos_beep(self.beep_segundos_var.get())
         self._ao_alternar_beep()
+        # calibração de volume: restaura o estado e sincroniza o carregador com o checkbox.
+        self.calibracao_habilitada_var.set(bool(data.get("calibration_enabled", CALIBRATION_ENABLED_DEFAULT)))
+        self.calibracao_arquivo_var.set(str(data.get("calibration_audio", "")))
+        self._ao_alternar_calibracao()
 
     # ações -------------------------------------------------------------
     def _on_salvar(self):

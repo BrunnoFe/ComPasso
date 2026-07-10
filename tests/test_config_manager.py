@@ -140,6 +140,60 @@ def test_validate_values_bad_sensor_type(valid_config_values):
     assert any("Tipo de sensor" in e for e in errors)
 
 
+# ------------------- calibração de volume (chave gated) -------------------- #
+def test_validate_values_calibration_disabled_ignores_audio(valid_config_values):
+    # desabilitada: nem precisa de arquivo, mesmo que ausente/inexistente.
+    valid_config_values["calibration_enabled"] = False
+    valid_config_values["calibration_audio"] = ""
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_validate_values_calibration_enabled_requires_audio(valid_config_values):
+    valid_config_values["calibration_enabled"] = True
+    valid_config_values["calibration_audio"] = ""
+    errors = cm.validate_values(valid_config_values)
+    assert any("Arquivo de áudio da calibração" in e for e in errors)
+
+
+def test_validate_values_calibration_audio_not_found(valid_config_values, tmp_path):
+    valid_config_values["calibration_enabled"] = True
+    valid_config_values["calibration_audio"] = str(tmp_path / "nao_existe.wav")
+    errors = cm.validate_values(valid_config_values)
+    assert any("não encontrado" in e for e in errors)
+
+
+def test_validate_values_calibration_bad_extension(valid_config_values, tmp_path):
+    wrong = tmp_path / "audio.txt"
+    wrong.write_text("x")
+    valid_config_values["calibration_enabled"] = True
+    valid_config_values["calibration_audio"] = str(wrong)
+    errors = cm.validate_values(valid_config_values)
+    assert any(".wav" in e for e in errors)
+
+
+def test_validate_values_calibration_enabled_ok(valid_config_values, tmp_path):
+    audio = tmp_path / "calib.wav"
+    audio.write_bytes(b"")
+    valid_config_values["calibration_enabled"] = True
+    valid_config_values["calibration_audio"] = str(audio)
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_load_backfills_calibration_defaults_on_old_config(tmp_path):
+    # `.config` antigo (sem as chaves de calibração) carrega com defaults, sem erro.
+    data = cm.default_config()
+    for key in cm.REQUIRED_KEYS:
+        data[key] = data[key] or "x"          # preenche obrigatórias com placeholder
+    data["music_quantity"] = 1
+    del data["calibration_enabled"]
+    del data["calibration_audio"]
+    path = tmp_path / "antigo.config"
+    path.write_text(json.dumps(data), encoding="utf-8")
+    loaded, _errors = cm.load_config(str(path))
+    assert loaded["calibration_enabled"] is cm.CALIBRATION_ENABLED_DEFAULT
+    assert loaded["calibration_audio"] == ""
+
+
 # --------------------------- save / load ----------------------------------- #
 def test_save_then_load_round_trip(tmp_path, valid_config_values, mocker):
     mocker.patch.object(cm.config_logger.logger, "info")

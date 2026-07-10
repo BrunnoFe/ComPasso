@@ -4,7 +4,7 @@ import customtkinter as ctk
 from tkinter import filedialog, TclError
 
 from .. import gui_logger
-from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
+from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
                      TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
@@ -603,9 +603,20 @@ class PlayerBar(Card):
         self.ctx.volume_text.set(f"{v}%")
 
         # ----- parar -----
-        danger_button(main_player_frame, "Parar", 
-                      command=self._on_stop, 
-                      width=90, height=BTN_H).grid(row=1, column=3, sticky="e")
+        danger_button(main_player_frame, "Parar",
+                      command=self._on_stop,
+                      width=90, height=BTN_H).grid(row=2, column=3, sticky=ctk.E, pady=(6, 0))
+
+        # ----- calibrar (abaixo do volume; só visível quando a calibração está habilitada) -----
+        self.calibrar_button = ghost_button(main_player_frame, text="Calibrar Volume", width=90,
+                                             height=BTN_H, command=self._on_calibrar)
+        self.calibrar_button.grid(row=2, column=2, padx=(0, 22), pady=(6, 0), sticky=ctk.EW)
+        self.calibrar_button.grid_remove()  # oculto até a calibração ser habilitada no .config
+
+        # expõe ao app (apply_config) e à janela de calibração os controles de volume/calibração.
+        self.ctx.atualizar_botao_calibrar = self._atualizar_botao_calibrar
+        self.ctx.aplicar_volume_calibrado = self._aplicar_volume_calibrado
+        self._atualizar_botao_calibrar()
 
         self.after(_PROGRESS_MS, self._update_progress)
 
@@ -620,6 +631,60 @@ class PlayerBar(Card):
             self.ctx.player.stop()
         except Exception:
             pass
+
+    # ------------------------------------------------------------------ #
+    def _atualizar_botao_calibrar(self):
+        """Mostra/oculta e habilita o botão "Calibrar" conforme o estado da calibração.
+
+        Visível só quando a calibração está habilitada no `.config`; desabilitado quando não há
+        arquivo de áudio válido ou quando há um experimento em andamento. Seguro em qualquer
+        momento (chamado pelo `apply_config` e pelo próprio `_update_progress`)."""
+        try:
+            habilitada = bool(getattr(self.ctx, "calibracao_habilitada", False))
+            if habilitada:
+                self.calibrar_button.grid()
+            else:
+                self.calibrar_button.grid_remove()
+                return
+            caminho = getattr(self.ctx, "calibracao_caminho", None)
+            runner = self.ctx.runner
+            ocupado = runner is not None and runner.is_running()
+            pronto = bool(caminho) and os.path.isfile(caminho) and not ocupado
+            self.calibrar_button.configure(state="normal" if pronto else "disabled")
+        except Exception:
+            pass
+
+    def _on_calibrar(self):
+        """Abre a janela de calibração de volume (valida pré-requisitos antes)."""
+        runner = self.ctx.runner
+        if runner is not None and runner.is_running():
+            show_message("Atenção", "Não é possível calibrar com um experimento em andamento.",
+                         icon="warning")
+            return
+        caminho = getattr(self.ctx, "calibracao_caminho", None)
+        if not caminho or not os.path.isfile(caminho):
+            show_message("Atenção", "Nenhum arquivo de áudio de calibração válido foi definido.\n"
+                                    "Carregue-o na janela de configuração do experimento "
+                                    "(Experimento → Novo/Editar).", icon="warning")
+            return
+        # import tardio: evita ciclo de importação com a camada de janelas da GUI.
+        from ..calibration_window import CalibrationWindow
+        CalibrationWindow(self, self.ctx)
+
+    def _aplicar_volume_calibrado(self, volume):
+        """Aplica o volume ótimo achado na calibração ao sistema e ao slider, e trava o slider."""
+        try:
+            vol = int(volume)
+            set_system_volume(vol)
+            self.music_volume.set(vol)
+            self.ctx.volume_text.set(f"{vol}%")
+            self.ctx.volume_calibrado = vol
+            self.ctx.volume_travado = True
+            self.music_volume.configure(state="disabled")
+            self._volume_locked = True
+            gui_logger.logger.info(f"Volume calibrado aplicado e travado em {vol}%.")
+        except Exception as e:
+            gui_logger.logger.warning(f"Falha ao aplicar volume calibrado: {e}")
 
     def _on_volume_change(self, value):
         """Atualiza o rótulo imediatamente e aplica o volume com debounce.
@@ -680,12 +745,15 @@ class PlayerBar(Card):
             self.rec_label.configure(text="GRAVANDO" if acquiring else "")
             has_cond = bool(self.ctx.current_condition_text.get().strip())
             self.condition_chip.configure(fg_color=ACCENT_TINT if has_cond else TRANSPARENTE)
-            # trava o slider durante a aquisição (contagem + reprodução): o volume não pode
-            # mudar no meio de uma faixa. Só reconfigura quando o estado muda (evita repintar
-            # o widget a cada polling).
-            if acquiring != getattr(self, "_volume_locked", False):
-                self._volume_locked = acquiring
-                self.music_volume.configure(state="disabled" if acquiring else "normal")
+            # trava o slider durante a aquisição (contagem + reprodução) OU após uma calibração
+            # confirmada (ctx.volume_travado): o volume não pode mudar no meio de uma faixa nem
+            # depois de fixado. Só reconfigura quando o estado muda (evita repintar a cada polling).
+            travado = acquiring or bool(getattr(self.ctx, "volume_travado", False))
+            if travado != getattr(self, "_volume_locked", False):
+                self._volume_locked = travado
+                self.music_volume.configure(state="disabled" if travado else "normal")
+            # reflete o estado do botão "Calibrar" (some/desabilita conforme config e aquisição)
+            self._atualizar_botao_calibrar()
         except Exception:
             pass
 

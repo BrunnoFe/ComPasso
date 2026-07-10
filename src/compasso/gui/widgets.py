@@ -47,6 +47,19 @@ def confirm(title: str, message: str) -> bool:
     return box.get() == "Sim"
 
 
+def ask_options(title: str, message: str, option_1: str, option_2: str,
+                icon: str = "question") -> str:
+    """Diálogo de duas opções livres no estilo padrão; retorna o texto da opção escolhida.
+
+    Diferente de `confirm` (fixo em Não/Sim), permite rótulos arbitrários — usado, por exemplo,
+    na calibração para o par "Reiniciar"/"Sim". `option_1` fica à esquerda; `option_2` à direita.
+    Deve ser chamada na thread da GUI. Retorna string vazia se a caixa for fechada sem escolha.
+    """
+    box = CTkMessagebox(title=title, message=message, icon=icon,
+                        option_1=option_1, option_2=option_2, **_MSGBOX_STYLE) #type: ignore
+    return box.get() or ""
+
+
 # ---------------------------------------------------------------------------
 # Cartão base do redesign
 # ---------------------------------------------------------------------------

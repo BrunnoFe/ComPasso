@@ -204,8 +204,12 @@ class ComPasso(ctk.CTk):
         config carregada e restaura o resumo do participante, se já estava salvo.
         """
         self.configure(fg_color=WIN_BG)
-        pywinstyles.change_border_color(self, WIN_BG)
-        pywinstyles.change_header_color(self, WIN_BG)
+
+        try:
+            pywinstyles.change_border_color(self, WIN_BG)
+            pywinstyles.change_header_color(self, WIN_BG)
+        except Exception as e:
+            gui_logger.logger.warning(f"Falha ao alterar cores da janela: {e}")
 
         self.main_frame.destroy()
         self.menu_bar.destroy()
@@ -410,6 +414,23 @@ class ComPasso(ctk.CTk):
             self.ctx.beep_habilitado = config_manager.BEEP_ENABLED_DEFAULT
             self.ctx.beep_antecedencia_segundos = config_manager.BEEP_LEAD_DEFAULT
             gui_logger.logger.warning(f"apply_config (beep de aviso): {e}")
+
+        # Calibração de volume (chaves opcionais; arquivos antigos caem no padrão: desabilitada,
+        # sem áudio). O botão "Calibrar" do PlayerBar é atualizado logo em seguida.
+        try:
+            self.ctx.calibracao_habilitada = bool(
+                data.get("calibration_enabled", config_manager.CALIBRATION_ENABLED_DEFAULT))
+            audio = str(data.get("calibration_audio", "")).strip()
+            self.ctx.calibracao_caminho = audio or None
+        except Exception as e:
+            self.ctx.calibracao_habilitada = config_manager.CALIBRATION_ENABLED_DEFAULT
+            self.ctx.calibracao_caminho = None
+            gui_logger.logger.warning(f"apply_config (calibração de volume): {e}")
+        try:
+            if self.ctx.atualizar_botao_calibrar is not None:
+                self.ctx.atualizar_botao_calibrar()
+        except Exception as e:
+            gui_logger.logger.warning(f"apply_config (botão calibrar): {e}")
 
         # marca que há uma configuração carregada (pré-requisito para iniciar o experimento)
         self.ctx.config_loaded = True

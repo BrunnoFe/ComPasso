@@ -13,6 +13,7 @@ from .experiment import ExperimentRunner, session_totals
 from .musics import scan_music_files, match_conditions
 from .audio import set_system_volume, get_system_volume
 from . import config_manager
+from . import calibration
 
 __all__ = [
     'connection_logger',
@@ -32,5 +33,6 @@ __all__ = [
     'match_conditions',
     'set_system_volume',
     'get_system_volume',
-    'config_manager'
+    'config_manager',
+    'calibration'
 ]

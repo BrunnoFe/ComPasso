@@ -36,6 +36,8 @@ OPTIONAL_KEYS = [
     "beep_enabled",
     "beep_lead_seconds",
     "sensor_type",
+    "calibration_enabled",
+    "calibration_audio",
 ]
 
 # Nomes default das colunas da planilha de condições (comportamento antigo, hardcoded).
@@ -54,6 +56,14 @@ BEEP_ENABLED_DEFAULT = False
 BEEP_LEAD_MIN = 1
 BEEP_LEAD_MAX = 10
 BEEP_LEAD_DEFAULT = 1
+
+# Calibracao de volume (opcional): se habilitada, um arquivo de audio dedicado e usado para
+# calibrar o volume com o participante antes da sessao (ver compasso.gui.calibration_window).
+# Desabilitada por padrao; so o flag e o caminho do audio sao persistidos no `.config` (os
+# parametros da rampa sao ajustados na janela de calibracao a cada uso). Extensoes aceitas
+# pelo pygame.mixer.
+CALIBRATION_ENABLED_DEFAULT = False
+CALIBRATION_AUDIO_EXTS = (".wav", ".ogg", ".mp3")
 
 CHANNEL_OPTIONS = ["A1", "A2", "A3", "A4", "A5", "A6"]
 
@@ -74,6 +84,8 @@ _FIELD_LABELS = {
     "beep_enabled": "Beep de aviso",
     "beep_lead_seconds": "Tempo do beep",
     "sensor_type": "Tipo de sensor",
+    "calibration_enabled": "Calibração de volume",
+    "calibration_audio": "Arquivo de áudio da calibração",
 }
 
 
@@ -104,6 +116,8 @@ def default_config() -> dict:
         "beep_enabled": BEEP_ENABLED_DEFAULT,
         "beep_lead_seconds": BEEP_LEAD_DEFAULT,
         "sensor_type": SENSOR_DEFAULT,
+        "calibration_enabled": CALIBRATION_ENABLED_DEFAULT,
+        "calibration_audio": "",
     }
 
 
@@ -203,6 +217,20 @@ def validate_values(values: dict) -> list:
         if sensor not in SENSOR_TYPES:
             errors.append(
                 f"Tipo de sensor: selecione um sensor válido ({', '.join(SENSOR_TYPES)}).")
+
+    # Calibracao de volume (chave opcional gated): so ha o que validar quando habilitada — aí o
+    # arquivo de audio precisa estar preenchido, existir e ter uma extensao suportada. Desabilitada,
+    # nao adiciona erro (o `.config` pode nem trazer o arquivo).
+    if values.get("calibration_enabled"):
+        audio = str(values.get("calibration_audio") or "").strip()
+        if not audio:
+            errors.append("Arquivo de áudio da calibração: campo obrigatório quando a calibração está habilitada.")
+        elif not os.path.isfile(audio):
+            errors.append(f"Arquivo de áudio da calibração: arquivo não encontrado ({audio}).")
+        elif not audio.lower().endswith(CALIBRATION_AUDIO_EXTS):
+            errors.append(
+                "Arquivo de áudio da calibração: deve ser um arquivo "
+                f"{'/'.join(CALIBRATION_AUDIO_EXTS)}.")
 
     # Chave opcional: só valida quando presente (arquivos antigos não a possuem).
     if "pre_stimulus_seconds" in values:

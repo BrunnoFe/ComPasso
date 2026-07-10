@@ -70,6 +70,14 @@ class AppContext:
         # cards e trava o botão de recolher; ao finalizar/parar (False) expande e libera.
         self.set_experiment_ui_lock = None
 
+        # callbacks registrados pelo PlayerBar para a calibração de volume:
+        # - atualizar_botao_calibrar(): mostra/oculta e habilita o botão "Calibrar" conforme o
+        #   estado (calibração habilitada, arquivo válido, sem experimento em curso);
+        # - aplicar_volume_calibrado(volume): aplica o volume ótimo achado na calibração ao
+        #   sistema e ao slider, e trava o slider.
+        self.atualizar_botao_calibrar = None
+        self.aplicar_volume_calibrado = None
+
         # watchdog de conexão do BITalino e callback de perda de conexão (top_frame).
         self.watchdog = None
         self.handle_connection_lost = None
@@ -105,6 +113,13 @@ class AppContext:
         # faixa (X = beep_antecedencia_segundos). Desabilitado por padrão; padrão de X = 1 s.
         self.beep_habilitado: bool = False
         self.beep_antecedencia_segundos: int = 1
+        # calibracao de volume (opcional): habilitacao + caminho do audio (definidos no .config).
+        # Quando habilitada, o PlayerBar mostra o botao "Calibrar" (ver calibration_window.py).
+        self.calibracao_habilitada: bool = False
+        self.calibracao_caminho: str | None = None
+        # volume otimo achado na calibracao e trava do slider de volume do PlayerBar apos salva-lo.
+        self.volume_calibrado: int | None = None
+        self.volume_travado: bool = False
         self.config_loaded: bool = False
 
         # textos reativos dos rótulos (qualquer frame faz .set())
