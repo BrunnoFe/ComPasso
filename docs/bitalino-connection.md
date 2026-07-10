@@ -14,7 +14,7 @@ A conexão **só funciona** se o OpenSignals estiver compartilhando os dados via
 3. Coloque o dispositivo em modo de aquisição/streaming (*play* do OpenSignals), de forma que o
    BITalino esteja transmitindo amostras.
 
-![Configurações Opensignals](docs\assets\images\opensignals.png)
+![Configurações Opensignals](/docs/assets/images/opensignals.png)
 
 > Sem o LSL ativo e transmitindo, a conexão falha com uma mensagem de erro (a resolução da stream
 > tem timeout de ~2 segundos).
@@ -34,7 +34,7 @@ Em caso de sucesso, o botão dá lugar a um indicador **"● Conectado"** com um
 animado, e um botão **Desconectar** fica disponível. Os campos de MAC, canal e sensor ficam
 travados enquanto a conexão estiver ativa.
 
-![Conectando o Bitalino](docs\assets\images\conectando.gif)
+![Conectando o Bitalino](/docs/assets/images/conectando.gif)
 
 ## 🔬 Tipo de sensor
 

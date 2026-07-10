@@ -177,7 +177,6 @@ THEME_NAMES = list(PALETTES)
 
 # >>> Paleta ativa (troque por PALETTE_IRIS ou PALETTE_AMBER para recolorir tudo) <<<
 THEME = PALETTE_TEAL
-_CURRENT = "Teal"
 
 # ---------------------------------------------------------------------------
 # Constantes semânticas de cor (derivadas da paleta ativa)
@@ -241,13 +240,12 @@ def set_theme(name: str) -> bool:
     """
     import sys
 
-    global THEME, _CURRENT
+    global THEME
     palette = PALETTES.get(name)
     if palette is None:
         return False
 
     THEME = palette
-    _CURRENT = name
     _assign(palette)
 
     novos = {nome: globals()[nome] for nome in _COLOR_MAP.values()}
@@ -258,11 +256,6 @@ def set_theme(name: str) -> bool:
             if hasattr(mod, nome):
                 setattr(mod, nome, valor)
     return True
-
-
-def current_theme_name() -> str:
-    """Retorna o nome da paleta ativa (chave de `PALETTES`)."""
-    return _CURRENT
 
 
 # ---------------------------------------------------------------------------

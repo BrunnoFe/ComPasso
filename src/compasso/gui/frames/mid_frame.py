@@ -486,13 +486,13 @@ class FilesCard(_CollapsibleCard, Card):
 
         self.ctx.music_condition_mapping = mapping
         self._scan_in_progress = False
-        if ignoradas:
+        """if ignoradas:
             nomes = "\n".join(f"- {n}" for n in ignoradas)
             self.ctx.run_after(lambda nomes=nomes: show_message(
                 "Atenção",
                 f"As músicas abaixo não têm condição correspondente no arquivo de condições e "
                 f"serão ignoradas durante o experimento:\n\n{nomes}",
-                icon="warning"))
+                icon="warning"))"""
         self.ctx.run_after(lambda: self.ctx.status_text.set("Mapemento de músicas para condições realizado com sucesso!"))
         self.ctx.run_after(self._refresh_checks)
         self.update_session_counters()
@@ -605,11 +605,11 @@ class PlayerBar(Card):
         # ----- parar -----
         danger_button(main_player_frame, "Parar",
                       command=self._on_stop,
-                      width=90, height=BTN_H).grid(row=2, column=3, sticky=ctk.E, pady=(6, 0))
+                      width=90, height=BTN_H).grid(row=1, column=3, sticky=ctk.E, pady=(6, 0))
 
         # ----- calibrar (abaixo do volume; só visível quando a calibração está habilitada) -----
         self.calibrar_button = ghost_button(main_player_frame, text="Calibrar Volume", width=90,
-                                             height=BTN_H, command=self._on_calibrar)
+                                             height=30, command=self._on_calibrar)
         self.calibrar_button.grid(row=2, column=2, padx=(0, 22), pady=(6, 0), sticky=ctk.EW)
         self.calibrar_button.grid_remove()  # oculto até a calibração ser habilitada no .config
 

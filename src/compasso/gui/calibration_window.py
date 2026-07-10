@@ -23,7 +23,7 @@ from compasso.utils.configs import ICON_FILENAME
 from compasso.utils import format_time
 
 from . import gui_logger
-from .theme import (FONT_LG, WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT, ACCENT_INK,
+from .theme import (FONT_2XL, WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT, ACCENT_INK,
                    TEXT, MUTED, FAINT, DANGER, DANGER_TINT, DANGER_BORDER, CORNER, CORNER_PILL,
                    DISPLAY_FAMILY, BASE_FONT, INPUT_H, BTN_H, FONT_SM, FONT_BASE, FONT_4XL)
 from .widgets import show_message, ask_options, styled_label, styled_entry, styled_button, \
@@ -134,10 +134,10 @@ class CalibrationWindow(ctk.CTkToplevel):
 
         # sliders de passo de aumento (%) e intervalo (s), ambos 1–5.
         self._step_pct_slider, self._step_pct_valor = self._coluna_slider(
-            frame, "AUMENTO (%)", self._step_pct_var,
+            frame, "AUMENTO X% DO VOLUME", self._step_pct_var,
             calibration.CALIB_STEP_PCT_MIN, calibration.CALIB_STEP_PCT_MAX)
         self._step_seg_slider, self._step_seg_valor = self._coluna_slider(
-            frame, "A CADA (S)", self._step_seg_var,
+            frame, "A CADA X SEGUNDOS", self._step_seg_var,
             calibration.CALIB_STEP_SEG_MIN, calibration.CALIB_STEP_SEG_MAX)
 
     def _coluna_entry(self, master, rotulo, var):
@@ -154,7 +154,7 @@ class CalibrationWindow(ctk.CTkToplevel):
         """Sub-coluna (caption + slider 1–5 + valor) para um parâmetro de passo/intervalo."""
         col = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
         col.pack(side=ctk.TOP, padx=(0, 14))
-        caption(col, rotulo).pack(anchor=ctk.W, pady=(0, 4))
+        caption(col, rotulo).pack(anchor=ctk.N, pady=(0, 4))
         linha = ctk.CTkFrame(col, fg_color=TRANSPARENTE)
         linha.pack()
         slider = ctk.CTkSlider(linha, from_=minimo, to=maximo, number_of_steps=maximo - minimo,
@@ -163,7 +163,7 @@ class CalibrationWindow(ctk.CTkToplevel):
                                progress_color=ACCENT, button_color=ACCENT,
                                button_hover_color=ACCENT, fg_color=BORDER)
         slider.pack(side=ctk.LEFT)
-        valor = mono(linha, str(var.get()), size=FONT_LG, color=MUTED, width=24)
+        valor = mono(linha, str(var.get()), size=FONT_2XL, color=MUTED, width=24)
         valor.pack(side=ctk.LEFT, padx=(8, 0))
         return slider, valor
 
