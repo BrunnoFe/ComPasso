@@ -1,6 +1,6 @@
 <img width="1280" height="320" alt="banner-blend" src="https://github.com/user-attachments/assets/2fd0a973-1433-4083-bbc9-4fd72d5c2d22" />
 
-<p>
+<p align="center">
   <img alt="License" src="https://img.shields.io/github/license/BrunnoFe/Compasso?color=2DD4BF">
   <img alt="Python" src="https://img.shields.io/badge/python-3.12%2B-2DD4BF">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-2DD4BF">
@@ -95,11 +95,21 @@ Abre a janela de configuração com campos vazios. Preencha todos os campos:
 | Quantidade de músicas | Número esperado de músicas (inteiro ≥ 1) |
 | Quantidade de ruído | Número esperado de faixas de ruído (inteiro ≥ 0) |
 | Arquivo de fatores | Planilha `.xlsx` / `.xls` com as condições de cada faixa |
+| 🆕 Coluna do nome dos áudios / Coluna dos fatores | Dois menus suspensos que surgem ao carregar o arquivo de fatores, já com os nomes reais das colunas da planilha — não escolha a mesma coluna nos dois |
 | Pasta de salvamento dos dados | Onde os arquivos da sessão serão gravados |
 | Canal ativo do BITalino | Canal do sensor a gravar — **A1 a A6** |
+| 🆕 Tipo de sensor | **EDA** / **ECG** (padrão) / **EMG** / **EOG** / **EEG** / **EGG** — define a unidade e a escala do gráfico |
 | Endereço MAC do BITalino | Endereço do dispositivo no formato `XX:XX:XX:XX:XX:XX` |
+| 🆕 Tempo pré-estímulo (s) | Slider de **5 a 120 segundos** — duração da contagem regressiva antes de cada faixa |
+| 🆕 Beep de aviso | Checkbox + slider de **1 a 10 segundos** — toca um beep no t-X da contagem regressiva (desligado por padrão) |
 
 Ao clicar em **Salvar**, escolha o nome e o local do arquivo `.config` (pasta padrão sugerida: `Documentos/ComPasso/Experiment files/`). A configuração é aplicada imediatamente a todos os campos da janela principal.
+
+<!-- SCREENSHOT: janela "Configuração do Experimento" com os novos campos (colunas da planilha, sensor, sliders de pré-estímulo/beep) -->
+
+> 🔔 **Colunas da planilha e beep de aviso:** escolher a mesma coluna nos dois menus de coluna, ou
+> um tempo de beep maior/igual ao tempo pré-estímulo, deixa os controles com a borda vermelha e
+> bloqueia o **Salvar** com uma mensagem explicando o problema.
 
 ### Abrir
 
@@ -109,9 +119,19 @@ Abre um seletor de arquivos para carregar um `.config` existente da pasta `Docum
 
 Disponível somente após um **Novo** ou **Abrir** bem-sucedido. Reabre a janela de configuração pré-preenchida com os valores do `.config` atual. Ao salvar, solicita confirmação antes de sobrescrever o arquivo.
 
+### 🚪 Sair
+
+Encerra o aplicativo. Ao contrário de Novo/Abrir/Editar (que ficam **desabilitados** durante um
+experimento em andamento, para não trocar a configuração no meio de uma sessão), **Sair fica
+sempre habilitada**.
+
 ### ⚙️ Configurações → Gráfico
 
 Abre a janela **Configurações do Gráfico**, para ajustar como o gráfico do sinal em tempo real é exibido — veja a seção [📈 Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) para a lista completa de opções, faixas e padrões. As mudanças são salvas em `prefs.json` e recarregadas automaticamente na próxima abertura do programa.
+
+> 🆕 A unidade e os limites do slider de **escala do eixo Y** dependem do **tipo de sensor**
+> selecionado na barra de conexão (µV para EEG, mV para ECG/EMG/EOG/EGG, µS para EDA) — veja
+> [🔬 Tipo de sensor](#-tipo-de-sensor) abaixo.
 
 ### 🎨 Temas
 
@@ -158,6 +178,8 @@ Exemplo:
 <img width="497" height="122" alt="fatores" src="https://github.com/user-attachments/assets/980f1e33-5da6-4e78-a25a-7db569695c06" />
 
 > **Importante:** o valor da coluna `música` deve bater exatamente com o nome do arquivo na pasta. Se uma música não tiver linha correspondente, o programa avisa e interrompe a verificação — corrija a planilha e recarregue. Os contadores **Música / Ruído** são calculados a partir da coluna `fator`: valores que contêm "ruido"/"ruído" contam como ruído; qualquer outro valor conta como música.
+>
+> 🆕 **Nomes de coluna configuráveis:** se sua planilha usar outros nomes (ex.: `arquivo`/`condicao`), não é preciso renomear nada — ao carregar o arquivo em **Experimento → Novo/Editar**, dois menus suspensos surgem automaticamente com os nomes reais das colunas, para você escolher qual é o nome do áudio e qual é o fator.
 
 ---
 
@@ -183,12 +205,30 @@ A interface foi redesenhada em cartões escuros com um indicador de progresso em
 
 1. **Endereço MAC** — campo de texto para digitar o endereço MAC do BITalino no formato `XX:XX:XX:XX:XX:XX`. É por ele que o ComPasso localiza a *stream* LSL publicada pelo OpenSignals.
 2. **Canal** — caixa de seleção ao lado do endereço MAC. Escolha o canal do sensor cujo sinal será gravado (**A1 a A6**). O padrão ao abrir o programa é **A1**.
-3. **Botão "Conectar"** — conecta ao BITalino via LSL. Em caso de sucesso, o botão dá lugar a um indicador "● Conectado" com um pequeno equalizador animado, e um botão **Desconectar** passa a ficar disponível; o campo de MAC e o canal ficam travados.
-4. **Botão "Desconectar"** — encerra manualmente a conexão com o BITalino e restaura a UI de conexão. Bloqueia (com aviso) se houver um experimento em andamento — pare o experimento antes de desconectar.
+3. **Sensor** 🆕 — caixa de seleção do tipo de sensor conectado ao canal (veja [🔬 Tipo de sensor](#-tipo-de-sensor) abaixo).
+4. **Botão "Conectar"** — conecta ao BITalino via LSL. Em caso de sucesso, o botão dá lugar a um indicador "● Conectado" com um pequeno equalizador animado, e um botão **Desconectar** passa a ficar disponível; os campos de MAC, canal e sensor ficam travados.
+5. **Botão "Desconectar"** — encerra manualmente a conexão com o BITalino e restaura a UI de conexão. Bloqueia (com aviso) se houver um experimento em andamento — pare o experimento antes de desconectar.
 
 > **Watchdog de conexão:** após conectar, o ComPasso monitora continuamente o fluxo de amostras. Se nenhuma amostra for recebida por ~15 segundos, a conexão é encerrada automaticamente, o experimento em andamento é interrompido com marcador `stop`, e uma mensagem de aviso é exibida.
 
 <!-- SCREENSHOT: barra de conexão no estado "Conectado", com o equalizador animado visível -->
+
+### 🔬 Tipo de sensor
+
+O BITalino aceita sensores diferentes, cada um com sua própria unidade e faixa de valores. Escolha o tipo **antes de conectar** (o menu fica travado depois) — isso ajusta a unidade e a escala padrão do [gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real):
+
+| Sensor | Unidade | Escala padrão | Faixa do slider (passo) |
+| --- | --- | --- | --- |
+| EDA | µS | ±6 µS | ±4 a ±30 µS (passo 2) |
+| **ECG** (padrão) | mV | ±1 mV | ±0,4 a ±3 mV (passo 0,2) |
+| EMG | mV | ±1 mV | ±0,4 a ±3 mV (passo 0,2) |
+| EOG | mV | ±0,5 mV | ±0,1 a ±2 mV (passo 0,1) |
+| EEG | µV | ±30 µV | ±10 a ±50 µV (passo 10) |
+| EGG | mV | ±0,5 mV | ±0,1 a ±2 mV (passo 0,1) |
+
+> 💡 A escolha do sensor **não converte** o sinal — o valor gravado no CSV/XLSX continua bruto, exatamente como antes. O sensor só muda o rótulo da unidade e a janela padrão de exibição do gráfico. Trocar de sensor **reseta a escala do eixo Y** para o padrão daquele sensor.
+
+<!-- SCREENSHOT: combobox "Sensor" aberto na barra de conexão, mostrando as 6 opções -->
 
 ### Indicador de progresso (stepper)
 
@@ -240,8 +280,10 @@ Cada linha tem um ícone de check que fica verde assim que o respectivo item é 
 
 - **Nome da faixa atual** (com um chip indicando a condição/fator) e um indicador **● GRAVANDO** enquanto a aquisição de sinal está ativa. Durante a contagem regressiva antes de cada faixa (inclusive logo após clicar em **Continuar →**), o rótulo mostra "Preparando: {nome da música}" até a reprodução começar de fato.
 - **Barra de progresso** com tempos de início/fim da faixa.
-- **Volume** — slider que controla o volume principal do sistema; ao abrir o programa, o volume é ajustado automaticamente para 50%.
+- **Volume** — slider que controla o volume principal do sistema; ao abrir o programa, o volume é ajustado automaticamente para 50%. 🔒 **Fica travado durante a contagem regressiva e a reprodução de cada faixa**, liberando entre uma faixa e a próxima.
 - **Parar** — interrompe **a qualquer momento** o experimento e a reprodução, gravando o marcador `stop` e finalizando o arquivo da faixa atual. Pede confirmação ("Tem certeza que deseja parar o experimento?") antes de interromper, para evitar cliques acidentais em uma sessão em andamento.
+
+> 🔔 **Beep de aviso (opcional):** se habilitado em **Experimento → Novo/Editar**, um beep toca durante a contagem regressiva, alguns segundos antes do início da faixa (1 a 10 s, configurável).
 
 ### 📈 Gráfico do sinal em tempo real
 
@@ -250,8 +292,8 @@ Cada linha tem um ícone de check que fica verde assim que o respectivo item é 
 Abaixo do player, um cartão desenha o sinal do BITalino do canal selecionado **ao vivo**, faixa por faixa:
 
 - O gráfico se abre nos **últimos 5 segundos** da contagem regressiva (eixo de tempo começa em `-0:05`) e mostra a música inteira até o fim (`0:00` = início da faixa, destacado por uma linha mais clara).
-- A linha se forma **continuamente e sem travar a interface**, com um ponteiro que acompanha a formação em tempo real e mostra o valor atual (µV) no canto superior.
-- O eixo Y é **sempre fixo** na escala configurada (padrão **±30 µV**), com marcas e linhas de grade de **10 em 10 µV** — não há mais ajuste automático pelos dados.
+- A linha se forma **continuamente e sem travar a interface**, com um ponteiro que acompanha a formação em tempo real e mostra o valor atual, na **unidade do sensor ativo** 🆕 (µV para EEG, mV para ECG/EMG/EOG/EGG, µS para EDA — veja [🔬 Tipo de sensor](#-tipo-de-sensor)), no canto superior.
+- O eixo Y é **sempre fixo** na escala configurada (padrão do sensor ativo, ex.: **±30 µV** para EEG ou **±1 mV** para ECG), com marcas e linhas de grade no passo do sensor — não há ajuste automático pelos dados.
 - Ao final de cada faixa, o registro completo permanece visível até ~1 segundo antes da próxima música começar, quando o gráfico se limpa para a faixa seguinte.
 - Ao **parar** o experimento, o gráfico volta ao estado ocioso ("Aguardando gravação…").
 
@@ -308,7 +350,7 @@ Ao clicar em **Começar**, o ComPasso verifica se todos os cinco pré-requisitos
    1. **Contagem regressiva de 10 segundos** — a gravação do sinal começa neste instante (marcador `countdown_start`). O botão vai para **Executando…** (desabilitado).
    2. **Reprodução da faixa** — ao iniciar o áudio, é gravado o marcador `music_start` (com o nome do arquivo e o fator). A faixa toca até o fim.
    3. **Fim da faixa** — grava o marcador `music_end`, finaliza o par CSV + XLSX e atualiza os contadores.
-   4. O botão muda para **Continuar →**: a sessão aguarda o pesquisador clicar para ir à próxima faixa. Use este intervalo conforme o protocolo (instruções ao participante, anotações etc.).
+   4. O botão muda para **Continuar →**: a sessão aguarda o pesquisador clicar para ir à próxima faixa. Use este intervalo conforme o protocolo (instruções ao participante, anotações etc.). Ao clicar, uma linha é gravada em `dados_da_execucao.xlsx` 🆕 com o tempo de reação dessa pausa.
 9. Quando todas as faixas terminam, a sessão é finalizada automaticamente.
 10. O botão **Parar** (painel do player) encerra a sessão a qualquer momento, gravando um marcador `stop` e finalizando o arquivo da faixa em andamento.
 
@@ -337,12 +379,14 @@ Documentos/ComPasso/data/
     ├── 01_faixa_01.csv
     ├── 01_faixa_01.xlsx
     ├── 02_branco_01.csv
-    └── 02_branco_01.xlsx
+    ├── 02_branco_01.xlsx
+    └── dados_da_execucao.xlsx
 ```
 
 - A **ordem** é a posição da faixa na playlist embaralhada (começa em 1, com zero à esquerda — largura mínima de 2 dígitos).
 - A **extensão do áudio** é removida do nome do arquivo.
 - O **CSV é gravado em tempo real** (com fsync periódico, resistindo a quedas inesperadas); o **XLSX é gerado ao final** de cada faixa a partir do mesmo conteúdo.
+- 🆕 **`dados_da_execucao.xlsx`** — uma única planilha **por sessão** (não por faixa), regravada a cada faixa concluída, com as colunas `n`, `áudio`, `fator`, `volume` (volume do sistema quando a faixa tocou) e `intervalo` (segundos entre o fim da faixa e o clique em "Continuar →").
 
 <!-- SCREENSHOT: Example data file -->
 
@@ -390,6 +434,9 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 | **Áudio não toca** | Verifique se os arquivos estão em `.mp3`, `.wav` ou `.ogg` e se o volume do sistema não está no mínimo. |
 | **Menu "Tema" não responde** | A troca de tema é bloqueada enquanto o BITalino está conectado ou um experimento está em andamento — desconecte/finalize antes de trocar. |
 | **Gráfico fica "Aguardando gravação…" o tempo todo** | O BITalino não está conectado/transmitindo, ou nenhuma faixa está em reprodução no momento — o gráfico só recebe dados durante os 5 s finais da contagem e a reprodução da faixa. |
+| 🆕 **"Salvar" recusa a configuração por causa das colunas** | As duas colunas escolhidas (nome do áudio / fator) são iguais, ou não existem na planilha carregada — recarregue o arquivo e escolha colunas diferentes. |
+| 🆕 **"Salvar" recusa por causa do beep** | O tempo do beep está igual ou maior que o tempo pré-estímulo. Diminua o tempo do beep ou aumente o tempo pré-estímulo. |
+| 🆕 **Menu "Experimento" com Novo/Abrir/Editar apagados** | Um experimento está em andamento — esses itens ficam desabilitados até a sessão terminar ou ser interrompida. Use **Sair** se precisar fechar o app mesmo assim. |
 | **Onde estão os arquivos de erro?** | `%LOCALAPPDATA%\ComPasso\errors.log` (Windows) / `~/Library/Application Support/ComPasso/errors.log` (macOS). |
 
 <!--
@@ -408,4 +455,11 @@ barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
 - GIF do botão "▴/▾" recolhendo/expandindo os cartões Participante + Arquivos & Dados (animação de
   slide de ~100 ms), incluindo o momento em que o experimento inicia (cartões recolhem e o botão
   trava sozinho) e finaliza/para (reabrem e o botão destrava).
+
+Adicionados nesta sessão (funcionalidades novas, ainda sem captura):
+- Janela "Configuração do Experimento" com os menus de coluna da planilha de fatores, o combobox
+  de tipo de sensor e os sliders de tempo pré-estímulo/beep de aviso.
+- Combobox "Sensor" aberto na barra de conexão, mostrando as 6 opções (EDA/ECG/EMG/EOG/EEG/EGG).
+- Menu "Experimento" com Novo/Abrir/Editar desabilitados durante um experimento e a opção "Sair".
+- `dados_da_execucao.xlsx` aberto, mostrando as colunas n/áudio/fator/volume/intervalo.
 -->

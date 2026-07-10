@@ -9,7 +9,7 @@ from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, FAINT, SUCCESS, A
                      FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
 from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
                        styled_entry, circle, check_icon, danger_button, Card)
-from compasso.core import (scan_music_files, match_conditions, MissingConditionError,
+from compasso.core import (scan_music_files, match_conditions,
                       set_system_volume, get_system_volume, session_totals)
 from compasso.utils import validar_nome_genero, validar_idade, format_time, get_data_dir, MIN_IDADE, MAX_IDADE
 
@@ -453,19 +453,20 @@ class FilesCard(_CollapsibleCard, Card):
         self.match_condition_with_music_file(music_files, cond_path)
 
     def match_condition_with_music_file(self, music_files: list, cond_path: str):
-        """Casa cada música com seu fator (thread de trabalho) e grava o mapeamento no contexto."""
+        """Casa cada música com seu fator (thread de trabalho) e grava o mapeamento no contexto.
+
+        Músicas sem condição correspondente na planilha são ignoradas (ficam de fora do
+        mapeamento) em vez de interromper o casamento das demais; o usuário é avisado, mas o
+        experimento segue normalmente com as músicas que têm condição.
+        """
         try:
-            mapping = match_conditions(
+            mapping, ignoradas = match_conditions(
                 music_files, cond_path,
                 music_column=getattr(self.ctx, "music_column", "musica"),
                 factor_column=getattr(self.ctx, "factor_column", "fator"))
         except FileNotFoundError:
             self._scan_in_progress = False
             self.ctx.run_after(lambda: show_message("Erro", f"Arquivo de condições não encontrado: {cond_path}.\nPor favor, verifique o arquivo e tente novamente."))
-            return
-        except MissingConditionError as e:
-            self._scan_in_progress = False
-            self.ctx.run_after(lambda n=e.music_name: show_message("Atenção", f"Nenhuma condição encontrada para {n} no arquivo de condições.\nEssa música será ignorada durante o experimento.", icon="warning"))
             return
 
         if mapping is None:
@@ -474,8 +475,24 @@ class FilesCard(_CollapsibleCard, Card):
             gui_logger.logger.warning("Nenhuma condição encontrada para as músicas selecionadas.")
             return
 
+        if not mapping:
+            self._scan_in_progress = False
+            self.ctx.run_after(lambda: show_message(
+                "Atenção",
+                "Nenhuma das músicas da pasta selecionada tem condição correspondente no "
+                "arquivo de condições.\nVerifique os nomes dos arquivos e a planilha.",
+                icon="warning"))
+            return
+
         self.ctx.music_condition_mapping = mapping
         self._scan_in_progress = False
+        if ignoradas:
+            nomes = "\n".join(f"- {n}" for n in ignoradas)
+            self.ctx.run_after(lambda nomes=nomes: show_message(
+                "Atenção",
+                f"As músicas abaixo não têm condição correspondente no arquivo de condições e "
+                f"serão ignoradas durante o experimento:\n\n{nomes}",
+                icon="warning"))
         self.ctx.run_after(lambda: self.ctx.status_text.set("Mapemento de músicas para condições realizado com sucesso!"))
         self.ctx.run_after(self._refresh_checks)
         self.update_session_counters()

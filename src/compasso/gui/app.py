@@ -1,6 +1,6 @@
 import os
 import webbrowser
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
 
 import customtkinter as ctk
 import pywinstyles
@@ -13,7 +13,7 @@ from . import theme
 from .context import AppContext
 from .assets import ASSETS_DIR
 from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
-from .widgets import show_message, ghost_button
+from .widgets import show_message, confirm, ghost_button
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
 from .frames.graph_frame import aplicar_sensor_ao_grafico
@@ -232,7 +232,9 @@ class ComPasso(ctk.CTk):
                                initial=self._loaded_config_data, config_path=self._loaded_config_path)
 
     def _on_sair(self):
-        """Encerra a aplicação (opção 'Sair' do menu Experimento)."""
+        """Encerra a aplicação (opção 'Sair' do menu Experimento), com confirmação prévia."""
+        if not confirm("Sair", "Tem certeza que deseja sair?"):
+            return
         gui_logger.logger.info("Encerrando o aplicativo pela opção 'Sair'.")
         self.destroy()
 
@@ -259,10 +261,10 @@ class ComPasso(ctk.CTk):
             return
         data, errors = config_manager.load_config(path)
         if errors:
-            messagebox.showerror("Arquivo inválido", "O arquivo de configuração contém problemas:\n\n" + "\n".join(errors))
+            show_message("Arquivo inválido", "O arquivo de configuração contém problemas:\n\n" + "\n".join(errors))
             return
         if data is None:
-            messagebox.showerror("Erro", "Falha ao carregar o arquivo de configuração.")
+            show_message("Erro", "Falha ao carregar o arquivo de configuração.")
             return
         gui_logger.logger.info(f"Configuração carregada: {path}")
         self._set_current_config(path, data)
@@ -425,7 +427,6 @@ class ComPasso(ctk.CTk):
             gui_logger.logger.warning(f"apply_config (contadores): {e}")
 
         self.ctx.notify_stepper()
-
 
 class MainFrame(ctk.CTkFrame):
     """Contêiner do redesign: pilha vertical de seções + rodapé fixo.

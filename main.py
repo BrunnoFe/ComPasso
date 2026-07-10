@@ -10,6 +10,7 @@ main_logger = SetLogger(category='main', namelogger='mainLogger')
 # Tempo (ms) que a tela de carregamento fica visível antes da janela principal ser montada.
 SPLASH_DURATION_MS = 3000
 
+VERSION = "2026.3.0"
 
 def _show_splash():
     """Mostra a tela de carregamento numa raiz Tk descartável, própria da splash.
@@ -44,7 +45,7 @@ def main():
             main_logger.logger.warning(f"Falha ao exibir a tela de carregamento: {e}")
 
         app = ComPasso(
-            nome="ComPasso",
+            nome=f"ComPasso ({VERSION})",
         )
         main_logger.logger.info("Interface gráfica carregada com sucesso.")
         app.mainloop()

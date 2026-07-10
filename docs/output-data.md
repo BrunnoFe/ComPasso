@@ -30,7 +30,8 @@ Documentos/ComPasso/Dados/
     ├── 01_faixa_01.csv
     ├── 01_faixa_01.xlsx
     ├── 02_branco_01.csv
-    └── 02_branco_01.xlsx
+    ├── 02_branco_01.xlsx
+    └── dados_da_execucao.xlsx
 ```
 
 - A **ordem** é a posição da faixa na playlist (começa em 1, com zero à esquerda — largura mínima
@@ -39,6 +40,10 @@ Documentos/ComPasso/Dados/
 - Caracteres problemáticos nos nomes (do participante e da música) são substituídos por `_`.
 - O **CSV é gravado em tempo real** (com sincronização periódica em disco, resistindo a quedas
   inesperadas); o **XLSX é gerado ao final** de cada faixa, a partir do mesmo conteúdo do CSV.
+- 🆕 **`dados_da_execucao.xlsx`** — uma única planilha por sessão (não por faixa), regravada por
+  inteiro a cada faixa concluída, com colunas `n, áudio, fator, volume, intervalo` — veja
+  [🕒 Planilha de execução](running-an-experiment.md#-planilha-de-execução) para o detalhe de cada
+  coluna.
 
 <!-- SCREENSHOT: exemplo de arquivo de dados aberto (CSV/XLSX) -->
 

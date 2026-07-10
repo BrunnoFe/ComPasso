@@ -25,6 +25,8 @@ Demo:
 
 import tkinter as tk
 
+from compasso.gui.assets import ASSETS_DIR
+from compasso.utils.configs import ICON_FILENAME
 import customtkinter as ctk
 
 from . import gui_logger
@@ -210,6 +212,7 @@ def show_splash(master=None, palette=None, display_family="Segoe UI",
     win = ctk.CTk() if owns_root else ctk.CTkToplevel(master)
     win.overrideredirect(True)                      # sem barra de título
     win.configure(fg_color=C["win_bg_transparent"])
+    win.iconbitmap(str(ASSETS_DIR / ICON_FILENAME))
 
     # centraliza
     win.update_idletasks()

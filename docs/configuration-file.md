@@ -12,7 +12,8 @@ são versionados no repositório — pertencem ao ambiente de cada pesquisador.
 
 ## Schema
 
-O arquivo contém a versão do schema (`config_version`) e sete campos obrigatórios:
+O arquivo contém a versão do schema (`config_version`), sete campos **obrigatórios** e seis campos
+**opcionais** (ausentes em `.config`s antigos → caem no valor padrão, sem quebrar a leitura):
 
 | Chave | Tipo | Descrição |
 | --- | --- | --- |
@@ -25,6 +26,17 @@ O arquivo contém a versão do schema (`config_version`) e sete campos obrigató
 | `bitalino_channel` | string | Canal ativo do sensor: `A1` a `A6`. |
 | `bitalino_mac` | string | Endereço MAC do BITalino (`XX:XX:XX:XX:XX:XX`). |
 
+### Campos opcionais 🆕
+
+| Chave | Tipo | Padrão | Descrição |
+| --- | --- | --- | --- |
+| `sensor_type` | string | `"ECG"` | Tipo de sensor do BITalino: `EDA`/`ECG`/`EMG`/`EOG`/`EEG`/`EGG`. Define a unidade e a escala do eixo Y do gráfico — veja [Conexão com o BITalino](bitalino-connection.md#-tipo-de-sensor). |
+| `music_column` | string | `"musica"` | Nome da coluna da planilha de fatores com o nome dos áudios. |
+| `factor_column` | string | `"fator"` | Nome da coluna da planilha de fatores com a condição/fator. |
+| `pre_stimulus_seconds` | inteiro 5–120 | `5` | Duração da contagem regressiva antes de cada faixa. |
+| `beep_enabled` | booleano | `false` | Liga/desliga o beep de aviso antes de cada faixa. |
+| `beep_lead_seconds` | inteiro 1–10 | `1` | Quantos segundos antes da faixa o beep toca (deve ser **menor** que `pre_stimulus_seconds`). |
+
 ## Exemplo
 
 ```json
@@ -36,7 +48,13 @@ O arquivo contém a versão do schema (`config_version`) e sete campos obrigató
   "factors_file": "C:\\Users\\pesquisa\\condicoes.xlsx",
   "data_save_path": "C:\\Users\\pesquisa\\Documents\\ComPasso\\Dados",
   "bitalino_channel": "A1",
-  "bitalino_mac": "AA:BB:CC:DD:EE:FF"
+  "bitalino_mac": "AA:BB:CC:DD:EE:FF",
+  "sensor_type": "ECG",
+  "music_column": "musica",
+  "factor_column": "fator",
+  "pre_stimulus_seconds": 5,
+  "beep_enabled": true,
+  "beep_lead_seconds": 1
 }
 ```
 
@@ -48,6 +66,12 @@ O arquivo contém a versão do schema (`config_version`) e sete campos obrigató
   (veja [Executando um experimento](running-an-experiment.md)).
 - `music_quantity` é **validado** (deve ser ≥ 1), mas o experimento reproduz **todas** as músicas
   encontradas e mapeadas — cada música aparece uma vez na playlist, independentemente desse número.
+- `music_column`/`factor_column` só precisam ser diferentes de "musica"/"fator" se a sua planilha
+  usar outros nomes de coluna — veja [Arquivos de entrada](input-files.md).
+- `sensor_type` **não converte** o valor do sinal gravado (que continua bruto); afeta apenas a
+  unidade exibida e a janela padrão da escala do eixo Y do gráfico.
+- `beep_lead_seconds` só é aplicado se `beep_enabled` for `true`, e é validado como **menor** que
+  `pre_stimulus_seconds` ao salvar (senão o beep nunca soaria antes do fim da contagem).
 
 > **Nota:** `config_version` refere-se à versão do **formato do arquivo `.config`**, e não à
 > versão do aplicativo ComPasso.

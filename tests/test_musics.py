@@ -5,14 +5,14 @@ import os
 import pytest
 
 from compasso.core import musics
-from compasso.core.musics import (scan_music_files, match_conditions,
-                             MissingConditionError, AUDIO_EXTENSIONS)
+from compasso.core.musics import scan_music_files, match_conditions, AUDIO_EXTENSIONS
 
 
 @pytest.fixture(autouse=True)
 def _silence_logger(mocker):
     """Evita ruído de log durante os testes deste módulo."""
     mocker.patch.object(musics.musics_logger.logger, "info")
+    mocker.patch.object(musics.musics_logger.logger, "warning")
 
 
 # ----------------------------- scan_music_files ---------------------------- #
@@ -51,22 +51,27 @@ def test_match_maps_each_music_to_factor(tmp_path, make_factors_xlsx):
     music_files = [str(tmp_path / "a.mp3"), str(tmp_path / "b.mp3")]
     xlsx = make_factors_xlsx([("a.mp3", "musica"), ("b.mp3", "ruido")])
 
-    mapping = match_conditions(music_files, xlsx)
+    mapping, ignoradas = match_conditions(music_files, xlsx)
     assert mapping[str(tmp_path / "a.mp3")] == "musica"
     assert mapping[str(tmp_path / "b.mp3")] == "ruido"
+    assert ignoradas == []
 
 
-def test_match_missing_condition_raises(tmp_path, make_factors_xlsx):
-    music_files = [str(tmp_path / "semfator.mp3")]
+def test_match_missing_condition_is_ignored(tmp_path, make_factors_xlsx):
+    """Música sem condição correspondente é ignorada, não interrompe o casamento das demais."""
+    music_files = [str(tmp_path / "semfator.mp3"), str(tmp_path / "outra.mp3")]
     xlsx = make_factors_xlsx([("outra.mp3", "musica")])
-    with pytest.raises(MissingConditionError) as exc:
-        match_conditions(music_files, xlsx)
-    assert exc.value.music_name == "semfator.mp3"
+    mapping, ignoradas = match_conditions(music_files, xlsx)
+    assert str(tmp_path / "semfator.mp3") not in mapping
+    assert mapping[str(tmp_path / "outra.mp3")] == "musica"
+    assert ignoradas == ["semfator.mp3"]
 
 
 def test_match_returns_none_when_columns_missing(tmp_path, make_factors_xlsx):
     xlsx = make_factors_xlsx([("a.mp3", "x")], columns=("arquivo", "tipo"))
-    assert match_conditions([str(tmp_path / "a.mp3")], xlsx) is None
+    mapping, ignoradas = match_conditions([str(tmp_path / "a.mp3")], xlsx)
+    assert mapping is None
+    assert ignoradas == []
 
 
 def test_match_with_custom_column_names(tmp_path, make_factors_xlsx):
@@ -77,16 +82,20 @@ def test_match_with_custom_column_names(tmp_path, make_factors_xlsx):
     xlsx = make_factors_xlsx([("a.mp3", "calmo"), ("b.mp3", "ruido")],
                              columns=("arquivo", "condicao"))
 
-    assert match_conditions(music_files, xlsx) is None  # defaults 'musica'/'fator' não existem
-    mapping = match_conditions(music_files, xlsx,
+    mapping, _ = match_conditions(music_files, xlsx)
+    assert mapping is None  # defaults 'musica'/'fator' não existem
+    mapping, ignoradas = match_conditions(music_files, xlsx,
                                music_column="arquivo", factor_column="condicao")
     assert mapping[str(tmp_path / "a.mp3")] == "calmo"
     assert mapping[str(tmp_path / "b.mp3")] == "ruido"
+    assert ignoradas == []
 
 
 def test_match_returns_none_when_empty_sheet(tmp_path, make_factors_xlsx):
     xlsx = make_factors_xlsx([], columns=("musica", "fator"))
-    assert match_conditions([str(tmp_path / "a.mp3")], xlsx) is None
+    mapping, ignoradas = match_conditions([str(tmp_path / "a.mp3")], xlsx)
+    assert mapping is None
+    assert ignoradas == []
 
 
 def test_match_missing_xlsx_raises(tmp_path):

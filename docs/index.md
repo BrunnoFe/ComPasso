@@ -5,7 +5,7 @@ músicas com a aquisição contínua do sinal do **BITalino** (via OpenSignals +
 Layer). As amostras do sinal e os marcadores de evento compartilham um único relógio
 (`pylsl.local_clock()`), garantindo sincronia precisa entre o estímulo auditivo e os dados
 fisiológicos coletados. Um **gráfico do sinal em tempo real** 📈 acompanha cada faixa durante a
-gravação, sem travar a interface mesmo em sessões longas.
+gravação.
 
 O programa toca uma sequência pseudoaleatória de faixas (músicas e ruído) e grava, para cada
 faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento alinhados no tempo.
@@ -16,9 +16,10 @@ faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento ali
 
 - **Contexto:** experimento de laboratório (ex.: condutância da pele) em que a reprodutibilidade
   e a rastreabilidade dos dados são prioritárias.
-- **O que faz:** conecta ao BITalino, coleta dados do participante, monta uma playlist a partir de
-  uma pasta de áudios e de uma planilha de condições, grava o sinal sincronizado por faixa e exibe
-  um gráfico do sinal em tempo real durante a coleta.
+- **O que faz:** conecta ao BITalino (com suporte a diferentes tipos de sensor — EDA/ECG/EMG/EOG/
+  EEG/EGG), coleta dados do participante, monta uma playlist a partir de uma pasta de áudios e de
+  uma planilha de condições, grava o sinal sincronizado por faixa e exibe um gráfico do sinal em
+  tempo real durante a coleta.
 - **Multiplataforma:** Windows e macOS (Linux como melhor esforço).
 
 ## 📚 Índice da documentação

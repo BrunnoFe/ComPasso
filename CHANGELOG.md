@@ -3,6 +3,31 @@
 Todas as mudanças notáveis deste projeto são documentadas neste arquivo, seguindo o formato
 [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
+## [Não lançado]
+
+### Adicionado
+
+- 🔒 **Volume travado durante a faixa** — o slider de volume fica desabilitado enquanto uma faixa
+  está em contagem regressiva ou reprodução, evitando mudar o volume no meio de uma gravação.
+- 📄 **Planilha `dados_da_execucao.xlsx`** — uma planilha por sessão (regravada a cada faixa
+  concluída) com colunas `n`, `áudio`, `fator`, `volume` (do sistema, no instante do play) e
+  `intervalo` (segundos entre o fim da faixa e o clique em "Continuar →").
+- 🔤 **Colunas da planilha de fatores configuráveis** — dois menus suspensos na janela de
+  configuração do experimento permitem escolher, pelos cabeçalhos reais do arquivo carregado, qual
+  coluna traz o nome do áudio e qual traz o fator (antes, os nomes `musica`/`fator` eram fixos).
+  Validação em tempo real (borda vermelha) impede escolher a mesma coluna nos dois.
+- 🔔 **Beep de aviso opcional** — checkbox + slider (1 a 10 s) na janela de configuração tocam um
+  aviso sonoro alguns segundos antes de cada faixa começar, durante a contagem regressiva; validado
+  para ser sempre menor que o tempo de contagem.
+- 🎚️ **Tempo pré-estímulo como slider** — a contagem regressiva antes de cada faixa (5 a 120 s)
+  agora é ajustada por um slider, em vez de um campo de texto.
+- 🚪 **Opção "Sair" no menu Experimento** — encerra o app; permanece sempre habilitada. Novo/Abrir/
+  Editar passam a ficar **desabilitados** durante um experimento em andamento.
+- 🔬 **Tipo de sensor do BITalino** — combobox na barra de conexão (EDA/ECG/EMG/EOG/EEG/EGG,
+  padrão ECG) e na janela de configuração, escolhido antes de conectar. Define a unidade e a janela
+  padrão da escala do eixo Y do gráfico do sinal em tempo real (o dado gravado continua bruto —
+  é só uma mudança de exibição). Trocar de sensor reseta a escala ao padrão daquele sensor.
+
 ## [2026.2.0] - 2026-07-02
 
 ### Adicionado

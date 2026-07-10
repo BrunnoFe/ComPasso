@@ -348,7 +348,10 @@ class ExperimentRunner:
         self._volume_faixa = int(round(get_system_volume()))
         self.ctx.player.play()
         self._post_current_music(self.music_name)
-        self._post_condition(" música " if cat == CONDITION_MUSICA else " ruído ")
+        if cat == CONDITION_MUSICA:
+            self._post_condition(f" {str(self.music_fator).strip().lower()} ")
+        else:
+            self._post_condition(" ruído ")
         self._post_status(f"Reproduzindo: {self.music_name}")
 
         # 4) aguarda o fim da faixa (ou stop)

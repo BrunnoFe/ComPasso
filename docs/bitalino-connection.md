@@ -14,7 +14,7 @@ A conexão **só funciona** se o OpenSignals estiver compartilhando os dados via
 3. Coloque o dispositivo em modo de aquisição/streaming (*play* do OpenSignals), de forma que o
    BITalino esteja transmitindo amostras.
 
-<!-- SCREENSHOT: OpenSignals com a opção Lab Streaming Layer (LSL) ativada -->
+![Configurações Opensignals](docs\assets\images\opensignals.png)
 
 > Sem o LSL ativo e transmitindo, a conexão falha com uma mensagem de erro (a resolução da stream
 > tem timeout de ~2 segundos).
@@ -26,13 +26,37 @@ Na barra de conexão (topo da janela):
 1. **Endereço MAC** — digite o endereço do BITalino no formato `XX:XX:XX:XX:XX:XX`. São aceitos
    os separadores `:`, espaço ou `-` (ex.: `AA:BB:CC:DD:EE:FF`, `AA BB CC DD EE FF`).
 2. **Canal** — selecione o canal do sensor cujo sinal será gravado, de **A1 a A6** (padrão: A1).
-3. Clique em **Conectar**.
+3. **Sensor** 🆕 — selecione o tipo de sensor conectado àquele canal (veja
+   [🔬 Tipo de sensor](#-tipo-de-sensor) abaixo).
+4. Clique em **Conectar**.
 
 Em caso de sucesso, o botão dá lugar a um indicador **"● Conectado"** com um pequeno equalizador
-animado, e um botão **Desconectar** fica disponível. Os campos de MAC e de canal ficam travados
-enquanto a conexão estiver ativa.
+animado, e um botão **Desconectar** fica disponível. Os campos de MAC, canal e sensor ficam
+travados enquanto a conexão estiver ativa.
 
-<!-- SCREENSHOT: barra de conexão no estado "Conectado" com o equalizador animado -->
+![Conectando o Bitalino](docs\assets\images\conectando.gif)
+
+## 🔬 Tipo de sensor
+
+O BITalino aceita sensores diferentes, cada um com sua própria unidade e faixa de valores. Escolha
+o tipo **antes de conectar** (o menu fica travado depois) — isso ajusta a unidade e a escala
+padrão do [gráfico do sinal em tempo real](running-an-experiment.md#-gráfico-do-sinal-em-tempo-real):
+
+| Sensor | Unidade | Escala padrão | Faixa do slider (passo) |
+| --- | --- | --- | --- |
+| EDA | µS (microsiemens) | ±6 µS | ±4 a ±30 µS (passo 2) |
+| **ECG** (padrão) | mV (milivolts) | ±1 mV | ±0,4 a ±3 mV (passo 0,2) |
+| EMG | mV | ±1 mV | ±0,4 a ±3 mV (passo 0,2) |
+| EOG | mV | ±0,5 mV | ±0,1 a ±2 mV (passo 0,1) |
+| EEG | µV (microvolts) | ±30 µV | ±10 a ±50 µV (passo 10) |
+| EGG | mV | ±0,5 mV | ±0,1 a ±2 mV (passo 0,1) |
+
+> 💡 **A escolha do sensor não converte o sinal.** O valor gravado no CSV/XLSX continua sendo o
+> valor **bruto** lido do BITalino, exatamente como antes — o sensor só muda o rótulo da unidade e
+> a janela padrão de exibição do gráfico. Trocar de sensor **reseta a escala do eixo Y** para o
+> padrão daquele sensor (ajustável depois em **Configurações → Gráfico**).
+
+<!-- SCREENSHOT: combobox "Sensor" aberto na barra de conexão, mostrando as 6 opções -->
 
 ### O que acontece internamente
 

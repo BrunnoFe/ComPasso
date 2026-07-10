@@ -89,12 +89,34 @@ Para cada faixa da sequência:
    contadores são atualizados. O gráfico permanece com o registro completo da faixa visível.
 5. **Pausa entre faixas** — o botão muda para **Continuar →** e a sessão aguarda o pesquisador
    clicar para avançar à próxima faixa. Use este intervalo conforme o protocolo (instruções ao
-   participante, anotações etc.).
+   participante, anotações etc.). Ao clicar em **Continuar →**, o ComPasso grava uma linha em
+   `dados_da_execucao.xlsx` com o tempo de reação daquela pausa — veja
+   [🕒 Planilha de execução](#-planilha-de-execução) abaixo.
+
+> 🔔 **Beep de aviso (opcional):** se habilitado em **Experimento → Novo/Editar**, um beep toca
+> durante a contagem regressiva, alguns segundos antes do início da faixa (configurável de 1 a 10
+> segundos) — um sinal sonoro para avisar o participante que o áudio está prestes a começar.
 
 <!-- SCREENSHOT: player com o indicador GRAVANDO e o chip de condição visíveis -->
 
 Quando todas as faixas terminam, a sessão é finalizada automaticamente e o status indica
 "Experimento finalizado."
+
+## 🕒 Planilha de execução
+
+Além do CSV/XLSX por faixa, o ComPasso mantém **uma planilha por sessão** chamada
+`dados_da_execucao.xlsx`, na mesma pasta da sessão. Ela é regravada a cada faixa concluída, com
+uma linha por faixa:
+
+| Coluna | Descrição |
+| --- | --- |
+| `n` | Ordem da faixa na sessão (1, 2, 3, ...). |
+| `áudio` | Nome do arquivo de áudio daquela faixa. |
+| `fator` | Condição/fator daquela faixa. |
+| `volume` | Volume do sistema (0–100) no instante em que a faixa começou a tocar. |
+| `intervalo` | Segundos entre o **fim** daquela faixa e o clique em **Continuar →** — útil para medir o tempo de reação/preparo entre as faixas. |
+
+<!-- SCREENSHOT: dados_da_execucao.xlsx aberto, mostrando as colunas n/áudio/fator/volume/intervalo -->
 
 ## 📈 Gráfico do sinal em tempo real
 
@@ -108,9 +130,12 @@ plausível (sem precisar abrir o CSV depois):
   fim da música; o instante **`0:00`** (início da faixa) é destacado por uma linha vertical mais
   clara.
 - A linha se forma **continuamente**, com um ponteiro que acompanha a formação e mostra o valor
-  atual (µV) no canto superior direito do cartão.
-- O eixo vertical é **sempre fixo** na escala configurada (padrão **±30 µV**), com marcas e linhas
-  de grade de **10 em 10 µV** — não há mais reescala automática pelos dados.
+  atual no canto superior direito do cartão, na **unidade do sensor ativo** (veja
+  [🔬 Tipo de sensor](bitalino-connection.md#-tipo-de-sensor) — µV para EEG, mV para ECG/EMG/EOG/EGG,
+  µS para EDA).
+- O eixo vertical é **sempre fixo** na escala configurada (padrão do sensor ativo, ex.: **±30 µV**
+  para EEG ou **±1 mV** para ECG), com marcas e linhas de grade no passo do sensor — não há mais
+  reescala automática pelos dados.
 - Ao final da faixa, o registro completo permanece visível durante a pausa "Continuar →" e some
   ~1 segundo antes do início da contagem da próxima faixa.
 - Ao clicar em **Parar**, o gráfico volta imediatamente ao estado ocioso ("Aguardando gravação…").
@@ -152,6 +177,10 @@ que deseja parar o experimento?") e, se confirmado, interrompe a reprodução, r
 Ao abrir o programa, o volume principal do sistema é ajustado automaticamente para **50%**. O
 slider de volume no player controla o volume principal do SO (a aplicação é feita com um pequeno
 atraso após o último ajuste, para não sobrecarregar o sistema).
+
+> 🔒 **O slider de volume fica travado durante a contagem regressiva e a reprodução de cada
+> faixa**, evitando que o volume mude no meio de uma gravação. Ele volta a ficar disponível durante
+> a pausa "Continuar →", entre uma faixa e a próxima.
 
 ---
 

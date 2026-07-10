@@ -3,7 +3,7 @@
 A barra de menus da janela principal tem quatro cascatas: **Experimento**, **Configurações**,
 **Tema** e **Ajuda**.
 
-<!-- SCREENSHOT: barra de menus com Experimento / Configurações / Tema / Ajuda -->
+![Menu](docs\assets\images\menu.png)
 
 ## 📁 Menu Experimento
 
@@ -25,16 +25,40 @@ Abre a janela de configuração com campos vazios. Preencha todos os campos:
 | Quantidade de músicas | Número inteiro ≥ 1 |
 | Quantidade de ruído | Número inteiro ≥ 0 |
 | Arquivo de fatores | Planilha `.xlsx` / `.xls` com as condições de cada faixa |
+| 🆕 Coluna do nome dos áudios / Coluna dos fatores | Surgem como dois menus suspensos assim que o arquivo de fatores é carregado, já preenchidos com os nomes reais das colunas da planilha — veja [Arquivos de entrada](input-files.md#planilha-de-condições) |
 | Pasta de salvamento dos dados | Onde os arquivos da sessão serão gravados |
 | Canal ativo do BITalino | Canal do sensor a gravar — **A1 a A6** |
+| 🆕 Tipo de sensor | **EDA** / **ECG** (padrão) / **EMG** / **EOG** / **EEG** / **EGG** — define a unidade e a escala do gráfico, veja [Conexão com o BITalino](bitalino-connection.md#-tipo-de-sensor) |
 | Endereço MAC do BITalino | Endereço no formato `XX:XX:XX:XX:XX:XX` |
+| 🆕 Tempo pré-estímulo (s) | Slider de **5 a 120 segundos** — duração da contagem regressiva antes de cada faixa |
+| 🆕 Beep de aviso | Checkbox + slider de **1 a 10 segundos** — toca um beep no t-X da contagem regressiva; desabilitado por padrão |
 
-<!-- SCREENSHOT: janela "Configuração do Experimento" com os campos preenchidos -->
+<!-- SCREENSHOT: janela "Configuração do Experimento" com os campos preenchidos, incluindo os
+     menus de coluna, o combobox de sensor e os sliders de pré-estímulo/beep -->
 
 Ao clicar em **Salvar**, os valores são validados (veja abaixo). Se estiverem corretos, você
 escolhe o nome e o local do arquivo `.config` (pasta padrão sugerida:
 `Documentos/ComPasso/Configurações do Experimento/`). A configuração é aplicada imediatamente aos
 campos da janela principal.
+
+### 🔔 Colunas da planilha de fatores
+
+Ao escolher o **Arquivo de fatores**, dois menus suspensos aparecem logo abaixo, listando os
+cabeçalhos reais daquela planilha — um para a coluna com o **nome dos arquivos de áudio** e outro
+para a coluna com o **fator/condição**. Você **não pode escolher a mesma coluna nos dois**: se
+tentar, ambos os menus ficam com a borda vermelha (validação em tempo real), e o botão **Salvar**
+recusa com uma mensagem explicando o problema. Isso substitui a exigência antiga de nomear as
+colunas exatamente `musica`/`fator` — agora qualquer planilha funciona, desde que as colunas sejam
+selecionadas corretamente.
+
+### 🔔 Beep de aviso
+
+Um checkbox ("Tocar um beep antes de cada faixa") habilita um slider de **1 a 10 segundos** que
+define quantos segundos antes do início da faixa o beep toca, durante a contagem regressiva. O
+tempo do beep **precisa ser menor** que o tempo de contagem regressiva (Tempo pré-estímulo) —
+se você definir um valor igual ou maior, o slider fica vermelho e o **Salvar** é bloqueado com uma
+mensagem explicando exatamente o conflito. Por padrão o beep vem **desligado**; quando ligado, o
+padrão é **t-1s**.
 
 ### Abrir
 
@@ -47,6 +71,15 @@ aplicada.
 Disponível **somente após** um "Novo" ou "Abrir" bem-sucedido. Reabre a janela de configuração
 pré-preenchida com os valores do `.config` atual. Ao salvar, solicita **confirmação antes de
 sobrescrever** o arquivo (`Sobrescrever <nome>?`).
+
+### 🚪 Sair
+
+Encerra o aplicativo imediatamente. Diferente de Novo/Abrir/Editar, **fica sempre habilitada**,
+mesmo durante um experimento em andamento.
+
+> ⚠️ **Novo, Abrir e Editar ficam desabilitados enquanto um experimento está em andamento** — evita
+> trocar a configuração ativa no meio de uma sessão de coleta. Eles voltam a ficar disponíveis
+> assim que a sessão termina ou é interrompida (Editar só se já havia uma configuração carregada).
 
 ### Validações e mensagens de erro
 
@@ -61,6 +94,11 @@ Ao salvar, cada campo é validado. As mensagens são exibidas diretamente ao usu
 - **Canal ativo do BITalino:** obrigatório, entre A1 e A6.
 - **Endereço MAC do BITalino:** obrigatório e no formato `XX:XX:XX:XX:XX:XX`
   (`formato inválido (use XX:XX:XX:XX:XX:XX)`).
+- **Coluna do nome dos áudios / Coluna dos fatores:** ambas obrigatórias e **diferentes** entre si
+  (`devem ser colunas diferentes`); também precisam existir de fato na planilha carregada.
+- **Tipo de sensor:** deve ser um dos seis sensores válidos.
+- **Tempo do beep:** se o beep estiver habilitado, precisa ser um inteiro de 1 a 10 segundos e
+  **menor** que o tempo pré-estímulo configurado.
 
 Ao **abrir** um arquivo, há ainda verificações de estrutura: se o JSON estiver malformado
 (`Arquivo de configuração inválido ou ilegível (JSON malformado)`), se faltar a versão
@@ -83,6 +121,11 @@ junto com o tema. A **escala do eixo Y** fica desabilitada durante um experiment
 (é fixa durante a sessão); as demais configurações podem ser ajustadas a qualquer momento. Botões:
 **Salvar** (aplica e persiste), **Restaurar padrões** (volta aos valores de fábrica) e
 **Cancelar** (fecha sem salvar, revertendo qualquer preview aplicado).
+
+> 🆕 A **unidade e os limites do slider de escala Y** agora dependem do **tipo de sensor**
+> selecionado na barra de conexão (µV para EEG, mV para ECG/EMG/EOG/EGG, µS para EDA) — veja
+> [Conexão com o BITalino](bitalino-connection.md#-tipo-de-sensor). Trocar de sensor reseta a
+> escala ao padrão daquele sensor.
 
 ## 🎨 Menu Tema
 

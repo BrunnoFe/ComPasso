@@ -18,12 +18,8 @@ uma mensagem avisa que nenhum arquivo foi encontrado.
 ## 2. Planilha de condições (`.xlsx` / `.xls`)
 
 Uma planilha Excel que associa cada arquivo de música à sua **condição/fator** experimental. Ela
-**precisa** conter exatamente estas duas colunas (com estes nomes, em minúsculo):
-
-| Coluna | Descrição |
-| --- | --- |
-| `musica` | Nome do arquivo de áudio **com a extensão** (ex.: `faixa_01.mp3`). |
-| `fator` | Condição/rótulo daquela faixa (ex.: `intenso`, `calmo`, `ruido`). |
+precisa conter (pelo menos) duas colunas: uma com o **nome do arquivo de áudio** e outra com a
+**condição/fator** daquela faixa.
 
 ### Exemplo
 
@@ -35,15 +31,25 @@ Uma planilha Excel que associa cada arquivo de música à sua **condição/fator
 
 <!-- SCREENSHOT: planilha de condições com as colunas musica e fator -->
 
+### 🆕 Nomes de coluna configuráveis
+
+Por padrão, o ComPasso procura as colunas chamadas **`musica`** e **`fator`** (como no exemplo
+acima). Se a sua planilha usa outros nomes (ex.: `arquivo`/`condicao`), **não é preciso renomear
+nada**: ao carregar o arquivo de fatores na janela **Experimento → Novo/Editar**, dois menus
+suspensos aparecem automaticamente, já listando os nomes reais das colunas encontradas — escolha
+ali qual coluna é o nome do áudio e qual é o fator. Veja
+[Menus → Colunas da planilha de fatores](experiment-menu.md#-colunas-da-planilha-de-fatores) para
+o passo a passo e as regras de validação (as duas colunas escolhidas precisam ser diferentes).
+
 ### Regras importantes
 
-- O valor da coluna `musica` deve **bater exatamente** com o nome do arquivo na pasta de músicas
+- O valor da coluna de música deve **bater exatamente** com o nome do arquivo na pasta de músicas
   (incluindo a extensão).
 - Se uma música da pasta **não tiver linha correspondente** na planilha, o ComPasso avisa
   (`Nenhuma condição encontrada para <arquivo>`) e **essa música é ignorada** durante o
   experimento.
-- Se a planilha não tiver as colunas `musica` e `fator`, ou estiver vazia, o mapeamento não é
-  realizado e uma mensagem de status indica que nenhuma condição foi encontrada.
+- Se a planilha não tiver as colunas configuradas (`musica`/`fator` por padrão), ou estiver vazia,
+  o mapeamento não é realizado e uma mensagem de status indica que nenhuma condição foi encontrada.
 
 ## Classificação música vs. ruído
 
