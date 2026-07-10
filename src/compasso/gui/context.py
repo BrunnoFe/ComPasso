@@ -3,7 +3,12 @@ import threading
 import customtkinter as ctk
 
 from . import gui_logger
+from .assets import ASSETS_DIR
 from compasso.core.player import Player
+from compasso.core.constants import SENSOR_DEFAULT
+
+# Beep de aviso opcional tocado na contagem regressiva (ver ExperimentRunner).
+BEEP_FILENAME = "edit_beep_1000Hz.wav"
 
 class AppContext:
     """Estado compartilhado da aplicação ComPasso.
@@ -28,9 +33,15 @@ class AppContext:
 
         # serviços / estado
         self.player: Player = Player()
+        # caminho do arquivo de beep (aviso na contagem regressiva); resolvido a partir de
+        # assets/ para que o runner (core) o toque sem depender da camada de GUI.
+        self.beep_caminho: str = str(ASSETS_DIR / BEEP_FILENAME)
         self.bitalino = None          # StreamInlet | None
         self.mac_addr: str | None = None          # str | None
         self.signal_channel: int = 0       # índice do canal LSL usado na coluna 'signal'
+        # tipo de sensor do BITalino (EDA/ECG/EMG/EOG/EEG/EGG); define a unidade e a escala
+        # do gráfico (só exibição — ver constants.SENSOR_GRAPH_PARAMS e graph_frame.py).
+        self.sensor_type: str = SENSOR_DEFAULT
         self.runner = None            # ExperimentRunner | None
 
         # fachada do gráfico do sinal (GraphFrame), registrada pelo próprio frame.
@@ -80,12 +91,20 @@ class AppContext:
         self.save_dir: str | None = None
         self.music_files: list = []
         self.music_condition_mapping: dict = {}
+        # nomes das colunas da planilha de condições (definidos no .config; defaults reproduzem
+        # o comportamento antigo). Usados por match_conditions ao casar músicas e fatores.
+        self.music_column: str = "musica"
+        self.factor_column: str = "fator"
 
         # configuração do experimento (.config): quantidade total de reproduções de ruído e
         # se há uma config carregada (pré-requisito para iniciar — ver bottom_frame).
         self.noise_quantity: int = 0
         # tempo pré-estímulo (s): contagem regressiva antes de cada faixa (padrão em config_manager)
         self.pre_stimulus_seconds: int = 5
+        # beep de aviso na contagem regressiva: se habilitado, toca X segundos antes de cada
+        # faixa (X = beep_antecedencia_segundos). Desabilitado por padrão; padrão de X = 1 s.
+        self.beep_habilitado: bool = False
+        self.beep_antecedencia_segundos: int = 1
         self.config_loaded: bool = False
 
         # textos reativos dos rótulos (qualquer frame faz .set())

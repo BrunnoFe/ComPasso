@@ -11,7 +11,9 @@ from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, ACCENT,
                      INPUT_H, BTN_H, FONT_XS, FONT_MD)
 from ..widgets import show_message, caption, ghost_button, styled_button, Card
 from ..canvas_widgets import LiveEqualizer
+from .graph_frame import aplicar_sensor_ao_grafico
 from compasso.core import connectar_bitalino, ConnectionWatchdog
+from compasso.core.constants import SENSOR_TYPES, SENSOR_DEFAULT
 
 # Altura-alvo (px) do logo no topo da barra de conexão. A coluna do MAC (rótulo +
 # campo INPUT_H) é a mais alta da linha (~61 px); manter o logo abaixo disso preserva
@@ -87,6 +89,22 @@ class ConnectionFrame(Card):
 
         self.canal_optionmenu.pack()
 
+        # ----- Sensor (tipo de sensor do BITalino; escolher antes de conectar) -----
+        sensor_frame = ctk.CTkFrame(main_connect_frame, fg_color=TRANSPARENTE)
+        sensor_frame.pack(side="left", padx=(18, 0))
+
+        caption(sensor_frame, "SENSOR").pack(anchor="w", pady=(0, 5))
+
+        self.sensor_var = ctk.StringVar(value=getattr(ctx, "sensor_type", SENSOR_DEFAULT))
+        self.sensor_optionmenu = ctk.CTkOptionMenu(
+            sensor_frame, width=88, height=INPUT_H, corner_radius=CORNER_SM,
+            values=list(SENSOR_TYPES), variable=self.sensor_var,
+            command=self._on_sensor_change,
+            fg_color=INPUT_BG, button_color=INPUT_BG, button_hover_color=BORDER,
+            text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
+            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
+        self.sensor_optionmenu.pack()
+
         # espaçador
         ctk.CTkFrame(main_connect_frame, fg_color=TRANSPARENTE, height=1).pack(side="left", expand=True, fill="x")
 
@@ -145,6 +163,11 @@ class ConnectionFrame(Card):
             self.ctx.signal_channel = 0
         gui_logger.logger.info(f"Canal de sinal selecionado: {self.ctx.signal_channel}")
 
+    def _on_sensor_change(self, sensor_escolhido: str):
+        """Aplica o tipo de sensor: muda unidade/escala do gráfico (reset ao padrão do sensor)."""
+        aplicar_sensor_ao_grafico(self.ctx, sensor_escolhido, resetar_escala=True)
+        gui_logger.logger.info(f"Tipo de sensor selecionado: {sensor_escolhido}")
+
     def conect_bitalino(self, mac_addr: str):
         """Conecta ao Bitalino fora da thread da GUI; trata o resultado na thread principal."""
         gui_logger.logger.info(f"Solicitada conexão ao Bitalino com MAC: {mac_addr}, type: {type(mac_addr)}")
@@ -171,6 +194,7 @@ class ConnectionFrame(Card):
             self.ctx.status_text.set("Bitalino conectado")
             self.mac_entry.configure(state="disabled")
             self.canal_optionmenu.configure(state="disabled")
+            self.sensor_optionmenu.configure(state="disabled")  # sensor é escolhido antes de conectar
             self._show_connected()
 
             # inicia o watchdog de conexão (detecta perda de sinal por >= 15 s)
@@ -215,9 +239,10 @@ class ConnectionFrame(Card):
         self.ctx.bitalino = None
         self.ctx.mac_addr = None
 
-        # restaura o campo de MAC/canal e o botão de conexão
+        # restaura o campo de MAC/canal/sensor e o botão de conexão
         self.mac_entry.configure(state="normal")
         self.canal_optionmenu.configure(state="normal")
+        self.sensor_optionmenu.configure(state="normal")
         self._show_disconnected()
 
         self.ctx.notify_stepper()

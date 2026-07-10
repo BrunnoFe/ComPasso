@@ -10,6 +10,7 @@ import re
 import json
 
 from . import config_logger
+from .constants import SENSOR_TYPES, SENSOR_DEFAULT
 from compasso.utils import (ENCODING_FORMAT, APP_NAME, EXPERIMENT_FILES_DIRNAME, PREFS_FILENAME,
                       get_documents_dir, get_app_data_dir)
 
@@ -30,12 +31,29 @@ REQUIRED_KEYS = [
 # são default-adas na leitura.
 OPTIONAL_KEYS = [
     "pre_stimulus_seconds",
+    "music_column",
+    "factor_column",
+    "beep_enabled",
+    "beep_lead_seconds",
+    "sensor_type",
 ]
+
+# Nomes default das colunas da planilha de condições (comportamento antigo, hardcoded).
+# Usados quando o `.config` não traz as chaves (arquivos anteriores à seleção de colunas).
+MUSIC_COLUMN_DEFAULT = "musica"
+FACTOR_COLUMN_DEFAULT = "fator"
 
 # Faixa aceita para o tempo pré-estímulo (contagem regressiva antes de cada faixa), em segundos.
 PRE_STIMULUS_MIN = 5
 PRE_STIMULUS_MAX = 120
 PRE_STIMULUS_DEFAULT = 5
+
+# Beep de aviso na contagem regressiva: se habilitado, toca no t-X (X segundos antes da faixa).
+# Desabilitado por padrão; quando ligado, o default é t-1 s. Faixa aceita para X: 1 a 10 s.
+BEEP_ENABLED_DEFAULT = False
+BEEP_LEAD_MIN = 1
+BEEP_LEAD_MAX = 10
+BEEP_LEAD_DEFAULT = 1
 
 CHANNEL_OPTIONS = ["A1", "A2", "A3", "A4", "A5", "A6"]
 
@@ -51,6 +69,11 @@ _FIELD_LABELS = {
     "bitalino_channel": "Canal ativo do BITalino",
     "bitalino_mac": "Endereço MAC do BITalino",
     "pre_stimulus_seconds": "Tempo pré-estímulo",
+    "music_column": "Coluna com nome dos áudios",
+    "factor_column": "Coluna dos fatores",
+    "beep_enabled": "Beep de aviso",
+    "beep_lead_seconds": "Tempo do beep",
+    "sensor_type": "Tipo de sensor",
 }
 
 
@@ -76,6 +99,11 @@ def default_config() -> dict:
         "bitalino_channel": "",
         "bitalino_mac": "",
         "pre_stimulus_seconds": PRE_STIMULUS_DEFAULT,
+        "music_column": MUSIC_COLUMN_DEFAULT,
+        "factor_column": FACTOR_COLUMN_DEFAULT,
+        "beep_enabled": BEEP_ENABLED_DEFAULT,
+        "beep_lead_seconds": BEEP_LEAD_DEFAULT,
+        "sensor_type": SENSOR_DEFAULT,
     }
 
 
@@ -137,6 +165,45 @@ def validate_values(values: dict) -> list:
     elif not MAC_REGEX.match(mac):
         errors.append("Endereço MAC do BITalino: formato inválido (use XX:XX:XX:XX:XX:XX).")
 
+    # Colunas da planilha de condições (chaves opcionais): quando presentes, ambas precisam
+    # estar preenchidas e ser distintas. A existência das colunas no arquivo é verificada na
+    # janela de configuração (onde o próprio Excel está carregado).
+    if "music_column" in values or "factor_column" in values:
+        music_column = str(values.get("music_column") or "").strip()
+        factor_column = str(values.get("factor_column") or "").strip()
+        if not music_column:
+            errors.append("Coluna do nome dos áudios: selecione uma coluna da planilha de fatores.")
+        if not factor_column:
+            errors.append("Coluna dos fatores: selecione uma coluna da planilha de fatores.")
+        if music_column and factor_column and music_column == factor_column:
+            errors.append("Coluna do nome dos áudios e Coluna dos fatores devem ser colunas diferentes.")
+
+    # Beep de aviso (chave opcional): só há o que validar quando o beep está habilitado —
+    # aí o tempo (t-X) precisa ser um inteiro dentro da faixa aceita. Com o slider da janela
+    # o valor já nasce válido; esta checagem protege contra `.config` editado à mão.
+    if values.get("beep_enabled"):
+        beep_lead = str(values.get("beep_lead_seconds")).strip()
+        if not (_is_int(beep_lead, BEEP_LEAD_MIN) and int(beep_lead) <= BEEP_LEAD_MAX):
+            errors.append(
+                f"Tempo do beep: informe um inteiro entre {BEEP_LEAD_MIN} e "
+                f"{BEEP_LEAD_MAX} segundos.")
+        else:
+            # O beep toca durante a contagem regressiva (no t-X); portanto a antecedência
+            # precisa ser MENOR que o tempo de contagem, senão ele nunca soaria antes da faixa.
+            pre_stimulus = str(values.get("pre_stimulus_seconds", "")).strip()
+            if _is_int(pre_stimulus, 1) and int(beep_lead) >= int(pre_stimulus):
+                errors.append(
+                    f"Tempo do beep: a antecedência (t-{int(beep_lead)}s) deve ser menor que o "
+                    f"tempo de contagem regressiva ({int(pre_stimulus)}s). Reduza o tempo do beep "
+                    f"ou aumente a contagem regressiva.")
+
+    # Tipo de sensor (chave opcional): quando presente, precisa ser um dos sensores conhecidos.
+    if "sensor_type" in values:
+        sensor = str(values.get("sensor_type") or "").strip()
+        if sensor not in SENSOR_TYPES:
+            errors.append(
+                f"Tipo de sensor: selecione um sensor válido ({', '.join(SENSOR_TYPES)}).")
+
     # Chave opcional: só valida quando presente (arquivos antigos não a possuem).
     if "pre_stimulus_seconds" in values:
         pre_stimulus = str(values.get("pre_stimulus_seconds")).strip()
@@ -156,7 +223,7 @@ def save_config(path: str, values: dict) -> None:
         data[key] = values.get(key, "")
     defaults = default_config()
     for key in OPTIONAL_KEYS:
-        data[key] = values.get(key, defaults.get(key))
+        data[key] = values.get(key, defaults.get(key)) #type: ignore
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     with open(path, "w", encoding=ENCODING_FORMAT) as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
@@ -256,7 +323,7 @@ DEFAULT_GRAPH_SETTINGS = {
     "y_scale": 30,               # escala Y simétrica (µV): ±20/±30/±40/±50
     "smoothing_enabled": True,   # média móvel de exibição ligada?
     "smoothing_window": 5,       # janela da média móvel (colunas de exibição, 1–15)
-    "fps": 60,                   # quadros por segundo do gráfico: 10/15/30/60
+    "fps": 30,                   # quadros por segundo do gráfico: 10/15/30/60
     "line_width": 1.5,           # espessura da linha do sinal (px)
     "grid_visible": True,        # mostrar linhas de grade?
     "axis_labels_visible": True, # mostrar rótulos dos eixos?

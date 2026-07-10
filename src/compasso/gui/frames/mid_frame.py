@@ -455,7 +455,10 @@ class FilesCard(_CollapsibleCard, Card):
     def match_condition_with_music_file(self, music_files: list, cond_path: str):
         """Casa cada música com seu fator (thread de trabalho) e grava o mapeamento no contexto."""
         try:
-            mapping = match_conditions(music_files, cond_path)
+            mapping = match_conditions(
+                music_files, cond_path,
+                music_column=getattr(self.ctx, "music_column", "musica"),
+                factor_column=getattr(self.ctx, "factor_column", "fator"))
         except FileNotFoundError:
             self._scan_in_progress = False
             self.ctx.run_after(lambda: show_message("Erro", f"Arquivo de condições não encontrado: {cond_path}.\nPor favor, verifique o arquivo e tente novamente."))
@@ -621,6 +624,11 @@ class PlayerBar(Card):
     def _apply_pending_volume(self):
         """Aplica o último volume solicitado (chamado pelo debounce na thread da GUI)."""
         self._volume_after_id = None
+        # defesa: um debounce agendado logo antes de a faixa começar não deve aplicar volume
+        # já com a aquisição em andamento (o slider desabilitado não dispara novos comandos).
+        runner = self.ctx.runner
+        if runner is not None and runner.is_acquiring():
+            return
         if not set_system_volume(self._pending_volume) and not getattr(self, "_volume_warned", False):
             self._volume_warned = True
             self.ctx.status_text.set("Controle de volume do sistema indisponível.")
@@ -655,6 +663,12 @@ class PlayerBar(Card):
             self.rec_label.configure(text="GRAVANDO" if acquiring else "")
             has_cond = bool(self.ctx.current_condition_text.get().strip())
             self.condition_chip.configure(fg_color=ACCENT_TINT if has_cond else TRANSPARENTE)
+            # trava o slider durante a aquisição (contagem + reprodução): o volume não pode
+            # mudar no meio de uma faixa. Só reconfigura quando o estado muda (evita repintar
+            # o widget a cada polling).
+            if acquiring != getattr(self, "_volume_locked", False):
+                self._volume_locked = acquiring
+                self.music_volume.configure(state="disabled" if acquiring else "normal")
         except Exception:
             pass
 

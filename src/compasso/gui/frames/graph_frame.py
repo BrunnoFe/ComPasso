@@ -22,6 +22,43 @@ from ..theme import (ACCENT, TRANSPARENTE, DISPLAY_FAMILY, MONO_FAMILY,
                      FONT_MD, PAD_MD, PAD_SM)
 from ..widgets import Card, caption, mono
 from .signal_plot import GraficoSinal
+from compasso.core.constants import SENSOR_DEFAULT, SENSOR_GRAPH_PARAMS
+
+
+def _params_sensor(sensor):
+    """Parâmetros de exibição do gráfico para `sensor` (cai no default se desconhecido)."""
+    return SENSOR_GRAPH_PARAMS.get(sensor, SENSOR_GRAPH_PARAMS[SENSOR_DEFAULT])
+
+
+def _escala_valida_para_sensor(escala, params):
+    """Retorna `escala` se estiver dentro dos limites do sensor; senão o padrão do sensor."""
+    try:
+        valor = abs(float(escala))
+    except (TypeError, ValueError):
+        return params["padrao"]
+    return valor if params["minimo"] <= valor <= params["maximo"] else params["padrao"]
+
+
+def aplicar_sensor_ao_grafico(ctx, sensor, resetar_escala=True):
+    """Aplica os parâmetros do sensor ao gráfico: unidade, passo e escala Y.
+
+    Registra o sensor em ``ctx.sensor_type`` e ajusta ``ctx.graph_settings['y_scale']``.
+    ``resetar_escala=True`` (troca feita pelo usuário) volta a escala ao padrão do sensor;
+    ``False`` (arranque/aplicação de config) mantém a escala salva se estiver dentro dos
+    limites do sensor. Aplica ao gráfico ao vivo se já houver um registrado em ctx.
+    """
+    params = _params_sensor(sensor)
+    ctx.sensor_type = sensor
+    settings = ctx.graph_settings if isinstance(getattr(ctx, "graph_settings", None), dict) else {}
+    if resetar_escala:
+        escala = params["padrao"]
+    else:
+        escala = _escala_valida_para_sensor(settings.get("y_scale", params["padrao"]), params)
+    settings["y_scale"] = escala
+    ctx.graph_settings = settings
+    plot = getattr(ctx, "signal_plot", None)
+    if plot is not None:
+        plot.apply_settings({"y_scale": escala, "unidade": params["unidade"], "y_step": params["passo"]})
 
 # altura fixa do gráfico (largura é responsiva via fill="x")
 _ALTURA_GRAFICO = 300
@@ -81,10 +118,23 @@ class GraphFrame(Card):
         # As configurações de exibição vêm do hub (ctx.graph_settings, populado no arranque
         # e ajustável pela janela "Configurações do Gráfico"); ausentes -> defaults do widget.
         settings = getattr(ctx, "graph_settings", None) if ctx is not None else None
+        kwargs = _kwargs_grafico(settings)
+        # unidade/passo/escala do eixo Y vêm do sensor ativo (só exibição). A escala salva é
+        # honrada se estiver dentro dos limites do sensor; senão cai no padrão do sensor.
+        sensor = getattr(ctx, "sensor_type", SENSOR_DEFAULT) if ctx is not None else SENSOR_DEFAULT
+        params = _params_sensor(sensor)
+        kwargs["unidade"] = params["unidade"]
+        kwargs["passo_eixo_y"] = params["passo"]
+        kwargs["escala_y"] = _escala_valida_para_sensor(kwargs.get("escala_y", params["padrao"]), params)
+        # mantém o hub coerente com a escala efetivamente aplicada (pode ter sido clampada ao sensor).
+        if ctx is not None:
+            settings_hub = ctx.graph_settings if isinstance(ctx.graph_settings, dict) else {}
+            settings_hub["y_scale"] = kwargs["escala_y"]
+            ctx.graph_settings = settings_hub
         self._grafico = GraficoSinal(self, paleta=theme.THEME,
                                      familia_display=DISPLAY_FAMILY, familia_mono=MONO_FAMILY,
                                      height=_ALTURA_GRAFICO,
-                                     **_kwargs_grafico(settings))
+                                     **kwargs)
         self._grafico.pack(fill="x", expand=True, padx=PAD_MD, pady=(PAD_SM, PAD_MD))
 
         # nasce ocioso ("Aguardando gravação…")

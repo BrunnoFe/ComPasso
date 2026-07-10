@@ -19,6 +19,10 @@ class Player:
         self._paused = False
         self._path = None
         self._current_length = 0.0
+        # beep de aviso (canal separado): Sound cacheado por caminho para não recarregar a
+        # cada faixa. Toca em paralelo à faixa carregada em pygame.mixer.music, sem pará-la.
+        self._beep_sound = None
+        self._beep_path = None
 
         try:
             pygame.mixer.init()
@@ -56,6 +60,23 @@ class Player:
             player_logger.logger.info('Playback started')
         except Exception as e:
             player_logger.logger.error(f'Playback error: {e}')
+
+    def play_beep(self, path: str) -> bool:
+        """Toca um beep curto em um canal separado (não interfere na música carregada).
+
+        Usa ``pygame.mixer.Sound`` (canal próprio) em vez de ``pygame.mixer.music``, para
+        não parar a faixa carregada. O Sound é cacheado por caminho. Retorna True se tocou.
+        """
+        try:
+            if self._beep_sound is None or self._beep_path != path:
+                self._beep_sound = pygame.mixer.Sound(path)
+                self._beep_path = path
+            self._beep_sound.play()
+            player_logger.logger.info(f'Beep played: {path}')
+            return True
+        except Exception as e:
+            player_logger.logger.error(f'Beep playback error: {e}')
+            return False
 
     def stop(self):
         try:

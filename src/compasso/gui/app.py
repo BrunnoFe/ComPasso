@@ -16,9 +16,11 @@ from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_B
 from .widgets import show_message, ghost_button
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
+from .frames.graph_frame import aplicar_sensor_ao_grafico
 from .experiment_config_window import ExperimentConfigWindow
 from .graph_settings_window import GraphSettingsWindow
 from compasso.core import config_manager, set_system_volume
+from compasso.core.constants import SENSOR_TYPES, SENSOR_DEFAULT
 from compasso.utils import ICON_FILENAME, PROJECT_URL, PROJECT_GITSITE, get_logs_dir, open_path 
 
 # Volume principal do sistema aplicado uma única vez no arranque do app.
@@ -93,11 +95,13 @@ class ComPasso(ctk.CTk):
             border_width=2,
         )
         
-        # Adiciona as opções
-        self.dropdown_experimento.add_option(option="Novo", command=self._on_novo)
-        self.dropdown_experimento.add_option(option="Abrir", command=self._on_abrir)
+        # Adiciona as opções (referências guardadas para travar durante o experimento)
+        self.novo_option = self.dropdown_experimento.add_option(option="Novo", command=self._on_novo)
+        self.abrir_option = self.dropdown_experimento.add_option(option="Abrir", command=self._on_abrir)
         self.editar_option = self.dropdown_experimento.add_option(  # type: ignore[func-returns-value]
             option="Editar", command=self._on_editar, state="disabled")
+        # "Sair" encerra o app; permanece sempre habilitada (inclusive durante o experimento).
+        self.sair_option = self.dropdown_experimento.add_option(option="Sair", command=self._on_sair)
 
         self.btn_configs = self.menu_bar.add_cascade("Configurações",
                                                      hover_color=ACCENT_TINT,
@@ -227,6 +231,26 @@ class ComPasso(ctk.CTk):
         ExperimentConfigWindow(self, mode="editar", on_saved=self._on_config_saved,
                                initial=self._loaded_config_data, config_path=self._loaded_config_path)
 
+    def _on_sair(self):
+        """Encerra a aplicação (opção 'Sair' do menu Experimento)."""
+        gui_logger.logger.info("Encerrando o aplicativo pela opção 'Sair'.")
+        self.destroy()
+
+    def _set_experimento_menu_locked(self, locked: bool):
+        """Trava/destrava as opções Novo/Abrir/Editar do menu Experimento (exceto 'Sair').
+
+        Chamado no início/fim do experimento (via `_set_experiment_ui_lock`). Ao destravar,
+        'Editar' só volta a ficar disponível se há uma configuração carregada.
+        """
+        estado = "disabled" if locked else "normal"
+        self.novo_option.configure(state=estado)   # type: ignore[union-attr]
+        self.abrir_option.configure(state=estado)  # type: ignore[union-attr]
+        if locked:
+            self.editar_option.configure(state="disabled")  # type: ignore[union-attr]
+        else:
+            self.editar_option.configure(  # type: ignore[union-attr]
+                state="normal" if self._loaded_config_data else "disabled")
+
     def _on_abrir(self):
         path = filedialog.askopenfilename(parent=self, title="Abrir configuração",
                                           initialdir=str(config_manager.get_experiment_files_dir()),
@@ -305,6 +329,19 @@ class ComPasso(ctk.CTk):
         except Exception as e:
             gui_logger.logger.warning(f"apply_config (canal): {e}")
 
+        # Tipo de sensor: reflete no optionmenu do top_frame e ajusta unidade/escala do gráfico
+        # (chave opcional; arquivos antigos caem no default). resetar_escala=False mantém a
+        # escala salva se estiver dentro dos limites do sensor.
+        try:
+            sensor = str(data.get("sensor_type", SENSOR_DEFAULT)).strip().upper()
+            if sensor not in SENSOR_TYPES:
+                sensor = SENSOR_DEFAULT
+            conn.sensor_var.set(sensor)
+            aplicar_sensor_ao_grafico(self.ctx, sensor, resetar_escala=False)
+        except Exception as e:
+            self.ctx.sensor_type = SENSOR_DEFAULT
+            gui_logger.logger.warning(f"apply_config (tipo de sensor): {e}")
+
         # Pasta de músicas
         try:
             music = str(data.get("music_folder", "")).strip()
@@ -322,6 +359,14 @@ class ComPasso(ctk.CTk):
                 self.ctx.conditions_file = factors
         except Exception as e:
             gui_logger.logger.warning(f"apply_config (fatores): {e}")
+
+        # Colunas da planilha de condições (chaves opcionais; arquivos antigos caem no default).
+        try:
+            self.ctx.music_column = str(data.get("music_column", "musica")).strip() or "musica"
+            self.ctx.factor_column = str(data.get("factor_column", "fator")).strip() or "fator"
+        except Exception as e:
+            self.ctx.music_column, self.ctx.factor_column = "musica", "fator"
+            gui_logger.logger.warning(f"apply_config (colunas de condições): {e}")
 
         # Pasta de salvamento dos dados
         try:
@@ -350,6 +395,19 @@ class ComPasso(ctk.CTk):
         except Exception as e:
             self.ctx.pre_stimulus_seconds = config_manager.PRE_STIMULUS_DEFAULT
             gui_logger.logger.warning(f"apply_config (tempo pré-estímulo): {e}")
+
+        # Beep de aviso na contagem regressiva (chaves opcionais; arquivos antigos caem no
+        # padrão: desabilitado, t-1 s). Antecedência clampada à faixa aceita por segurança.
+        try:
+            self.ctx.beep_habilitado = bool(data.get("beep_enabled", config_manager.BEEP_ENABLED_DEFAULT))
+            antecedencia = data.get("beep_lead_seconds", config_manager.BEEP_LEAD_DEFAULT)
+            antecedencia = int(antecedencia) if str(antecedencia).strip().lstrip("-").isdigit() else config_manager.BEEP_LEAD_DEFAULT
+            self.ctx.beep_antecedencia_segundos = max(config_manager.BEEP_LEAD_MIN,
+                                                      min(config_manager.BEEP_LEAD_MAX, antecedencia))
+        except Exception as e:
+            self.ctx.beep_habilitado = config_manager.BEEP_ENABLED_DEFAULT
+            self.ctx.beep_antecedencia_segundos = config_manager.BEEP_LEAD_DEFAULT
+            gui_logger.logger.warning(f"apply_config (beep de aviso): {e}")
 
         # marca que há uma configuração carregada (pré-requisito para iniciar o experimento)
         self.ctx.config_loaded = True
@@ -443,6 +501,8 @@ class MainFrame(ctk.CTkFrame):
         else:
             self.cards_collapser.set_enabled(True)
             self.cards_collapser.expand()
+        # trava/destrava o menu Experimento (Novo/Abrir/Editar) durante a sessão.
+        self._set_experimento_menu_locked(active)
 
 if __name__ == "__main__":
     app = ComPasso()

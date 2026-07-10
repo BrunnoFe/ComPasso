@@ -128,18 +128,26 @@ _PALETA_RESERVA = {
 _PASSO_EIXO_Y_UV = 10.0
 
 
-def _limites_y_para_escala(escala_uv):
-    """Converte a escala Y simétrica (µV) na tupla ``(mín, máx, passo)`` do eixo.
+def _limites_y_para_escala(escala, passo=_PASSO_EIXO_Y_UV):
+    """Converte a escala Y simétrica na tupla ``(mín, máx, passo)`` do eixo.
 
-    Passo FIXO de ``_PASSO_EIXO_Y_UV`` (10 µV): ±10 dá marcas a -10/0/10; ±30 dá
-    -30/-20/-10/0/10/20/30; ±50 vai de -50 a 50 de 10 em 10."""
+    O ``passo`` (distância entre marcas/linhas de grade) depende do sensor ativo
+    (ver constants.SENSOR_GRAPH_PARAMS): µV usa passo 10; mV usa 0,2/0,1 etc. Ex.:
+    escala ±30 com passo 10 dá marcas -30/-20/.../30; escala ±1 com passo 0,2 dá
+    marcas -1/-0,8/.../1."""
     try:
-        escala = abs(float(escala_uv))
+        escala = abs(float(escala))
     except (TypeError, ValueError):
         escala = 30.0
-    if not math.isfinite(escala) or escala < 1.0:
+    if not math.isfinite(escala) or escala <= 0.0:
         escala = 30.0
-    return (-escala, escala, _PASSO_EIXO_Y_UV)
+    try:
+        passo = abs(float(passo))
+    except (TypeError, ValueError):
+        passo = _PASSO_EIXO_Y_UV
+    if not math.isfinite(passo) or passo <= 0.0:
+        passo = _PASSO_EIXO_Y_UV
+    return (-escala, escala, passo)
 
 
 def _intervalo_ms_para_fps(fps):
@@ -200,7 +208,8 @@ class GraficoSinal(tk.Canvas):
     def __init__(self, master, paleta=None, familia_display="Segoe UI",
                  familia_mono="Consolas", unidade="µV",
                  mensagem_ociosa="Aguardando gravação…",
-                 escala_y=_ESCALA_Y_PADRAO_UV, suavizacao_ativa=True,
+                 escala_y=_ESCALA_Y_PADRAO_UV, passo_eixo_y=_PASSO_EIXO_Y_UV,
+                 suavizacao_ativa=True,
                  janela_suavizacao=_JANELA_SUAVIZACAO_COLUNAS, fps=None,
                  largura_linha=1.5, grade_visivel=True, rotulos_visiveis=True,
                  **kwargs_canvas):
@@ -237,7 +246,9 @@ class GraficoSinal(tk.Canvas):
 
         # --- configurações de exibição (ajustáveis em runtime; ver aplicar_configuracoes) ---
         self._escala_y = escala_y
-        self._limites_eixo_y_padrao = _limites_y_para_escala(escala_y)
+        # passo entre marcas do eixo Y — depende do sensor ativo (µV=10, mV=0,2/0,1, ...).
+        self._passo_eixo_y = passo_eixo_y
+        self._limites_eixo_y_padrao = _limites_y_para_escala(escala_y, passo_eixo_y)
         self._suavizacao_ativa = bool(suavizacao_ativa)
         self._janela_suavizacao = max(1, int(janela_suavizacao))
         self._intervalo_quadro_ms = _INTERVALO_QUADRO_MS if fps is None else _intervalo_ms_para_fps(fps)
@@ -414,9 +425,18 @@ class GraficoSinal(tk.Canvas):
         """
         if not isinstance(settings, dict):
             return
+        # unidade e passo do eixo Y vêm do sensor ativo (ver graph_frame.aplicar_sensor_ao_grafico).
+        if "unidade" in settings:
+            self.unidade = settings["unidade"]
+        recomputar_y = False
+        if "y_step" in settings:
+            self._passo_eixo_y = settings["y_step"]
+            recomputar_y = True
         if "y_scale" in settings:
             self._escala_y = settings["y_scale"]
-            self._limites_eixo_y_padrao = _limites_y_para_escala(settings["y_scale"])
+            recomputar_y = True
+        if recomputar_y:
+            self._limites_eixo_y_padrao = _limites_y_para_escala(self._escala_y, self._passo_eixo_y)
             if not self._gravando:
                 self._limites_eixo_y = self._limites_eixo_y_padrao
         if "smoothing_enabled" in settings:

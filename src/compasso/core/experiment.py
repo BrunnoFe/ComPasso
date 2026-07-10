@@ -3,12 +3,19 @@ import time
 import random
 import threading
 
+import pandas as pd
 from pylsl import local_clock
 
 from . import experiment_logger
+from .audio import get_system_volume
 from .constants import (MARKER_COUNTDOWN_START, MARKER_MUSIC_START, MARKER_MUSIC_END,
                        MARKER_STOP, CONDITION_MUSICA, CONDITION_RUIDO, RUIDO_KEYWORDS)
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
+
+# Planilha (uma por sessão) com o resumo de cada faixa executada: ordem, arquivo, fator,
+# volume do sistema no momento da reprodução e intervalo de reação até o "continuar".
+EXECUCAO_XLSX_FILENAME = "dados_da_execucao.xlsx"
+EXECUCAO_COLUNAS = ["n", "audio", "fator", "volume", "intervalo"]
 
 
 def _classify_condition(fator: str) -> str:
@@ -138,6 +145,10 @@ class ExperimentRunner:
         self.ctx = ctx
         # tempo pré-estímulo configurável (menu Experimento / .config); cai no fallback da classe.
         self.countdown_seconds = int(getattr(ctx, "pre_stimulus_seconds", self.COUNTDOWN_SECONDS))
+        # beep de aviso na contagem regressiva (opcional): toca a `beep_antecedencia_segundos`
+        # segundos antes de cada faixa começar.
+        self.beep_habilitado = bool(getattr(ctx, "beep_habilitado", False))
+        self.beep_antecedencia_segundos = int(getattr(ctx, "beep_antecedencia_segundos", 1))
         self._stop_event = threading.Event()
         self._continue_event = threading.Event()
         self._order = []
@@ -150,6 +161,12 @@ class ExperimentRunner:
         # contagem até o FIM_MUSICA, para que amostras fora da janela não corrompam o
         # traço da faixa anterior.
         self._plot_active = False
+        # linhas acumuladas da planilha de execução (uma por faixa concluída) e estado da
+        # faixa corrente usado para montar cada linha: volume do sistema no play e instante
+        # (local_clock) do FIM_MUSICA. _ts_fim_faixa=None sinaliza faixa pulada/abortada.
+        self._linhas_execucao = []
+        self._volume_faixa = None
+        self._ts_fim_faixa = None
         # timestamp (relativo ao início da aquisição) da primeira amostra aceita após a
         # janela abrir — usado para "zerar" o eixo X do gráfico nesse instante, já que o
         # timestamp bruto da amostra é relativo ao início da gravação (antes da contagem).
@@ -238,6 +255,7 @@ class ExperimentRunner:
 
         totals = count_totals(self._order, self.ctx.music_condition_mapping or {})
         self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
+        self._linhas_execucao = []
         self._update_counters(totals)
 
         for order, path in enumerate(self._order, start=1):
@@ -251,6 +269,12 @@ class ExperimentRunner:
             self._post_status("Faixa concluída. Clique em continuar para a próxima.")
             self._continue_event.clear()
             self._continue_event.wait()
+            # intervalo de reação: do FIM_MUSICA até o clique em "continuar" (mesmo relógio
+            # local_clock). music_name/music_fator ainda são os da faixa recém-concluída.
+            t_continuar = local_clock()
+            if self._ts_fim_faixa is not None:
+                intervalo = round(t_continuar - self._ts_fim_faixa, 3)
+                self._registrar_execucao(order, self._volume_faixa, intervalo)
             if self._stop_event.is_set():
                 break
 
@@ -260,6 +284,9 @@ class ExperimentRunner:
         self.music_name = os.path.basename(path)
         self.music_fator = self.ctx.music_condition_mapping.get(path, "")
         cat = _classify_condition(self.music_fator)
+        # zera o estado de registro da faixa; só volta a valer se a faixa chegar ao fim.
+        self._ts_fim_faixa = None
+        self._volume_faixa = None
 
         self._set_button("rodando")
         self._post_current_music(f"Preparando: {self.music_name}")
@@ -293,6 +320,7 @@ class ExperimentRunner:
         # lead do gráfico nunca maior que a própria contagem (evita não disparar quando
         # countdown < PLOT_LEAD_SECONDS).
         lead = min(self.PLOT_LEAD_SECONDS, self.countdown_seconds)
+        beep_tocado = False
         for remaining in range(self.countdown_seconds, 0, -1):
             if self._stop_event.is_set():
                 return
@@ -302,6 +330,11 @@ class ExperimentRunner:
                 self._plot_active = True
                 self._plot_origin = None
                 self._plot_begin(lead + duration, lead)
+            # beep de aviso no t-X: toca uma vez, ao alcançar `beep_antecedencia_segundos`
+            # restantes. Se a antecedência for maior que a própria contagem, toca no 1º tique.
+            if self.beep_habilitado and not beep_tocado and remaining <= self.beep_antecedencia_segundos:
+                self.ctx.player.play_beep(self.ctx.beep_caminho)
+                beep_tocado = True
             self._post_status(f"Preparando '{self.music_name}' — iniciando em {remaining}s")
             time.sleep(1.0)
         if self._stop_event.is_set():
@@ -310,6 +343,9 @@ class ExperimentRunner:
         # 3) início da música
         ts_start = local_clock()
         recorder.add_marker(MARKER_MUSIC_START, ts_start, music_file=self.music_name, fator=self.music_fator)
+        # volume do sistema no instante da reprodução (lido direto do SO — o slider pode
+        # nunca ter sido tocado nesta sessão).
+        self._volume_faixa = int(round(get_system_volume()))
         self.ctx.player.play()
         self._post_current_music(self.music_name)
         self._post_condition(" música " if cat == CONDITION_MUSICA else " ruído ")
@@ -322,6 +358,7 @@ class ExperimentRunner:
 
         # 5) fim da música + finalização do arquivo
         ts_end = local_clock()
+        self._ts_fim_faixa = ts_end
         recorder.add_marker(MARKER_MUSIC_END, ts_end, music_file=self.music_name, fator=self.music_fator)
         # congela o traço completo no gráfico e bloqueia pushes tardios.
         self._plot_active = False
@@ -333,6 +370,28 @@ class ExperimentRunner:
         self._done[cat] = self._done.get(cat, 0) + 1
         self._update_counters(totals)
         self._post_condition("")
+
+    def _registrar_execucao(self, order: int, volume, intervalo: float) -> None:
+        """Acumula a linha da faixa e regrava a planilha da sessão a cada faixa.
+
+        Reescreve o arquivo inteiro (padrão de `LSLRecorder.finalize`); o volume de linhas
+        (uma por faixa) é pequeno. Falha de escrita é registrada mas não aborta a sessão.
+        """
+        self._linhas_execucao.append({
+            "n": order,
+            "áudio": self.music_name,
+            "fator": self.music_fator,
+            "volume": volume,
+            "intervalo": intervalo,
+        })
+        if self._session_dir is not None:
+            caminho = os.path.join(self._session_dir, EXECUCAO_XLSX_FILENAME)
+            try:
+                df = pd.DataFrame(self._linhas_execucao, columns=EXECUCAO_COLUNAS)
+                df.to_excel(caminho, index=False)
+            except OSError as e:
+                experiment_logger.logger.error(
+                    f"Não foi possível gravar a planilha de execução '{caminho}': {e}")
 
     def _wait_track_end(self) -> None:
         """Aguarda enquanto o mixer estiver tocando, abortando se houver stop."""

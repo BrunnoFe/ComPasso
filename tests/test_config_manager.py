@@ -80,6 +80,66 @@ def test_validate_values_noise_quantity_allows_zero(valid_config_values):
     assert cm.validate_values(valid_config_values) == []
 
 
+def test_validate_values_columns_must_differ(valid_config_values):
+    valid_config_values["music_column"] = "col"
+    valid_config_values["factor_column"] = "col"
+    errors = cm.validate_values(valid_config_values)
+    assert any("colunas diferentes" in e for e in errors)
+
+
+def test_validate_values_columns_distinct_ok(valid_config_values):
+    valid_config_values["music_column"] = "arquivo"
+    valid_config_values["factor_column"] = "condicao"
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_validate_values_empty_column_reported(valid_config_values):
+    valid_config_values["music_column"] = ""
+    valid_config_values["factor_column"] = "condicao"
+    errors = cm.validate_values(valid_config_values)
+    assert any("Coluna do nome dos áudios" in e for e in errors)
+
+
+def test_validate_values_beep_disabled_ignores_lead(valid_config_values):
+    # beep desabilitado: a antecedência (mesmo fora da faixa) não é validada.
+    valid_config_values["beep_enabled"] = False
+    valid_config_values["beep_lead_seconds"] = 999
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_validate_values_beep_enabled_bad_lead(valid_config_values):
+    valid_config_values["beep_enabled"] = True
+    valid_config_values["beep_lead_seconds"] = 11  # acima do máximo (10)
+    errors = cm.validate_values(valid_config_values)
+    assert any("Tempo do beep" in e for e in errors)
+
+
+def test_validate_values_beep_must_be_less_than_countdown(valid_config_values):
+    valid_config_values["pre_stimulus_seconds"] = 5
+    valid_config_values["beep_enabled"] = True
+    valid_config_values["beep_lead_seconds"] = 5  # igual à contagem -> inválido
+    errors = cm.validate_values(valid_config_values)
+    assert any("menor que o" in e for e in errors)
+
+
+def test_validate_values_beep_less_than_countdown_ok(valid_config_values):
+    valid_config_values["pre_stimulus_seconds"] = 6
+    valid_config_values["beep_enabled"] = True
+    valid_config_values["beep_lead_seconds"] = 3
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_validate_values_sensor_type_ok(valid_config_values):
+    valid_config_values["sensor_type"] = "EDA"
+    assert cm.validate_values(valid_config_values) == []
+
+
+def test_validate_values_bad_sensor_type(valid_config_values):
+    valid_config_values["sensor_type"] = "XPTO"
+    errors = cm.validate_values(valid_config_values)
+    assert any("Tipo de sensor" in e for e in errors)
+
+
 # --------------------------- save / load ----------------------------------- #
 def test_save_then_load_round_trip(tmp_path, valid_config_values, mocker):
     mocker.patch.object(cm.config_logger.logger, "info")

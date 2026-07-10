@@ -36,11 +36,17 @@ def scan_music_files(folder: str) -> list:
     return music_files
 
 
-def match_conditions(music_files: list, conditions_path: str):
+def match_conditions(music_files: list, conditions_path: str,
+                     music_column: str = "musica", factor_column: str = "fator"):
     """Mapeia cada música para o seu fator a partir do Excel de condições.
 
+    Os nomes das colunas são configuráveis (definidos pelo usuário na janela de configuração
+    do experimento e persistidos no `.config`); os defaults reproduzem o comportamento antigo.
+
+    :param music_column: nome da coluna que contém os nomes dos arquivos de áudio.
+    :param factor_column: nome da coluna que contém os fatores/condições.
     :return: dict {caminho_da_musica: fator} em caso de sucesso, ou `None` se o Excel
-        não tiver as colunas obrigatórias ('musica' e 'fator') ou estiver vazio.
+        não tiver as colunas informadas ou estiver vazio.
     :raises FileNotFoundError: se o arquivo de condições não existir.
     :raises MissingConditionError: se alguma música não tiver condição correspondente.
     """
@@ -48,13 +54,13 @@ def match_conditions(music_files: list, conditions_path: str):
         raise FileNotFoundError(conditions_path)
 
     conditions: pd.DataFrame = pd.read_excel(conditions_path)
-    if conditions.empty or 'musica' not in conditions.columns or 'fator' not in conditions.columns:
+    if conditions.empty or music_column not in conditions.columns or factor_column not in conditions.columns:
         return None
 
     mapping = {}
     for music in music_files:
         music_name = os.path.basename(music)
-        fatores = conditions.loc[conditions['musica'] == music_name, 'fator'].values #type: ignore
+        fatores = conditions.loc[conditions[music_column] == music_name, factor_column].values #type: ignore
         if len(fatores) == 0:
             raise MissingConditionError(music_name)
         mapping[music] = fatores[0]

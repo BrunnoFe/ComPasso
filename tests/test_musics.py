@@ -69,6 +69,21 @@ def test_match_returns_none_when_columns_missing(tmp_path, make_factors_xlsx):
     assert match_conditions([str(tmp_path / "a.mp3")], xlsx) is None
 
 
+def test_match_with_custom_column_names(tmp_path, make_factors_xlsx):
+    (tmp_path / "a.mp3").write_text("x")
+    (tmp_path / "b.mp3").write_text("x")
+    music_files = [str(tmp_path / "a.mp3"), str(tmp_path / "b.mp3")]
+    # colunas com nomes arbitrários — só funcionam quando informadas explicitamente.
+    xlsx = make_factors_xlsx([("a.mp3", "calmo"), ("b.mp3", "ruido")],
+                             columns=("arquivo", "condicao"))
+
+    assert match_conditions(music_files, xlsx) is None  # defaults 'musica'/'fator' não existem
+    mapping = match_conditions(music_files, xlsx,
+                               music_column="arquivo", factor_column="condicao")
+    assert mapping[str(tmp_path / "a.mp3")] == "calmo"
+    assert mapping[str(tmp_path / "b.mp3")] == "ruido"
+
+
 def test_match_returns_none_when_empty_sheet(tmp_path, make_factors_xlsx):
     xlsx = make_factors_xlsx([], columns=("musica", "fator"))
     assert match_conditions([str(tmp_path / "a.mp3")], xlsx) is None

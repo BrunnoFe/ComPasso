@@ -23,6 +23,7 @@ from .theme import (WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT,
                    DISPLAY_FAMILY, MONO_FAMILY, FONT_MD, FONT_SM)
 from .widgets import styled_label, styled_button, ghost_button, mono
 from compasso.core import config_manager
+from compasso.core.constants import SENSOR_DEFAULT, SENSOR_GRAPH_PARAMS
 
 # opções de FPS oferecidas no menu (quadros por segundo do gráfico)
 _OPCOES_FPS = ["10", "15", "30", "60"]
@@ -32,8 +33,8 @@ _OPCOES_VALUE_MODE = ["Valor bruto", "Média"]
 _MAPA_VALUE_MODE = {"Valor bruto": "raw", "Média": "mean"}
 _MAPA_VALUE_MODE_INV = {"raw": "Valor bruto", "mean": "Média"}
 
-# limites/passos dos sliders
-_Y_MIN, _Y_MAX, _Y_PASSOS = 10, 50, 4            # 10/20/30/40/50 µV (passo 10)
+# limites/passos dos sliders. A escala Y depende do sensor ativo (unidade/mín/máx/passo,
+# ver constants.SENSOR_GRAPH_PARAMS) — calculada em runtime no __init__.
 _JANELA_MIN, _JANELA_MAX, _JANELA_PASSOS = 1, 15, 14   # média móvel: 1..15 colunas
 _LARGURA_MIN, _LARGURA_MAX, _LARGURA_PASSOS = 0.5, 4.0, 7  # espessura: 0.5..4.0 (passo 0.5)
 
@@ -63,11 +64,17 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         except Exception as e:
             gui_logger.logger.warning(f"Não foi possível ajustar a janela : {e}")
 
+        # parâmetros do eixo Y do sensor ativo (unidade/mín/máx/passo/padrão). A escala Y é
+        # interpretada na unidade do sensor; o slider usa esses limites e passo.
+        self._sensor_params = SENSOR_GRAPH_PARAMS.get(
+            getattr(ctx, "sensor_type", SENSOR_DEFAULT), SENSOR_GRAPH_PARAMS[SENSOR_DEFAULT])
+
         # snapshot dos valores ativos ao abrir (para o Cancelar reverter o preview)
         self._snapshot = self._settings_atuais()
 
         # --- variáveis dos controles (inicializadas com o snapshot) ---
-        self._y_var = ctk.IntVar(value=int(self._snapshot["y_scale"]))
+        # escala Y pode ser fracionária (mV: 0,2/0,1) -> DoubleVar; clampada à faixa do sensor.
+        self._y_var = ctk.DoubleVar(value=self._escala_no_intervalo(self._snapshot["y_scale"]))
         self._smooth_enabled_var = ctk.BooleanVar(value=bool(self._snapshot["smoothing_enabled"]))
         self._smooth_window_var = ctk.IntVar(value=int(self._snapshot["smoothing_window"]))
         self._fps_var = ctk.StringVar(value=str(int(self._snapshot["fps"])))
@@ -115,11 +122,13 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             row=1, column=0, padx=15, pady=10, sticky=ctk.E)
         y_frame = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
         y_frame.grid(row=1, column=1, padx=15, pady=10, sticky=ctk.EW)
-        self._y_neg_label = mono(y_frame, "−30 µV", size=FONT_SM, color=MUTED, width=64)
+        self._y_neg_label = mono(y_frame, "", size=FONT_SM, color=MUTED, width=72)
         self._y_neg_label.pack(side="left")
-        self._y_slider = self._slider(y_frame, self._y_var, _Y_MIN, _Y_MAX, _Y_PASSOS)
+        p = self._sensor_params
+        passos_y = max(1, int(round((p["maximo"] - p["minimo"]) / p["passo"])))
+        self._y_slider = self._slider(y_frame, self._y_var, p["minimo"], p["maximo"], passos_y)
         self._y_slider.pack(side="left", padx=8, fill="x", expand=True)
-        self._y_pos_label = mono(y_frame, "+30 µV", size=FONT_SM, color=MUTED, width=64)
+        self._y_pos_label = mono(y_frame, "", size=FONT_SM, color=MUTED, width=72)
         self._y_pos_label.pack(side="left")
 
         # nota quando a escala Y está travada (sessão em andamento)
@@ -223,11 +232,34 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         self._atualizar_rotulos()
         self._aplicar_preview(self._coletar())
 
+    def _escala_no_intervalo(self, escala):
+        """Clampa `escala` à faixa do sensor; fora dela, cai no padrão do sensor."""
+        p = self._sensor_params
+        try:
+            valor = abs(float(escala))
+        except (TypeError, ValueError):
+            return p["padrao"]
+        return valor if p["minimo"] <= valor <= p["maximo"] else p["padrao"]
+
+    def _arredondar_escala(self, escala):
+        """Arredonda `escala` ao múltiplo de passo do sensor mais próximo, dentro dos limites."""
+        p = self._sensor_params
+        passos = round((float(escala) - p["minimo"]) / p["passo"])
+        valor = p["minimo"] + passos * p["passo"]
+        valor = min(max(valor, p["minimo"]), p["maximo"])
+        return round(valor, 3)
+
+    @staticmethod
+    def _fmt_escala(valor):
+        """Formata a escala Y sem zeros à toa (ex.: ``0.4``, ``1``, ``30``)."""
+        return f"{round(float(valor), 3):g}"
+
     def _atualizar_rotulos(self):
         """Reflete os valores atuais dos sliders nos rótulos e habilita/desabilita a janela."""
-        y = int(round(self._y_var.get()))
-        self._y_neg_label.configure(text=f"−{y} µV")
-        self._y_pos_label.configure(text=f"+{y} µV")
+        y = self._fmt_escala(self._y_var.get())
+        unidade = self._sensor_params["unidade"]
+        self._y_neg_label.configure(text=f"−{y} {unidade}")
+        self._y_pos_label.configure(text=f"+{y} {unidade}")
         self._smooth_window_value.configure(text=str(int(round(self._smooth_window_var.get()))))
         largura = self._arredondar_meio(self._width_var.get())
         self._width_value.configure(text=f"{largura:g} px")
@@ -242,7 +274,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
     def _coletar(self) -> dict:
         """Monta o dict de configurações a partir do estado atual dos controles."""
         return {
-            "y_scale": int(round(self._y_var.get())),
+            "y_scale": self._arredondar_escala(self._y_var.get()),
             "smoothing_enabled": bool(self._smooth_enabled_var.get()),
             "smoothing_window": int(round(self._smooth_window_var.get())),
             "fps": int(self._fps_var.get()),
@@ -273,7 +305,8 @@ class GraphSettingsWindow(ctk.CTkToplevel):
     def _on_restaurar(self):
         """Volta os controles aos defaults de fábrica e aplica o preview."""
         padrao = config_manager.DEFAULT_GRAPH_SETTINGS
-        self._y_var.set(int(padrao["y_scale"]))
+        # a escala Y padrão vem do sensor ativo (não do default global de µV).
+        self._y_var.set(self._sensor_params["padrao"])
         self._smooth_enabled_var.set(bool(padrao["smoothing_enabled"]))
         self._smooth_window_var.set(int(padrao["smoothing_window"]))
         self._fps_var.set(str(int(padrao["fps"])))
