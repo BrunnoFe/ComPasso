@@ -8,14 +8,19 @@ Esta página descreve o fluxo completo de uma sessão de coleta, do preparo ao e
 
 - **Barra de conexão** — endereço MAC, canal (A1–A6), botão Conectar/Desconectar. Veja
   [Conexão com o BITalino](bitalino-connection.md).
-- **Indicador de progresso (stepper)** — 4 etapas (**Conectar → Participante → Arquivos →
-  Iniciar**) que acendem conforme o estado real: BITalino conectado, informações salvas, e
-  arquivos mapeados + diretório de saída escolhido.
+- **Indicador de progresso (stepper)** — etapas (**Configurações → Conectar → Participante →
+  Arquivos → Calibragem → Começar**, sendo "Calibragem" opcional — só aparece se a calibração de
+  volume estiver habilitada) que acendem em verde conforme o estado real: configuração carregada,
+  BITalino conectado, informações salvas, arquivos mapeados + diretório de saída escolhido, e
+  calibração de volume salva. A etapa atual fica em destaque; as demais pendentes ficam em
+  **vermelho** até serem concluídas.
 - **Painel do participante** — campos **Nome**, **Idade** e **Gênero** + "Salvar informações".
 - **Painel de arquivos** — carregamento da pasta de músicas, da planilha de condições e do
   diretório de saída; cada linha ganha um check verde quando resolvida.
 - **Player** — nome da faixa atual, chip de condição, indicador **● GRAVANDO**, barra de
-  progresso, controle de volume e botão **Parar**.
+  progresso, controle de volume e botão **Parar**. Se a calibração de volume estiver habilitada,
+  um botão **Calibrar Volume** aparece abaixo do slider — veja
+  [🔊 Calibração de volume](#-calibração-de-volume) abaixo.
 - **📈 Gráfico do sinal em tempo real** — desenha o sinal do canal selecionado ao vivo durante a
   gravação, com um ponteiro fluido e leitura do valor atual (µV); veja a seção
   [Gráfico do sinal em tempo real](#-gráfico-do-sinal-em-tempo-real) abaixo.
@@ -181,6 +186,47 @@ atraso após o último ajuste, para não sobrecarregar o sistema).
 > 🔒 **O slider de volume fica travado durante a contagem regressiva e a reprodução de cada
 > faixa**, evitando que o volume mude no meio de uma gravação. Ele volta a ficar disponível durante
 > a pausa "Continuar →", entre uma faixa e a próxima.
+
+## 🔊 Calibração de volume
+
+Ajuda a encontrar o volume confortável para cada participante **antes** de iniciar a sessão,
+tocando uma faixa de áudio dedicada enquanto o volume do sistema sobe gradualmente. **Desligada
+por padrão** — habilite em **Experimento → Novo/Editar** (veja
+[🔊 Calibração de volume](experiment-menu.md#-calibração-de-volume) nos Menus). Quando habilitada:
+
+- Um botão **Calibrar Volume** aparece abaixo do slider de volume no player — fica **desabilitado**
+  se não houver um experimento carregado com um áudio de calibração válido, ou se houver uma sessão
+  em andamento.
+- Clicar nele abre a janela **Calibração de Volume**, com quatro parâmetros ajustáveis (só nessa
+  janela, não ficam salvos no `.config`):
+
+  | Parâmetro | Faixa | Padrão |
+  | --- | --- | --- |
+  | Volume mínimo | 0 a 100% | 30% |
+  | Volume máximo | 0 a 100% | 50% |
+  | Aumentar X% do volume (passo) | 1 a 5% | 1% |
+  | A cada X segundos (intervalo) | 1 a 5 s | 1 s |
+
+  A diferença entre o volume máximo e o mínimo não pode passar de **40%**. Se a faixa de áudio de
+  calibração for mais curta que a duração estimada do teste (número de degraus × intervalo + 2 s de
+  espera no máximo), o início é bloqueado com um aviso — use um áudio mais longo ou reduza o
+  passo/intervalo.
+
+- **Fluxo em duas etapas:**
+  1. **Linha de Base** — toca a rampa completa, do mínimo ao máximo, de forma demonstrativa (o
+     participante só ouve, sem interromper). Precisa ser concluída **uma vez** para liberar o botão
+     "Calibrar".
+  2. **Calibrar** — repete a rampa; assim que o participante indicar que o volume está confortável,
+     clique em **Parar** (o botão "Calibrar" morfa para isso durante o teste) — o volume atual é
+     mantido. Se a rampa chegar ao máximo sem interrupção, ele mesmo vira o volume ótimo.
+     Em seguida, **Salvar** pede confirmação (**Sim** aplica o volume; **Reiniciar** descarta e
+     permite tentar de novo, sem precisar refazer a Linha de Base).
+- Ao confirmar, o volume ótimo é aplicado ao sistema e ao slider do player, que fica **travado**
+  pelo resto da sessão (mesma trava usada durante a contagem regressiva/reprodução).
+- Fechar a janela sem salvar restaura o volume do sistema ao valor de antes de abrir.
+
+<!-- SCREENSHOT: janela "Calibração de Volume" com os parâmetros, o mini-player e os botões
+     "Linha de Base"/"Calibrar" -->
 
 ---
 

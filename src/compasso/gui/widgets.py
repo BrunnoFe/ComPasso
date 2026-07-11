@@ -14,7 +14,7 @@ from .theme import (WIN_BG, BAR_BG, BORDER, INPUT_BG, TEXT, MUTED, FAINT,
                     ACCENT, ACCENT_INK, ACCENT_TINT, SUCCESS, DANGER, DANGER_TINT,
                     DANGER_BORDER, TRANSPARENTE, DISPLAY_FAMILY, MONO_FAMILY,
                     BASE_FONT_MIN, CORNER, CORNER_SM,
-                    FONT_SM, FONT_BASE, FONT_MD, FONT_XL)
+                    FONT_S11, FONT_BASE_12, FONT_S13, FONT_S15)
 
 
 # ---------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def styled_button(master, **kwargs):
     """
     opts = dict(corner_radius=CORNER_SM, border_width=0, fg_color=ACCENT,
                 hover_color=ACCENT, text_color=ACCENT_INK,
-                font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold"))
+                font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S13, weight="bold"))
     opts.update(kwargs)
     return ctk.CTkButton(master, **opts)  # type: ignore
 
@@ -103,7 +103,7 @@ def styled_entry(master, **kwargs):
     """CTkEntry com o estilo escuro dos campos do formulário."""
     opts = dict(corner_radius=CORNER_SM, border_width=1, border_color=BORDER,
                 bg_color=TRANSPARENTE, fg_color=INPUT_BG, placeholder_text_color=FAINT,
-                font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD), text_color=TEXT)
+                font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S13), text_color=TEXT)
     opts.update(kwargs)
     return ctk.CTkEntry(master, **opts)  # type: ignore
 
@@ -114,7 +114,7 @@ def styled_combobox(master, **kwargs):
                 button_hover_color=BORDER, dropdown_fg_color=BAR_BG,
                 dropdown_hover_color=ACCENT_TINT, text_color=TEXT,
                 dropdown_text_color=TEXT, justify=ctk.CENTER,
-                font=ctk.CTkFont(MONO_FAMILY, FONT_MD), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
+                font=ctk.CTkFont(MONO_FAMILY, FONT_S13), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_S13))
     opts.update(kwargs)
     return ctk.CTkComboBox(master, **opts)  # type: ignore
 
@@ -122,22 +122,22 @@ def styled_combobox(master, **kwargs):
 # Componentes do redesign (rótulos tipográficos, badges)
 # ---------------------------------------------------------------------------
 
-def title(master, text, size=FONT_XL, **kwargs):
+def title(master, text, size=FONT_S15, **kwargs):
     """Título de cartão (display, negrito)."""
     return ctk.CTkLabel(master, text=text, text_color=TEXT,
                         font=ctk.CTkFont(DISPLAY_FAMILY, size, weight="bold"), **kwargs)
 
-def caption(master, text, color=None, **kwargs):
+def caption(master, text, color=None, font_size=FONT_S11, **kwargs):
     """Rótulo pequeno/apagado (caption em maiúsculas)."""
     return ctk.CTkLabel(master, text=text, text_color=color or FAINT,
-                        font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"), **kwargs)
+                        font=ctk.CTkFont(DISPLAY_FAMILY, font_size, weight="bold"), **kwargs)
 
-def mono(master, text, size=FONT_MD, color=None, **kwargs):
+def mono(master, text, size=FONT_S13, color=None, **kwargs):
     """Rótulo monoespaçado (caminhos, tempos, contadores)."""
     return ctk.CTkLabel(master, text=text, text_color=color or TEXT,
                         font=ctk.CTkFont(MONO_FAMILY, size), **kwargs)
 
-def ghost_button(master, text, command=None, size=FONT_MD, **kwargs):
+def ghost_button(master, text, command=None, size=FONT_S13, **kwargs):
     """Botão secundário 'fantasma' (fundo do input, borda sutil, texto apagado)."""
     opts = dict(text=text, command=command, fg_color=INPUT_BG, hover_color=BORDER,
                 text_color=MUTED, border_width=1, border_color=BORDER,
@@ -145,7 +145,7 @@ def ghost_button(master, text, command=None, size=FONT_MD, **kwargs):
     opts.update(kwargs)
     return ctk.CTkButton(master, **opts)  # type: ignore
 
-def danger_button(master, text, command=None, size=FONT_MD, **kwargs):
+def danger_button(master, text, command=None, size=FONT_S13, **kwargs):
     """Botão de perigo (parar/gravando) em tons de vermelho."""
     opts = dict(text=text, command=command, fg_color=DANGER_TINT, hover_color=DANGER_BORDER,
                 text_color=DANGER, border_width=1, border_color=DANGER_BORDER,
@@ -159,11 +159,11 @@ def circle(master, text, filled=True, size=28, **kwargs):
         master, text=text, width=size, height=size, corner_radius=size // 2,
         fg_color=ACCENT if filled else ACCENT_TINT,
         text_color=ACCENT_INK if filled else ACCENT,
-        font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold"), **kwargs)
+        font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S13, weight="bold"), **kwargs)
 
 def check_icon(master, done=True, size=22, radius=7, text="✓", fg_color=ACCENT_TINT, **kwargs):
     """Ícone de check de uma linha de arquivo (verde quando pronto, apagado quando não)."""
     return ctk.CTkLabel(master, text=text, width=size, height=size,
                         corner_radius=radius, fg_color=fg_color,
                         text_color=SUCCESS if done else FAINT,
-                        font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"), **kwargs)
+                        font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12, weight="bold"), **kwargs)

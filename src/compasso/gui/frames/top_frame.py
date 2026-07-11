@@ -8,7 +8,7 @@ from ..assets import ASSETS_DIR
 from ..theme import (BAR_BG, BORDER, INPUT_BG, TEXT, ACCENT,
                      ACCENT_TINT, ACCENT_BORDER, SUCCESS, TRANSPARENTE,
                      DISPLAY_FAMILY, MONO_FAMILY, CORNER_SM, CORNER_PILL,
-                     INPUT_H, BTN_H, FONT_XS, FONT_MD)
+                     INPUT_H, BTN_H, FONT_S10, FONT_S13)
 from ..widgets import show_message, caption, ghost_button, styled_button, Card
 from ..canvas_widgets import LiveEqualizer
 from .graph_frame import aplicar_sensor_ao_grafico
@@ -68,7 +68,7 @@ class ConnectionFrame(Card):
                                       fg_color=INPUT_BG, border_color=BORDER, text_color=TEXT,
                                       placeholder_text="XX:XX:XX:XX:XX:XX",
                                       textvariable=self.mac_addr_var,
-                                      font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
+                                      font=ctk.CTkFont(MONO_FAMILY, FONT_S13))
         self.mac_entry.pack()
 
         # ----- Canal -----
@@ -85,7 +85,7 @@ class ConnectionFrame(Card):
             command=self._on_channel_change,
             fg_color=INPUT_BG, button_color=INPUT_BG, button_hover_color=BORDER,
             text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
-            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
+            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_S13))
 
         self.canal_optionmenu.pack()
 
@@ -102,7 +102,7 @@ class ConnectionFrame(Card):
             command=self._on_sensor_change,
             fg_color=INPUT_BG, button_color=INPUT_BG, button_hover_color=BORDER,
             text_color=TEXT, dropdown_fg_color=BAR_BG, dropdown_text_color=TEXT,
-            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_MD))
+            dropdown_hover_color=ACCENT_TINT, font=ctk.CTkFont(MONO_FAMILY, FONT_S13))
         self.sensor_optionmenu.pack()
 
         # espaçador
@@ -142,9 +142,9 @@ class ConnectionFrame(Card):
         inner = ctk.CTkFrame(pill, fg_color=TRANSPARENTE)
         inner.pack(padx=14, pady=7)
         ctk.CTkLabel(inner, text="●", text_color=SUCCESS,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS)).pack(side="left", padx=(0, 7))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S10)).pack(side="left", padx=(0, 7))
         ctk.CTkLabel(inner, text="Conectado", text_color=ACCENT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_MD, weight="bold")).pack(side="left")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S13, weight="bold")).pack(side="left")
         self._equalizer = LiveEqualizer(inner, ACCENT, ACCENT_TINT)
         self._equalizer.pack(side="left", padx=(8, 0))
 

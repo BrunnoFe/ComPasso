@@ -232,9 +232,16 @@ O BITalino aceita sensores diferentes, cada um com sua própria unidade e faixa 
 
 ### Indicador de progresso (stepper)
 
-Logo abaixo da barra de conexão, uma faixa com 4 etapas — **Conectar → Participante → Arquivos → Iniciar** — mostra visualmente o que já foi concluído e qual é o próximo passo, atualizando em tempo real conforme o BITalino conecta, as informações do participante são salvas e os arquivos são mapeados.
+Logo abaixo da barra de conexão, uma faixa com as etapas — **Configurações → Conectar →
+Participante → Arquivos → Calibragem → Começar** — mostra visualmente o que já foi concluído e
+qual é o próximo passo. A etapa **Calibragem** só aparece quando a calibração de volume está
+habilitada na configuração do experimento; sem ela, "Começar" é a 5ª etapa. Cada etapa fica:
 
-<!-- SCREENSHOT: stepper de 4 etapas, com pelo menos uma etapa concluída e outra "AGORA" -->
+- **verde**, com um "✓", quando já foi concluída;
+- **em destaque** ("AGORA"), quando é a próxima a ser feita;
+- **vermelha**, quando ainda está pendente e não é a etapa atual.
+
+<!-- SCREENSHOT: stepper com uma etapa concluída (verde), uma "AGORA" e outra(s) pendente(s) em vermelho -->
 
 ### Recolher os cartões Participante / Arquivos & Dados
 
@@ -329,13 +336,14 @@ O menu **Configurações → Gráfico** abre uma janela para ajustar como o grá
 
 ### Pré-requisitos
 
-Ao clicar em **Começar**, o ComPasso verifica se todos os cinco pré-requisitos estão satisfeitos — caso contrário, uma mensagem indica o que falta:
+Ao clicar em **Começar**, o ComPasso verifica se todos os seis pré-requisitos estão satisfeitos — caso contrário, uma mensagem indica o que falta:
 
-1. BITalino **conectado**;
-2. Informações do participante **salvas**;
-3. **Pasta de músicas** carregada (ao menos um arquivo compatível encontrado);
-4. **Planilha de condições** carregada e mapeamento concluído;
-5. **Diretório de saída** escolhido.
+1. **Configuração** de experimento criada ou aberta (menu Experimento);
+2. BITalino **conectado**;
+3. Informações do participante **salvas**;
+4. **Pasta de músicas** carregada (ao menos um arquivo compatível encontrado);
+5. **Diretório de saída** escolhido;
+6. Nenhuma sessão já em andamento.
 
 ### Passo a passo
 
@@ -425,7 +433,7 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 
 | Sintoma | Causa provável / solução |
 | --- | --- |
-| **Mensagem de aviso ao clicar em "Começar"** | Falta um dos cinco pré-requisitos. Verifique a mensagem exibida e o que ainda está pendente. |
+| **Mensagem de aviso ao clicar em "Começar"** | Falta um dos seis pré-requisitos. Verifique a mensagem exibida e o que ainda está pendente. |
 | **Erro ao conectar o BITalino** | O **Lab Streaming Layer** não está ativo no OpenSignals, ou o dispositivo não está transmitindo. Reative e tente novamente. |
 | **Falha ao conectar / timeout** | OpenSignals sem LSL ativo ou sem transmitir, ou MAC incorreto. Ative o LSL, coloque o BITalino em aquisição e confira o endereço MAC. |
 | **"Conexão com BITalino perdida" durante o experimento** | O watchdog detectou ≥ 15 s sem amostras. Verifique o sensor e o OpenSignals, e reconecte. |

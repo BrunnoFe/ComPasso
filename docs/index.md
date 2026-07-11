@@ -10,7 +10,7 @@ gravação.
 O programa toca uma sequência pseudoaleatória de faixas (músicas e ruído) e grava, para cada
 faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento alinhados no tempo.
 
-<!-- SCREENSHOT: janela principal do ComPasso com a barra de menu (Experimento / Tema / Ajuda), o stepper de 4 etapas, o player e o gráfico do sinal em tempo real -->
+<!-- SCREENSHOT: janela principal do ComPasso com a barra de menu (Experimento / Tema / Ajuda), o indicador de progresso em etapas, o player e o gráfico do sinal em tempo real -->
 
 ## 🔎 Para que serve
 

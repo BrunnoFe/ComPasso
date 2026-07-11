@@ -20,7 +20,7 @@ from compasso.utils.configs import ICON_FILENAME
 from . import gui_logger
 from .theme import (WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT,
                    ACCENT_TINT, TEXT, MUTED, FAINT, BASE_FONT, CORNER, CORNER_SM,
-                   DISPLAY_FAMILY, MONO_FAMILY, FONT_MD, FONT_SM)
+                   DISPLAY_FAMILY, MONO_FAMILY, FONT_S13, FONT_S11)
 from .widgets import styled_label, styled_button, ghost_button, mono
 from compasso.core import config_manager
 from compasso.core.constants import SENSOR_DEFAULT, SENSOR_GRAPH_PARAMS
@@ -122,18 +122,18 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             row=1, column=0, padx=15, pady=10, sticky=ctk.E)
         y_frame = ctk.CTkFrame(mainframe, fg_color=TRANSPARENTE)
         y_frame.grid(row=1, column=1, padx=15, pady=10, sticky=ctk.EW)
-        self._y_neg_label = mono(y_frame, "", size=FONT_SM, color=MUTED, width=72)
+        self._y_neg_label = mono(y_frame, "", size=FONT_S11, color=MUTED, width=72)
         self._y_neg_label.pack(side="left")
         p = self._sensor_params
         passos_y = max(1, int(round((p["maximo"] - p["minimo"]) / p["passo"])))
         self._y_slider = self._slider(y_frame, self._y_var, p["minimo"], p["maximo"], passos_y)
         self._y_slider.pack(side="left", padx=8, fill="x", expand=True)
-        self._y_pos_label = mono(y_frame, "", size=FONT_SM, color=MUTED, width=72)
+        self._y_pos_label = mono(y_frame, "", size=FONT_S11, color=MUTED, width=72)
         self._y_pos_label.pack(side="left")
 
         # nota quando a escala Y está travada (sessão em andamento)
         self._y_nota = styled_label(mainframe, text="", text_color=FAINT,
-                                    font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM))
+                                    font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S11))
         self._y_nota.grid(row=2, column=1, padx=15, pady=(0, 6), sticky=ctk.W)
 
         # 2) Média móvel (toggle + janela) ---------------------------------------
@@ -146,10 +146,10 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         self._smooth_window_slider = self._slider(
             smooth_frame, self._smooth_window_var, _JANELA_MIN, _JANELA_MAX, _JANELA_PASSOS)
         self._smooth_window_slider.pack(side="left", padx=(12, 8), fill="x", expand=True)
-        self._smooth_window_value = mono(smooth_frame, "5", size=FONT_SM, color=MUTED, width=54)
+        self._smooth_window_value = mono(smooth_frame, "5", size=FONT_S11, color=MUTED, width=54)
         self._smooth_window_value.pack(side="left")
         styled_label(mainframe, text="janela em colunas de exibição (não altera o dado gravado)",
-                     text_color=FAINT, font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM)).grid(
+                     text_color=FAINT, font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S11)).grid(
             row=4, column=1, padx=15, pady=(0, 6), sticky=ctk.W)
 
         # 3) FPS ------------------------------------------------------------------
@@ -160,7 +160,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             command=self._on_change, fg_color=INPUT_BG, button_color=INPUT_BG,
             button_hover_color=BORDER, dropdown_fg_color=BAR_BG,
             dropdown_hover_color=ACCENT_TINT, text_color=TEXT, dropdown_text_color=TEXT,
-            font=ctk.CTkFont(MONO_FAMILY, FONT_MD), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_MD),
+            font=ctk.CTkFont(MONO_FAMILY, FONT_S13), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_S13),
             corner_radius=CORNER_SM)
         self._fps_menu.grid(row=5, column=1, padx=15, pady=10, sticky=ctk.W)
 
@@ -172,7 +172,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
         self._width_slider = self._slider(
             width_frame, self._width_var, _LARGURA_MIN, _LARGURA_MAX, _LARGURA_PASSOS)
         self._width_slider.pack(side="left", padx=(0, 8), fill="x", expand=True)
-        self._width_value = mono(width_frame, "1.5 px", size=FONT_SM, color=MUTED, width=54)
+        self._width_value = mono(width_frame, "1.5 px", size=FONT_S11, color=MUTED, width=54)
         self._width_value.pack(side="left")
 
         # 5) Grade liga/desliga ---------------------------------------------------
@@ -193,7 +193,7 @@ class GraphSettingsWindow(ctk.CTkToplevel):
             command=self._on_change, fg_color=INPUT_BG, button_color=INPUT_BG,
             button_hover_color=BORDER, dropdown_fg_color=BAR_BG,
             dropdown_hover_color=ACCENT_TINT, text_color=TEXT, dropdown_text_color=TEXT,
-            font=ctk.CTkFont(MONO_FAMILY, FONT_MD), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_MD),
+            font=ctk.CTkFont(MONO_FAMILY, FONT_S13), dropdown_font=ctk.CTkFont(MONO_FAMILY, FONT_S13),
             corner_radius=CORNER_SM)
         self._value_mode_menu.grid(row=9, column=1, padx=15, pady=10, sticky=ctk.W)
 

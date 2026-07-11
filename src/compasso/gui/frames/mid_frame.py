@@ -6,7 +6,7 @@ from tkinter import filedialog, TclError
 from .. import gui_logger
 from ..theme import (BAR_BG, BORDER, DANGER_TINT, TEXT, MUTED, SUCCESS, ACCENT, ACCENT_TINT, DANGER,
                      TRANSPARENTE, DISPLAY_FAMILY, CORNER_CHIP, CORNER_PILL, BTN_H,
-                     FONT_XS, FONT_SM, FONT_BASE, FONT_LG, FONT_2XL, FONT_3XL)
+                     FONT_S10, FONT_S11, FONT_BASE_12, FONT_S14, FONT_S17, FONT_S18)
 from ..widgets import (show_message, confirm, title, caption, mono, ghost_button,
                        styled_entry, circle, check_icon, danger_button, Card)
 from compasso.core import (scan_music_files, match_conditions,
@@ -271,13 +271,13 @@ class ParticipantCard(_CollapsibleCard, Card):
         for child in list(self.summary_frame.winfo_children()):
             child.destroy()
         avatar = circle(self.summary_frame, (nome[:1] or "?").upper(), filled=False, size=52)
-        avatar.configure(font=ctk.CTkFont(DISPLAY_FAMILY, FONT_3XL, weight="bold"))
+        avatar.configure(font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S18, weight="bold"))
         avatar.pack(side="left")
         info = ctk.CTkFrame(self.summary_frame, fg_color=TRANSPARENTE)
         info.pack(side="left", padx=14)
         ctk.CTkLabel(info, text=nome, text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_2XL, weight="bold")).pack(anchor="w")
-        mono(info, f"{idade} anos · {genero}", FONT_BASE, MUTED).pack(anchor="w")
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S17, weight="bold")).pack(anchor="w")
+        mono(info, f"{idade} anos · {genero}", FONT_BASE_12, MUTED).pack(anchor="w")
         self.edit_button = ghost_button(self.summary_frame, "Editar", command=self.edit_infos)
         self.edit_button.configure(width=80, height=36)
         self.edit_button.pack(side="right")
@@ -349,8 +349,8 @@ class FilesCard(_CollapsibleCard, Card):
         col = ctk.CTkFrame(r, fg_color=TRANSPARENTE)
         col.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
         caption(col, label.upper()).pack(anchor=ctk.W)
-        mono(col, "", FONT_BASE, MUTED, textvariable=var, anchor=ctk.W).pack(anchor=ctk.W, fill=ctk.X)
-        gb = ghost_button(r, btn_text, size=FONT_BASE, command=command)
+        mono(col, "", FONT_BASE_12, MUTED, textvariable=var, anchor=ctk.W).pack(anchor=ctk.W, fill=ctk.X)
+        gb = ghost_button(r, btn_text, size=FONT_BASE_12, command=command)
         gb.configure(width=88, height=32)
         gb.pack(side=ctk.RIGHT)
         return chk
@@ -554,47 +554,47 @@ class PlayerBar(Card):
         # cartão tenha altura fixa desde o início — só o texto/cor mudam em _update_progress,
         # reservando o espaço mesmo quando não há gravação/condição ativa.
         ctk.CTkLabel(main_player_frame, textvariable=self.ctx.current_music_text, text_color=TEXT, anchor=ctk.W,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_LG, weight="bold")).grid(
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S14, weight="bold")).grid(
                      row=0, column=0, columnspan=2, sticky=ctk.W, pady=(4, 4))
 
         self.rec_frame = ctk.CTkFrame(rec_cond_frame, fg_color=TRANSPARENTE)
         self.rec_frame.grid(row=0, column=0, sticky=ctk.W, pady=(4, 4))
 
         self.rec_dot = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_XS))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S10))
         self.rec_dot.pack(side=ctk.LEFT, padx=(0, 7))
 
         self.rec_label = ctk.CTkLabel(self.rec_frame, text="", text_color=DANGER,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S11, weight="bold"))
         self.rec_label.pack(side=ctk.LEFT)
 
         self.condition_chip = ctk.CTkLabel(rec_cond_frame, textvariable=self.ctx.current_condition_text,
                                            fg_color=TRANSPARENTE, text_color=ACCENT, corner_radius=CORNER_CHIP,
-                                           font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM, weight="bold"))
+                                           font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S11, weight="bold"))
         self.condition_chip.grid(row=1, column=0, sticky=ctk.W, pady=(4, 4))
         # cor/texto do chip são atualizados em _update_progress conforme houver condição
 
         # ----- centro: progresso -----
         progress_frame = ctk.CTkFrame(main_player_frame, fg_color=TRANSPARENTE)
         progress_frame.grid(row=1, column=1, sticky=ctk.EW, padx=22)
-        mono(progress_frame, "", FONT_BASE, MUTED, textvariable=self.ctx.time_begin_text).pack(side=ctk.LEFT)
+        mono(progress_frame, "", FONT_BASE_12, MUTED, textvariable=self.ctx.time_begin_text).pack(side=ctk.LEFT)
         self.music_progress = ctk.CTkProgressBar(progress_frame, height=6, corner_radius=CORNER_PILL,
                                                  progress_color=ACCENT, fg_color=BORDER)
         self.music_progress.set(0.0)
         self.music_progress.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
-        mono(progress_frame, "", FONT_BASE, MUTED, textvariable=self.ctx.time_end_text).pack(side=ctk.LEFT)
+        mono(progress_frame, "", FONT_BASE_12, MUTED, textvariable=self.ctx.time_end_text).pack(side=ctk.LEFT)
 
         # ----- volume -----
         volume_frame = ctk.CTkFrame(main_player_frame, fg_color=TRANSPARENTE)
         volume_frame.grid(row=1, column=2, padx=(0, 22))
         ctk.CTkLabel(volume_frame, text="Volume", text_color=MUTED,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE)).pack(side=ctk.LEFT, padx=(0, 8))
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12)).pack(side=ctk.LEFT, padx=(0, 8))
         self.music_volume = ctk.CTkSlider(volume_frame, width=120, height=16, from_=0, to=100,
                                           number_of_steps=100, progress_color=ACCENT,
                                           button_color=ACCENT, button_hover_color=ACCENT,
                                           fg_color=BORDER, command=self._on_volume_change)
         self.music_volume.pack(side=ctk.LEFT, fill=ctk.X, expand=True)
-        self.music_volume_label = mono(volume_frame, "", FONT_BASE, TEXT, textvariable=self.ctx.volume_text)
+        self.music_volume_label = mono(volume_frame, "", FONT_BASE_12, TEXT, textvariable=self.ctx.volume_text)
         self.music_volume_label.pack(side=ctk.LEFT, padx=(8, 0), fill=ctk.X, expand=True)
 
         # Inicializa o slider/rótulo com o volume atual do sistema (leitura apenas).
@@ -682,6 +682,7 @@ class PlayerBar(Card):
             self.ctx.volume_travado = True
             self.music_volume.configure(state="disabled")
             self._volume_locked = True
+            self.ctx.notify_stepper()  # acende a etapa "Calibragem" no stepper
             gui_logger.logger.info(f"Volume calibrado aplicado e travado em {vol}%.")
         except Exception as e:
             gui_logger.logger.warning(f"Falha ao aplicar volume calibrado: {e}")

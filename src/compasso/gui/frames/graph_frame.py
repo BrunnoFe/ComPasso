@@ -19,7 +19,7 @@ import customtkinter as ctk
 
 from .. import theme
 from ..theme import (ACCENT, TRANSPARENTE, DISPLAY_FAMILY, MONO_FAMILY,
-                     FONT_MD, PAD_MD, PAD_SM)
+                     FONT_S13, PAD_MD, PAD_SM)
 from ..widgets import Card, caption, mono
 from .signal_plot import GraficoSinal
 from compasso.core.constants import SENSOR_DEFAULT, SENSOR_GRAPH_PARAMS
@@ -104,7 +104,7 @@ class GraphFrame(Card):
 
         # largura fixa + alinhado à direita: o texto varia de comprimento (modo média/bruto,
         # com mín/máx ou DP) e não deve redimensionar o cabeçalho a cada atualização.
-        self._rotulo_valor = mono(cabecalho, "—", size=FONT_MD, color=ACCENT)
+        self._rotulo_valor = mono(cabecalho, "—", size=FONT_S13, color=ACCENT)
         self._rotulo_valor.configure(width=300, anchor="e")
         self._rotulo_valor.pack(side="right")
 

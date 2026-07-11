@@ -7,6 +7,10 @@ Todas as mudanças notáveis deste projeto são documentadas neste arquivo, segu
 
 ### Adicionado
 
+- 🧭 **Indicador de progresso (stepper) redesenhado** — ganhou as etapas "Configurações" (config de
+  experimento criada/aberta) e "Calibragem" (opcional, só aparece com a calibração de volume
+  habilitada); "Iniciar" foi renomeada para "Começar". Etapas pendentes que não são a atual agora
+  ficam **vermelhas** em vez de usar a mesma cor neutra da etapa em andamento.
 - 🔒 **Volume travado durante a faixa** — o slider de volume fica desabilitado enquanto uma faixa
   está em contagem regressiva ou reprodução, evitando mudar o volume no meio de uma gravação.
 - 📄 **Planilha `dados_da_execucao.xlsx`** — uma planilha por sessão (regravada a cada faixa

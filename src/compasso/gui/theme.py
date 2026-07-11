@@ -261,8 +261,8 @@ def set_theme(name: str) -> bool:
 # ---------------------------------------------------------------------------
 # Dimensões / layout
 # ---------------------------------------------------------------------------
-WIN_MIN_WIDTH: int = 1280
-WIN_MIN_HEIGHT: int = 768
+WIN_MIN_WIDTH: int = 1300
+WIN_MIN_HEIGHT: int = 720
 
 # Raios de canto
 CORNER: int = 14          # raio dos cartões
@@ -294,16 +294,17 @@ else:
 
 # Escala de tamanhos de fonte (cobre os tamanhos usados na UI: 9,10,11,12,13,14,15,17,18,19).
 # Trocar um valor aqui reflete em todos os widgets que usam o mesmo nível.
-FONT_2XS: int = 9
-FONT_XS: int = 10
-FONT_SM: int = 11
-FONT_BASE: int = 12
-FONT_MD: int = 13
-FONT_LG: int = 14
-FONT_XL: int = 15
-FONT_2XL: int = 17
-FONT_3XL: int = 18
-FONT_4XL: int = 19
+FONT_S9: int = 9
+FONT_S10: int = 10
+FONT_S11: int = 11
+FONT_BASE_12: int = 12
+FONT_S13: int = 13
+FONT_S14: int = 14
+FONT_S15: int = 15
+FONT_S16: int = 16
+FONT_S17: int = 17
+FONT_S18: int = 18
+FONT_S19: int = 19
 
-BASE_FONT: tuple = (DISPLAY_FAMILY, 16, "bold")
-BASE_FONT_MIN: tuple = (DISPLAY_FAMILY, FONT_BASE, "bold")
+BASE_FONT: tuple = (DISPLAY_FAMILY, FONT_S16, "bold")
+BASE_FONT_MIN: tuple = (DISPLAY_FAMILY, FONT_BASE_12, "bold")

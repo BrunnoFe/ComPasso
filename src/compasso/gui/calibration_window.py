@@ -23,9 +23,9 @@ from compasso.utils.configs import ICON_FILENAME
 from compasso.utils import format_time
 
 from . import gui_logger
-from .theme import (FONT_2XL, WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT, ACCENT_INK,
+from .theme import (FONT_S17, FONT_S10, WIN_BG, BAR_BG, BORDER, INPUT_BG, TRANSPARENTE, ACCENT, ACCENT_INK,
                    TEXT, MUTED, FAINT, DANGER, DANGER_TINT, DANGER_BORDER, CORNER, CORNER_PILL,
-                   DISPLAY_FAMILY, BASE_FONT, INPUT_H, BTN_H, FONT_SM, FONT_BASE, FONT_4XL)
+                   DISPLAY_FAMILY, BASE_FONT, INPUT_H, BTN_H, FONT_S11, FONT_BASE_12, FONT_S19)
 from .widgets import show_message, ask_options, styled_label, styled_entry, styled_button, \
     ghost_button, caption, mono
 from compasso.core import get_system_volume, set_system_volume, calibration
@@ -110,7 +110,7 @@ class CalibrationWindow(ctk.CTkToplevel):
         styled_label(mainframe, text="Calibração de Volume", font=BASE_FONT).grid(
             row=0, column=0, padx=15, pady=(15, 4), sticky=ctk.N)
         styled_label(mainframe, text="Ajuste o volume ideal para o participante antes da sessão.",
-                     text_color=FAINT, font=ctk.CTkFont(DISPLAY_FAMILY, FONT_SM)).grid(
+                     text_color=FAINT, font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S11)).grid(
             row=1, column=0, padx=15, pady=(0, 16), sticky=ctk.N)
 
         self._montar_parametros(mainframe, 2)
@@ -118,7 +118,7 @@ class CalibrationWindow(ctk.CTkToplevel):
 
         # rótulo grande do volume atual (linha de base e calibração o atualizam ao vivo)
         ctk.CTkLabel(mainframe, textvariable=self._vol_label_var, text_color=TEXT,
-                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_4XL, weight="bold")).grid(
+                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_S19, weight="bold")).grid(
             row=4, column=0, padx=15, pady=(6, 12))
 
         self._montar_botoes(mainframe, 5)
@@ -134,7 +134,7 @@ class CalibrationWindow(ctk.CTkToplevel):
 
         # sliders de passo de aumento (%) e intervalo (s), ambos 1–5.
         self._step_pct_slider, self._step_pct_valor = self._coluna_slider(
-            frame, "AUMENTO X% DO VOLUME", self._step_pct_var,
+            frame, "AUMENTAR X% DO VOLUME", self._step_pct_var,
             calibration.CALIB_STEP_PCT_MIN, calibration.CALIB_STEP_PCT_MAX)
         self._step_seg_slider, self._step_seg_valor = self._coluna_slider(
             frame, "A CADA X SEGUNDOS", self._step_seg_var,
@@ -154,7 +154,7 @@ class CalibrationWindow(ctk.CTkToplevel):
         """Sub-coluna (caption + slider 1–5 + valor) para um parâmetro de passo/intervalo."""
         col = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
         col.pack(side=ctk.TOP, padx=(0, 14))
-        caption(col, rotulo).pack(anchor=ctk.N, pady=(0, 4))
+        caption(col, rotulo, font_size=FONT_S10).pack(anchor=ctk.N, pady=(0, 4))
         linha = ctk.CTkFrame(col, fg_color=TRANSPARENTE)
         linha.pack()
         slider = ctk.CTkSlider(linha, from_=minimo, to=maximo, number_of_steps=maximo - minimo,
@@ -163,7 +163,7 @@ class CalibrationWindow(ctk.CTkToplevel):
                                progress_color=ACCENT, button_color=ACCENT,
                                button_hover_color=ACCENT, fg_color=BORDER)
         slider.pack(side=ctk.LEFT)
-        valor = mono(linha, str(var.get()), size=FONT_2XL, color=MUTED, width=24)
+        valor = mono(linha, str(var.get()), size=FONT_S17, color=MUTED, width=24)
         valor.pack(side=ctk.LEFT, padx=(8, 0))
         return slider, valor
 
@@ -172,12 +172,12 @@ class CalibrationWindow(ctk.CTkToplevel):
         frame = ctk.CTkFrame(master, fg_color=TRANSPARENTE)
         frame.grid(row=row, column=0, padx=15, pady=(0, 8), sticky=ctk.EW)
         master.grid_columnconfigure(0, weight=1)
-        mono(frame, "", FONT_BASE, MUTED, textvariable=self._t_begin_var).pack(side=ctk.LEFT)
+        mono(frame, "", FONT_BASE_12, MUTED, textvariable=self._t_begin_var).pack(side=ctk.LEFT)
         self._progress = ctk.CTkProgressBar(frame, height=6, corner_radius=CORNER_PILL,
                                             progress_color=ACCENT, fg_color=BORDER)
         self._progress.set(0.0)
         self._progress.pack(side=ctk.LEFT, fill=ctk.X, expand=True, padx=12)
-        mono(frame, "", FONT_BASE, MUTED, textvariable=self._t_end_var).pack(side=ctk.LEFT)
+        mono(frame, "", FONT_BASE_12, MUTED, textvariable=self._t_end_var).pack(side=ctk.LEFT)
 
     def _montar_botoes(self, master, row):
         """Botões: "Linha de Base" (esquerda) e "Calibrar" (direita, morfa para Parar/Salvar)."""

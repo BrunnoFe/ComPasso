@@ -12,7 +12,7 @@ from . import set_window_configs
 from . import theme
 from .context import AppContext
 from .assets import ASSETS_DIR
-from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE
+from .theme import ACCENT_TINT, BAR_BG, DISPLAY_FAMILY, FAINT2, FOOTER_BG, WIN_BG, TRANSPARENTE, WIN_MIN_WIDTH, WIN_MIN_HEIGHT, FONT_BASE_12
 from .widgets import show_message, confirm, ghost_button
 from .frames import (ConnectionFrame, StepperFrame, ParticipantCard, FilesCard,
                      PlayerBar, GraphFrame, DownFrame, CardsCollapseController)
@@ -83,7 +83,7 @@ class ComPasso(ctk.CTk):
         self.btn_experimento = self.menu_bar.add_cascade(
             "Experimento",
             hover_color=ACCENT_TINT,
-            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold")
+            font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12, weight="bold")
         )
         
         # Cria o dropdown flutuante associado ao botão
@@ -105,7 +105,7 @@ class ComPasso(ctk.CTk):
 
         self.btn_configs = self.menu_bar.add_cascade("Configurações",
                                                      hover_color=ACCENT_TINT,
-                                                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
+                                                     font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12, weight="bold"))
         self.dropdown_configs = CustomDropdownMenu(widget=self.btn_configs,
                                                     bg_color=WIN_BG,
                                                     hover_color=ACCENT_TINT,
@@ -117,7 +117,7 @@ class ComPasso(ctk.CTk):
         # Menu "Tema": uma opção por paleta disponível; troca a aparência ao vivo.
         self.btn_tema = self.menu_bar.add_cascade("Tema",
                                                   hover_color=ACCENT_TINT,
-                                                  font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
+                                                  font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12, weight="bold"))
         self.dropdown_tema = CustomDropdownMenu(
             widget=self.btn_tema,
             bg_color=WIN_BG,
@@ -134,7 +134,7 @@ class ComPasso(ctk.CTk):
         # Menu "Ajuda": abrir a pasta de logs e a página do projeto no GitHub.
         self.btn_ajuda = self.menu_bar.add_cascade("Ajuda",
                                                    hover_color=ACCENT_TINT,
-                                                   font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE, weight="bold"))
+                                                   font=ctk.CTkFont(DISPLAY_FAMILY, FONT_BASE_12, weight="bold"))
         self.dropdown_ajuda = CustomDropdownMenu(
             widget=self.btn_ajuda,
             bg_color=WIN_BG,
