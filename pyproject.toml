@@ -11,10 +11,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compasso"
-# Versão do APP (fonte: version_info.txt / tag `v2026.2.0`). NÃO confundir com
+# Versão do APP (fonte: version_info.txt / tag `v2026.3.0`). NÃO confundir com
 # `CONFIG_VERSION` (schema do .config, em src/compasso/core/config_manager.py) — são
 # conceitos independentes (ver RELEASE.md).
-version = "2026.2.0"
+version = "2026.3.0"
 description = "GUI de pesquisa que toca músicas e grava o sinal do BITalino (LSL) sincronizado por um único relógio."
 requires-python = ">=3.12"
 

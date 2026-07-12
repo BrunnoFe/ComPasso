@@ -5,6 +5,8 @@ Todas as mudanças notáveis deste projeto são documentadas neste arquivo, segu
 
 ## [Não lançado]
 
+## [2026.3.0] - 2026-07-11
+
 ### Adicionado
 
 - 🧭 **Indicador de progresso (stepper) redesenhado** — ganhou as etapas "Configurações" (config de
@@ -32,10 +34,11 @@ Todas as mudanças notáveis deste projeto são documentadas neste arquivo, segu
   padrão da escala do eixo Y do gráfico do sinal em tempo real (o dado gravado continua bruto —
   é só uma mudança de exibição). Trocar de sensor reseta a escala ao padrão daquele sensor.
 - 🔊 **Calibração de volume (opcional)** — checkbox + carregador de faixa de áudio na janela de
-  configuração habilitam um botão "Calibrar" no player, que abre uma janela dedicada: o volume do
-  sistema sobe gradualmente (X% a cada X s, entre um mínimo e um máximo configuráveis na própria
-  janela) enquanto a faixa toca, até o participante indicar que o volume está confortável. O volume
-  ótimo encontrado é aplicado ao sistema e trava o slider de volume do player pelo resto da sessão.
+  configuração habilitam um botão "Calibrar Volume" no player, que abre uma janela dedicada: uma
+  linha de base demonstrativa, seguida da calibração em si, em que o volume do sistema sobe
+  gradualmente (X% a cada X s, entre um mínimo e um máximo configuráveis na própria janela)
+  enquanto a faixa toca, até o participante indicar que o volume está confortável. O volume ótimo
+  encontrado é aplicado ao sistema e trava o slider de volume do player pelo resto da sessão.
   Desabilitada por padrão.
 
 ## [2026.2.0] - 2026-07-02
