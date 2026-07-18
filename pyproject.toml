@@ -1,9 +1,10 @@
 # Configuração consolidada do ComPasso.
 #
 # O projeto NÃO é publicado no PyPI — é distribuído como executável via PyInstaller
-# (ver compasso.spec / BUILD.md). Este pyproject serve para: declarar metadados e
-# dependências, habilitar a instalação editável (`pip install -e .`) para desenvolvimento,
-# e centralizar a configuração de testes/cobertura (antes espalhada em pytest.ini).
+# (ver compasso.spec / BUILD.md). Gerenciado com `uv`: este pyproject + `uv.lock` são a
+# única fonte de verdade das dependências (`uv sync` cria o venv e instala tudo, incluindo
+# o pacote `compasso` em modo editável) e centralizam a configuração de testes/cobertura
+# (antes espalhada em pytest.ini).
 
 [build-system]
 requires = ["setuptools>=61"]
@@ -18,8 +19,8 @@ version = "2026.3.0"
 description = "GUI de pesquisa que toca músicas e grava o sinal do BITalino (LSL) sincronizado por um único relógio."
 requires-python = ">=3.12"
 
-# Dependências de runtime — espelham requirements.txt (mantido para o fluxo já documentado).
-# Os markers `; sys_platform == "win32"` de comtypes/pycaw são obrigatórios (Windows-only).
+# Dependências de runtime. Os markers `; sys_platform == "win32"` de comtypes/pycaw são
+# obrigatórios (Windows-only).
 dependencies = [
     'comtypes==1.4.16 ; sys_platform == "win32"',
     "et_xmlfile==2.0.0",
@@ -37,9 +38,9 @@ dependencies = [
     "tzdata==2026.2",
 ]
 
-[project.optional-dependencies]
-# Ferramentas de build/lint/teste — espelham requirements-dev.txt. Instale com:
-#   pip install -e ".[dev]"
+[dependency-groups]
+# Ferramentas de build/lint/teste — instaladas por padrão por `uv sync` (não vão para o
+# pacote publicado, já que o projeto não é publicado no PyPI).
 dev = [
     "pyinstaller==6.21.0",
     "pyflakes==3.4.0",
@@ -53,7 +54,7 @@ dev = [
 where = ["src"]
 
 # Migrado de pytest.ini. Sem `pythonpath` de propósito: a suíte depende da instalação
-# editável (`pip install -e .`), que coloca o pacote `compasso` no ambiente.
+# editável (feita automaticamente por `uv sync`), que coloca o pacote `compasso` no ambiente.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

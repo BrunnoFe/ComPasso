@@ -39,24 +39,19 @@
 - **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado** (veja [Antes de abrir o programa](#-antes-de-abrir-o-programa)).
 - **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals (LSL ativo).
 
-As dependências Python estão em [`requirements.txt`](requirements.txt) (**PySide6** — Qt/QML —, pygame-ce, pylsl, pandas, openpyxl, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
+As dependências Python estão em [`pyproject.toml`](pyproject.toml) (**PySide6** — Qt/QML —, pygame-ce, pylsl, pandas, openpyxl, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
 
 ---
 
 ## 📦 Instalação
 
 ```bash
-# 1. Crie e ative um ambiente virtual
-python -m venv .venv
-.venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS/Linux
-
-# 2. Instale as dependências
-pip install -r requirements.txt
-
-# 3. Instale o pacote `compasso` em modo editável (habilita `import compasso`, testes e dev)
-pip install -e .
+# Requer uv (https://docs.astral.sh/uv/) instalado
+uv sync
 ```
+
+Cria `.venv/` e instala dependências de runtime + dev (testes, lint) e o próprio pacote
+`compasso` em modo editável — tudo num comando, a partir de `pyproject.toml`/`uv.lock`.
 
 Para gerar um executável distribuível (`.exe` no Windows, `.app` no macOS), consulte [BUILD.md](BUILD.md), ou baixe um build pronto na seção [🚀 Releases](#-releases).
 
@@ -186,7 +181,7 @@ Exemplo:
 ## 🎬 Como executar
 
 ```bash
-python main.py
+uv run main.py
 ```
 
 Uma **tela de carregamento** animada (a assinatura visual do ComPasso se desenhando) é exibida por alguns segundos antes da janela principal abrir, com uma transição suave para a interface. A janela do ComPasso é **sem moldura do sistema** (barra de título própria, cantos arredondados) e abre maximizada/centralizada (tamanho mínimo 1280×768); minimizar/maximizar/restaurar usam transições suaves em vez do salto abrupto padrão do SO. Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#-onde-os-dados-são-salvos)).

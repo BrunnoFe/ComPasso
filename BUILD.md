@@ -7,6 +7,7 @@ cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
 ## Pré-requisitos
 
 - Python 3.12+ (o projeto foi validado em 3.14).
+- [`uv`](https://docs.astral.sh/uv/) instalado.
 - (Opcional) **UPX** no `PATH` para comprimir os binários. Sem UPX, o build funciona
   normalmente — a compressão é apenas ignorada.
 - OpenSignals/`liblsl` **não** são necessários para *buildar*, apenas para usar o app.
@@ -14,21 +15,18 @@ cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
 ## Preparar o ambiente
 
 ```bash
-python -m venv .venv
-# Windows
-.venv\Scripts\activate
-# macOS/Linux
-source .venv/bin/activate
-
-pip install -r requirements.txt -r requirements-dev.txt
+uv sync
 ```
+
+`uv sync` cria `.venv/` e instala dependências de runtime + build/teste (grupo `dev`) a
+partir de `pyproject.toml`/`uv.lock`, num único comando.
 
 ## Gerar o build
 
 ### onedir (padrão, recomendado para release)
 
 ```bash
-pyinstaller compasso.spec
+uv run pyinstaller compasso.spec
 ```
 
 Saída:
@@ -44,11 +42,11 @@ Defina a variável `COMPASSO_ONEFILE` antes de buildar:
 
 ```bash
 # Windows (PowerShell)
-$env:COMPASSO_ONEFILE = "1"; pyinstaller compasso.spec; Remove-Item Env:\COMPASSO_ONEFILE
+$env:COMPASSO_ONEFILE = "1"; uv run pyinstaller compasso.spec; Remove-Item Env:\COMPASSO_ONEFILE
 # Windows (cmd)
-set COMPASSO_ONEFILE=1 && pyinstaller compasso.spec
+set COMPASSO_ONEFILE=1 && uv run pyinstaller compasso.spec
 # macOS/Linux
-COMPASSO_ONEFILE=1 pyinstaller compasso.spec
+COMPASSO_ONEFILE=1 uv run pyinstaller compasso.spec
 ```
 
 Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (macOS).
@@ -83,7 +81,7 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
    iconutil -c icns icon.iconset -o assets/icon.icns
    ```
 
-3. `pyinstaller compasso.spec`.
+3. `uv run pyinstaller compasso.spec`.
 
 ## Publicando um release no GitHub
 
@@ -95,8 +93,9 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
 ## Notas
 
 - `dist/` e `build/` não são versionados (ver `.gitignore`). `compasso.spec` é versionado.
-- Dependências de runtime ficam em `requirements.txt`; ferramentas de build (PyInstaller,
-  pyflakes) ficam em `requirements-dev.txt`.
+- Dependências de runtime ficam em `[project.dependencies]`; ferramentas de build
+  (PyInstaller, pyflakes, pytest) ficam em `[dependency-groups].dev` — ambos em
+  `pyproject.toml`, travados por versão exata em `uv.lock`.
 - Se o app empacotado acusar erro de `liblsl`/`lsl`, confirme que a biblioteca nativa do
   `pylsl` foi copiada para `dist/ComPasso-win/_internal/` (o `compasso.spec` já faz isso via
   `collect_dynamic_libs("pylsl")`).
