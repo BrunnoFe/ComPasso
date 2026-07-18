@@ -34,7 +34,8 @@ instalação editável (`pip install -e .`), por isso ela é obrigatória antes 
 | `test_validation.py` / `test_formatting.py` / `test_classify_condition.py` | lógica pura (participante, MM:SS, ruído/música) |
 | `test_audio_volume.py` | `set/get_system_volume` (Windows/macOS/Linux mockados, clamp, fallbacks) |
 | `test_paths.py` | estrutura de pastas + `ensure_app_dirs` |
-| `test_button_state_logic.py` | `DownFrame._validar_prerequisitos` via ctx falso (sem renderizar GUI) |
+| `test_button_state_logic.py` | `experiment_controller.validar_prerequisitos` via ctx falso (sem renderizar GUI) |
+| `test_graph.py` | `GraficoSinal` (QQuickPaintedItem): decimação por coluna, relógio de exibição, `reset_idle` — sem renderizar de verdade (QGuiApplication headless) |
 
 ## Fakes e fixtures (`conftest.py`)
 
@@ -54,8 +55,9 @@ instalação editável (`pip install -e .`), por isso ela é obrigatória antes 
 - **`player.py`** (reprodução real do pygame) e **`connectar_bitalino` end-to-end**
   (resolução LSL real / rede) — dependem de hardware/áudio; apenas a lógica isolável
   (normalização de MAC, ramos de erro) é testada com mocks.
-- **Renderização de widgets CustomTkinter** — alto esforço, baixo valor para uma
-  ferramenta de pesquisa; testamos a lógica subjacente contra um `ctx` falso.
+- **Renderização visual do QML** — alto esforço, baixo valor para uma ferramenta de
+  pesquisa; testamos a lógica subjacente (controllers, `Context`, `GraficoSinal`) contra um `ctx`
+  falso ou headless, sem carregar o engine QML.
 - **Diálogos de arquivo / volume real do SO** — mockados.
 
 ## Efeito colateral conhecido

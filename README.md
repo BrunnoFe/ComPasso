@@ -4,7 +4,7 @@
   <img alt="License" src="https://img.shields.io/github/license/BrunnoFe/Compasso?color=2DD4BF">
   <img alt="Python" src="https://img.shields.io/badge/python-3.12%2B-2DD4BF">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20%7C%20macOS-2DD4BF">
-  <img alt="GUI" src="https://img.shields.io/badge/GUI-CustomTkinter-2DD4BF">
+  <img alt="GUI" src="https://img.shields.io/badge/GUI-PySide6%2FQML-2DD4BF">
   <a href="https://github.com/BrunnoFe/Compasso/releases"><img alt="Latest release" src="https://img.shields.io/github/v/release/BrunnoFe/Compasso?include_prereleases&color=2DD4BF&label=release"></a>
 </p>
 
@@ -39,7 +39,7 @@
 - **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado** (veja [Antes de abrir o programa](#-antes-de-abrir-o-programa)).
 - **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals (LSL ativo).
 
-As dependências Python estão em [`requirements.txt`](requirements.txt) (CustomTkinter, pygame-ce, pylsl, pandas, openpyxl, pillow, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
+As dependências Python estão em [`requirements.txt`](requirements.txt) (**PySide6** — Qt/QML —, pygame-ce, pylsl, pandas, openpyxl, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
 
 ---
 
@@ -146,7 +146,7 @@ O menu **Tema** troca a paleta de cores da aplicação inteira ao vivo, sem rein
 | 🌅 **Aurora** | Clara, acento coral-pêssego |
 | 🌲 **Floresta** | Escura, acento verde-menta |
 
-> ⚠️ A troca de tema só é permitida com a aplicação **ociosa** (sem BITalino conectado e sem experimento em andamento), pois reconstrói toda a interface.
+> A troca de tema é instantânea e pode ser feita a qualquer momento, inclusive com o BITalino conectado ou um experimento em andamento — a interface inteira recolore ao vivo, sem reiniciar nem perder o estado da sessão.
 
 <img width="1270" height="824" alt="iris" src="https://github.com/user-attachments/assets/746422aa-91c0-44e9-a4fe-48944c241222" />
 
@@ -189,7 +189,7 @@ Exemplo:
 python main.py
 ```
 
-Uma **tela de carregamento** é exibida por alguns segundos antes da janela principal abrir (puramente decorativa — se falhar por qualquer motivo, o programa segue direto para a interface). A janela do ComPasso abre maximizada/centralizada (tamanho mínimo 1280×768). Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#-onde-os-dados-são-salvos)).
+Uma **tela de carregamento** animada (a assinatura visual do ComPasso se desenhando) é exibida por alguns segundos antes da janela principal abrir, com uma transição suave para a interface. A janela do ComPasso é **sem moldura do sistema** (barra de título própria, cantos arredondados) e abre maximizada/centralizada (tamanho mínimo 1280×768); minimizar/maximizar/restaurar usam transições suaves em vez do salto abrupto padrão do SO. Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja [Onde os dados são salvos](#-onde-os-dados-são-salvos)).
 
 ---
 
@@ -207,7 +207,7 @@ A interface foi redesenhada em cartões escuros com um indicador de progresso em
 2. **Canal** — caixa de seleção ao lado do endereço MAC. Escolha o canal do sensor cujo sinal será gravado (**A1 a A6**). O padrão ao abrir o programa é **A1**.
 3. **Sensor** 🆕 — caixa de seleção do tipo de sensor conectado ao canal (veja [🔬 Tipo de sensor](#-tipo-de-sensor) abaixo).
 4. **Botão "Conectar"** — conecta ao BITalino via LSL. Em caso de sucesso, o botão dá lugar a um indicador "● Conectado" com um pequeno equalizador animado, e um botão **Desconectar** passa a ficar disponível; os campos de MAC, canal e sensor ficam travados.
-5. **Botão "Desconectar"** — encerra manualmente a conexão com o BITalino e restaura a UI de conexão. Bloqueia (com aviso) se houver um experimento em andamento — pare o experimento antes de desconectar.
+5. **Botão "Desconectar"** — pede confirmação ("Tem certeza que deseja desconectar o Bitalino?") antes de encerrar a conexão e restaurar a UI de conexão. Bloqueia (com aviso) se houver um experimento em andamento — pare o experimento antes de desconectar.
 
 > **Watchdog de conexão:** após conectar, o ComPasso monitora continuamente o fluxo de amostras. Se nenhuma amostra for recebida por ~15 segundos, a conexão é encerrada automaticamente, o experimento em andamento é interrompido com marcador `stop`, e uma mensagem de aviso é exibida.
 
@@ -243,40 +243,30 @@ habilitada na configuração do experimento; sem ela, "Começar" é a 5ª etapa.
 
 <!-- SCREENSHOT: stepper com uma etapa concluída (verde), uma "AGORA" e outra(s) pendente(s) em vermelho -->
 
-### Recolher os cartões Participante / Arquivos & Dados
+### Cartão "Participante | Arquivos & Dados"
 
-Um botão **▴/▾** no canto superior direito do cartão "Arquivos & Dados" recolhe os dois cartões
-juntos (Participante + Arquivos & Dados) numa animação de slide suave, deixando visível só o
-título de cada um — útil para dar mais espaço ao player e ao gráfico do sinal depois que os
-formulários já foram preenchidos. Ao clicar em **Começar**, os cartões recolhem automaticamente
-(se ainda abertos) e o botão fica travado durante toda a sessão; ao finalizar o experimento
-(sozinho, ao fim das faixas, ou pelo botão **Parar**) eles reabrem sozinhos e o botão volta a
-funcionar.
+<!-- SCREENSHOT: cartão único, com o divisor vertical entre Participante e Arquivos & Dados -->
 
-<!-- SCREENSHOT/GIF: botão ▴/▾ recolhendo os dois cartões -->
+Participante e Arquivos & Dados vivem num **único cartão**, dividido por uma linha discreta —
+faz sentido juntá-los porque os dois recolhem juntos (ver abaixo). Um chevron **❯** no canto
+superior direito do cartão recolhe/expande os dois lados de uma vez, deixando visível só os
+títulos — útil para dar mais espaço ao player e ao gráfico do sinal depois que os formulários já
+foram preenchidos. Ao clicar em **Começar**, o cartão recolhe automaticamente (se ainda aberto) e
+o chevron fica travado durante toda a sessão; ao finalizar o experimento (sozinho, ao fim das
+faixas, ou pelo botão **Parar**) ele reabre sozinho e o chevron volta a funcionar.
 
-### Painel do participante
-
-<img width="488" height="307" alt="partic_info" src="https://github.com/user-attachments/assets/fbc951a0-6ea4-4e7e-bead-706f69baa17b" />
-
-Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**. Regras de validação:
+**Lado esquerdo — Participante.** Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**. Regras de validação:
 
 - **Nome** e **Gênero**: apenas letras e espaços.
 - **Idade**: número inteiro entre **18 e 100**.
 - Todos os campos são obrigatórios.
 
-Após salvar, o cartão muda para um resumo (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo. O botão **Editar** fica desabilitado durante um experimento em andamento (evita alterar as informações do participante no meio de uma sessão de coleta) e volta a funcionar assim que o experimento finaliza ou é interrompido.
+Após salvar, o lado do participante muda para um resumo centralizado (avatar com a inicial do nome + "idade anos · gênero") com um botão **Editar**, caso precise corrigir algo — a área ocupada não muda entre o formulário e o resumo. O botão **Editar** fica desabilitado durante um experimento em andamento (evita alterar as informações do participante no meio de uma sessão de coleta) e volta a funcionar assim que o experimento finaliza ou é interrompido.
 
-<img width="489" height="309" alt="partic_card" src="https://github.com/user-attachments/assets/b4d4f495-fafa-4660-927a-58721aa30633" />
-
-### Painel de arquivos e diretório de saída
-
-<img width="732" height="307" alt="arquivos" src="https://github.com/user-attachments/assets/ba3d5178-c9e8-467c-9d08-4562ff2e9914" />
-
-Três seleções, que também são preenchidas automaticamente ao carregar um `.config` pelo menu **Experimento**:
+**Lado direito — Arquivos & Dados.** Três seleções, também preenchidas automaticamente ao carregar um `.config` pelo menu **Experimento**:
 
 1. **Músicas → Carregar** — escolha a **pasta** com os áudios.
-2. **Condições (.xlsx) → Buscar** — escolha a **planilha `.xlsx`** de condições. Ao concluir a seleção, o mapeamento entre arquivos e fatores é verificado automaticamente em segundo plano.
+2. **Condições (.xlsx) → Buscar** — escolha a **planilha `.xlsx`** de condições. Ao concluir a seleção (basta a pasta de músicas + a planilha — a pasta de saída não é necessária para o casamento), o mapeamento entre arquivos e fatores é verificado automaticamente em segundo plano.
 3. **Salvar dados em → Escolher** — escolha a **pasta de saída** dos dados.
 
 Cada linha tem um ícone de check que fica verde assim que o respectivo item é resolvido com sucesso. A linha de status no rodapé indica o que ainda falta selecionar e, quando tudo está pronto, confirma que os arquivos foram encontrados e mapeados com sucesso.
@@ -300,9 +290,10 @@ Abaixo do player, um cartão desenha o sinal do BITalino do canal selecionado **
 
 - O gráfico se abre nos **últimos 5 segundos** da contagem regressiva (eixo de tempo começa em `-0:05`) e mostra a música inteira até o fim (`0:00` = início da faixa, destacado por uma linha mais clara).
 - A linha se forma **continuamente e sem travar a interface**, com um ponteiro que acompanha a formação em tempo real e mostra o valor atual, na **unidade do sensor ativo** 🆕 (µV para EEG, mV para ECG/EMG/EOG/EGG, µS para EDA — veja [🔬 Tipo de sensor](#-tipo-de-sensor)), no canto superior.
-- O eixo Y é **sempre fixo** na escala configurada (padrão do sensor ativo, ex.: **±30 µV** para EEG ou **±1 mV** para ECG), com marcas e linhas de grade no passo do sensor — não há ajuste automático pelos dados.
+- O eixo Y é **fixo** na escala configurada (padrão do sensor ativo, ex.: **±30 µV** para EEG ou **±1 mV** para ECG), com marcas e linhas de grade no passo do sensor — não há ajuste automático pelos dados.
+- 🆕 **Zoom ao vivo do eixo Y** — dois botões discretos **+/−** ao lado do eixo permitem ampliar ou afastar o sinal **durante a própria gravação** (diferente da escala configurada em "Configurações → Gráfico", que fica travada durante a sessão). "+" amplia o sinal (reduz o alcance ± do eixo); "−" afasta (aumenta o alcance). Útil para ajustar a visualização sem interromper a faixa.
 - Ao final de cada faixa, o registro completo permanece visível até ~1 segundo antes da próxima música começar, quando o gráfico se limpa para a faixa seguinte.
-- Ao **parar** o experimento, o gráfico volta ao estado ocioso ("Aguardando gravação…").
+- Ao **parar** o experimento, o gráfico volta ao estado ocioso ("Aguardando gravação…", sem a antiga linha de base horizontal).
 
 > 💡 O gráfico é só uma conferência visual em tempo real — os dados salvos em CSV/XLSX sempre trazem o valor **bruto** do sinal, sem qualquer suavização aplicada à exibição.
 
@@ -440,7 +431,6 @@ Builds prontos (Windows `.exe` / macOS `.app`, gerados com PyInstaller) são pub
 | **"Nenhuma condição encontrada para X"** | O nome na coluna `musica` da planilha não bate com o arquivo na pasta. Corrija a planilha e recarregue. |
 | **Sinal sempre 0 ou constante** | Canal errado selecionado. Consulte a primeira amostra registrada no log (linha "Primeira amostra completa") e ajuste o **Canal** na barra de conexão ou em **Experimento → Editar**. |
 | **Áudio não toca** | Verifique se os arquivos estão em `.mp3`, `.wav` ou `.ogg` e se o volume do sistema não está no mínimo. |
-| **Menu "Tema" não responde** | A troca de tema é bloqueada enquanto o BITalino está conectado ou um experimento está em andamento — desconecte/finalize antes de trocar. |
 | **Gráfico fica "Aguardando gravação…" o tempo todo** | O BITalino não está conectado/transmitindo, ou nenhuma faixa está em reprodução no momento — o gráfico só recebe dados durante os 5 s finais da contagem e a reprodução da faixa. |
 | 🆕 **"Salvar" recusa a configuração por causa das colunas** | As duas colunas escolhidas (nome do áudio / fator) são iguais, ou não existem na planilha carregada — recarregue o arquivo e escolha colunas diferentes. |
 | 🆕 **"Salvar" recusa por causa do beep** | O tempo do beep está igual ou maior que o tempo pré-estímulo. Diminua o tempo do beep ou aumente o tempo pré-estímulo. |
@@ -458,16 +448,25 @@ barra reconstruído) desde as últimas capturas de tela. Vale renovar/adicionar:
 - Indicador de progresso (stepper) em pelo menos dois estados (início e com etapas concluídas).
 - Painel do player com o indicador "GRAVANDO" e o chip de condição durante uma faixa em execução.
 - Cartão do gráfico do sinal em tempo real, durante uma gravação real (linha se formando + ponteiro
-  + chip de tempo visíveis) — um GIF curto comunica bem a fluidez da animação.
-- Ícone/logo do app em alta resolução para o topo do README.
-- GIF do botão "▴/▾" recolhendo/expandindo os cartões Participante + Arquivos & Dados (animação de
-  slide de ~100 ms), incluindo o momento em que o experimento inicia (cartões recolhem e o botão
-  trava sozinho) e finaliza/para (reabrem e o botão destrava).
+  + chip de tempo visíveis, e os botões +/- de zoom do eixo Y) — um GIF curto comunica bem a
+  fluidez da animação.
 
-Adicionados nesta sessão (funcionalidades novas, ainda sem captura):
+Cartões unificados (redesign desta sessão — as duas screenshots antigas de "Painel do
+participante"/"Painel de arquivos" mostravam os dois cartões SEPARADOS e foram removidas do
+README por estarem desatualizadas; precisam de substitutas):
+- Captura geral da janela principal (borderless, cantos arredondados, barra de título custom).
+- Cartão único "Participante | Arquivos & Dados" (divisor vertical, chevron ❯ no canto), nos dois
+  estados: formulário do participante e resumo salvo.
+- GIF do chevron ❯ recolhendo/expandindo o cartão único (~130 ms), incluindo o momento em que o
+  experimento inicia (cartão recolhe e o chevron trava sozinho) e finaliza/para (reabre e destrava).
+- Tela de carregamento animada (assinatura do ComPasso se desenhando) e a transição de fade para a
+  janela principal.
+- Botões +/- de zoom do eixo Y ao lado do gráfico, incluindo o estado desabilitado nos limites.
 - Janela "Configuração do Experimento" com os menus de coluna da planilha de fatores, o combobox
-  de tipo de sensor e os sliders de tempo pré-estímulo/beep de aviso.
+  de tipo de sensor e os sliders de tempo pré-estímulo/beep de aviso (agora em seções agrupadas).
 - Combobox "Sensor" aberto na barra de conexão, mostrando as 6 opções (EDA/ECG/EMG/EOG/EEG/EGG).
 - Menu "Experimento" com Novo/Abrir/Editar desabilitados durante um experimento e a opção "Sair".
 - `dados_da_execucao.xlsx` aberto, mostrando as colunas n/áudio/fator/volume/intervalo.
+- Diálogo de confirmação padronizado (ex.: "Desconectar Bitalino?"), no novo layout com badge de
+  ícone — MessageDialog/ConfirmDialog foram redesenhados nesta sessão.
 -->

@@ -25,7 +25,6 @@ from PySide6.QtCore import Qt, QObject, QPointF, QRectF, Property, Signal, Slot,
 from PySide6.QtGui import QColor, QPainter, QPen, QFont
 from PySide6.QtQuick import QQuickPaintedItem
 
-from . import gui_logger
 from compasso.core.constants import SENSOR_DEFAULT, SENSOR_GRAPH_PARAMS
 
 # Nº de colunas de decimação ao longo da duração (limita os pontos desenhados por quadro).
@@ -591,16 +590,3 @@ class GraficoSinal(QQuickPaintedItem):
         painter.setFont(QFont(self._paleta.get("_display", "Segoe UI"), 10))
         painter.drawText(QRectF(x0, y0, x1 - x0, y1 - y0),
                          Qt.AlignCenter, "Aguardando gravação…")
-
-
-# Compatibilidade: o app cria a fachada e a expõe; o item real é criado pelo QML.
-class SignalChart(QObject):
-    """Sombra leve mantida por compatibilidade — o gráfico real é o ``GraficoSinal`` do QML.
-
-    (Não é mais usada para criar o gráfico; o item QML registra a si mesmo em ``ctx.signal_plot``.)
-    """
-
-    def __init__(self, ctx):
-        super().__init__()
-        self._ctx = ctx
-        gui_logger.logger.info("SignalChart placeholder criado (gráfico real vem do QML).")
