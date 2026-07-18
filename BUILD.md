@@ -60,8 +60,9 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
 - **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do
   ComPasso já vão para pastas do usuário (Documentos/ComPasso, app-data) via
   `src/compasso/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
-- Recursos lidos (imagens, `lsl.dll`) são resolvidos a partir de `sys._MEIPASS`
-  (`src/compasso/gui/assets.py` já trata isso) — não dependa de caminhos relativos ao `.exe`.
+- Recursos lidos (imagens, `lsl.dll`, arquivos `.qml`) são resolvidos a partir de `sys._MEIPASS`
+  (`src/compasso/gui_qt/assets.py` resolve `ASSETS_DIR`; `src/compasso/gui_qt/app.py` resolve a
+  pasta `qml/` em `sys._MEIPASS/compasso/gui_qt/qml`) — não dependa de caminhos relativos ao `.exe`.
 - Maior chance de **falso-positivo de antivírus** e de o `lsl.dll` ser bloqueado.
 - As saídas têm nomes distintos (`ComPasso-win/` vs `ComPasso.exe`), então coexistem em
   `dist/`. Atenção: `--clean` limpa o cache e o `build/`, mas **não remove a saída da outra
@@ -99,3 +100,12 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
 - Se o app empacotado acusar erro de `liblsl`/`lsl`, confirme que a biblioteca nativa do
   `pylsl` foi copiada para `dist/ComPasso-win/_internal/` (o `compasso.spec` já faz isso via
   `collect_dynamic_libs("pylsl")`).
+- **GUI em PySide6/QML** (desde a migração do CustomTkinter): `compasso.spec` usa
+  `collect_all("PySide6")` para trazer as libs Qt, os plugins (`platforms`/`imageformats`/
+  `qmltooling`) e os módulos QML (`QtQuick`/`QtQuick.Controls`/`QtQuick.Dialogs`) necessários
+  para o `QQmlApplicationEngine` carregar a UI em runtime — sem isso o app abre e falha ao
+  resolver os imports QML. Os arquivos `.qml` (`src/compasso/gui_qt/qml/`) são copiados via
+  `datas` preservando a árvore do pacote (`compasso/gui_qt/qml/...`), pois a análise estática do
+  PyInstaller não os enxerga (não são importados como módulo Python). Se o app empacotado abrir e
+  fechar sem erro visível, rode-o **sem** `console=False` temporariamente (ou capture stderr) para
+  ver se é uma falha de import QML.

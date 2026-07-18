@@ -14,7 +14,11 @@ Princípios:
 - O hardware é substituído por fakes determinísticos (``FakeInlet``, ``FakeClock``).
 """
 
+import os
 import types
+
+# Qt headless: testes que instanciam objetos PySide6 (ex.: o gráfico) rodam sem janela/GL.
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 import pytest
 

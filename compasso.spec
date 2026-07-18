@@ -12,14 +12,15 @@ CAVEATS do onefile (tratados aqui / no código):
 - O EXE se auto-extrai num diretório TEMP a cada execução (sys._MEIPASS). NÃO escreva
   dados nele: dados/logs vão para pastas do usuário (Documentos/ComPasso, app-data) via
   src/utils/paths.py — independentes do bundle.
-- Recursos empacotados (assets/, lsl.dll) ficam em sys._MEIPASS. src/gui/assets.py já
-  resolve ASSETS_DIR a partir de sys._MEIPASS quando congelado.
+- Recursos empacotados (assets/, lsl.dll, .qml) ficam em sys._MEIPASS.
+  src/compasso/gui_qt/assets.py resolve ASSETS_DIR a partir de sys._MEIPASS quando congelado;
+  app.py resolve a pasta qml/ em sys._MEIPASS/compasso/gui_qt/qml.
 - Startup mais lento (extração a cada run) e maior chance de falso-positivo de antivírus
   do que o onedir — por isso o onedir é o alvo primário para o release.
 """
 import os
 import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs
+from PyInstaller.utils.hooks import collect_data_files, collect_dynamic_libs, collect_all
 
 ONEFILE = bool(os.environ.get("COMPASSO_ONEFILE"))
 is_win = sys.platform.startswith("win")
@@ -27,12 +28,19 @@ is_mac = sys.platform == "darwin"
 
 # --- dados empacotados -------------------------------------------------------
 datas = [("assets", "assets")]            # imagens + icon.ico
-datas += collect_data_files("customtkinter")   # temas/fontes (o PyInstaller não acha sozinho)
-datas += collect_data_files("CTkMessagebox")   # ícones do CTkMessagebox
+# arquivos .qml da GUI (a análise estática não os enxerga): preserva a árvore do pacote.
+datas += [("src/compasso/gui_qt/qml", "compasso/gui_qt/qml")]
 
 # --- binários nativos --------------------------------------------------------
 # pylsl carrega o liblsl (lsl.dll / liblsl.so / liblsl.dylib) via ctypes; precisa ser incluído.
 binaries = collect_dynamic_libs("pylsl")
+
+# --- PySide6/Qt: libs, plugins e MÓDULOS QML (QtQuick/Controls/Dialogs) -------
+# collect_all cobre libs Qt, plugins (platforms/imageformats/qmltooling) e os módulos QML
+# necessários para o engine carregar a UI em runtime.
+_pyside_datas, _pyside_bins, _pyside_hidden = collect_all("PySide6")
+datas += _pyside_datas
+binaries += _pyside_bins
 
 # --- imports que a análise estática não detecta ------------------------------
 hiddenimports = [
@@ -41,14 +49,11 @@ hiddenimports = [
     "et_xmlfile",
     "comtypes",
     "pycaw",
-    "darkdetect",
-    "CTkMessagebox",
-]
+] + _pyside_hidden
 
 # pygame-ce traz o próprio hook do PyInstaller — não precisa entrar aqui.
 
-# NÃO excluir psutil (importado por pycaw.utils) nem packaging (importado por
-# customtkinter.windows.ctk_tk/ctk_toplevel) — são dependências de runtime reais.
+# NÃO excluir psutil (importado por pycaw.utils) — dependência de runtime real.
 #
 # A suíte de testes (tests/) e o framework de teste NÃO são importados por main.py,
 # então a análise estática já não os empacota; os excludes abaixo são uma salvaguarda

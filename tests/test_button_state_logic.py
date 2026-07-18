@@ -1,15 +1,13 @@
-"""Lógica de pré-requisitos do botão 'começar' (DownFrame), sem renderizar a GUI.
+"""Lógica de pré-requisitos do botão 'começar', sem renderizar a GUI.
 
-``_validar_prerequisitos`` só lê ``self.ctx``; chamamos o método de forma desacoplada
-(via ``__func__`` sobre um objeto falso com ``.ctx``), evitando construir o widget CTk
-— coerente com a estratégia de testar a lógica, não a renderização.
+``validar_prerequisitos`` é uma função pura que só lê o ``ctx`` — testamos a lógica, não a
+renderização (a UI QML não é testada em unidade). Foi extraída do antigo DownFrame para o
+``experiment_controller`` durante a migração para PySide6/QML.
 """
 
 import types
 
-from compasso.gui.frames.bottom_frame import DownFrame
-
-_validar = DownFrame._validar_prerequisitos
+from compasso.gui_qt.controllers.experiment_controller import validar_prerequisitos
 
 
 def _ctx(**kwargs):
@@ -20,7 +18,7 @@ def _ctx(**kwargs):
 
 
 def _call(ctx):
-    return _validar(types.SimpleNamespace(ctx=ctx))
+    return validar_prerequisitos(ctx)
 
 
 def test_all_prereqs_met_returns_empty():
