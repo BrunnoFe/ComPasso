@@ -29,25 +29,28 @@ def _log_unavailable(motivo: str) -> bool:
     return False
 
 
-def get_system_volume() -> float:
+def get_system_volume(padrao: float | None = 50.0):
     """Lê o volume principal de saída do sistema (0–100), de forma multiplataforma.
 
-    Mesma estrutura de plataforma de `set_system_volume`. Em caso de falha ou SO
-    não suportado, registra um aviso e retorna o padrão atual (50.0). Nunca levanta
-    exceção.
+    Mesma estrutura de plataforma de `set_system_volume`. Nunca levanta exceção.
 
-    :return: volume atual do sistema, de 0 (mudo) a 100 (máximo).
+    :param padrao: valor devolvido quando a leitura **falha** (pycaw ausente, erro de COM,
+        SO não suportado). O default 50.0 preserva o comportamento histórico, mas quem
+        **age** sobre o resultado deve passar ``None`` e tratar o "não sei": devolver 50 em
+        caso de erro é indistinguível de "o volume é 50", e num laço de sincronização isso
+        empurraria o volume real da máquina para 50 sozinho.
+    :return: volume atual do sistema (0–100), ou ``padrao`` se não foi possível ler.
     """
     sistema = platform.system()
     try:
         if sistema == "Windows":
             if AudioUtilities is None:
                 _log_unavailable("pycaw ausente")
-                return 50.0
+                return padrao
             device = AudioUtilities.GetSpeakers()
             if device is None:
                 _log_unavailable("dispositivo de áudio não encontrado")
-                return 50.0
+                return padrao
             volume = device.EndpointVolume  # nova API do pycaw: interface acessada diretamente
             return volume.GetMasterVolumeLevelScalar() * 100.0  # escala 0.0–1.0 -> 0–100
 
@@ -63,13 +66,13 @@ def get_system_volume() -> float:
             if match:
                 return float(int(match.group(1)))
             _log_unavailable("não foi possível interpretar a saída do amixer")
-            return 50.0
+            return padrao
 
         _log_unavailable(f"SO não suportado: {sistema}")
-        return 50.0
+        return padrao
     except Exception as e:
-        player_logger.logger.warning(f"Erro ao ler volume em {sistema}: {e}; usando padrão 50%.")
-        return 50.0
+        player_logger.logger.warning(f"Erro ao ler volume em {sistema}: {e}; devolvendo {padrao}.")
+        return padrao
 
 
 def set_system_volume(percentage) -> bool:

@@ -139,14 +139,25 @@ Card {
             }
             Rectangle {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 10
-                radius: 5
+                Layout.preferredHeight: 6
+                radius: 3
                 color: Theme.colors.border
                 Rectangle {
                     width: parent.width * playerController.musicProgress
                     height: parent.height
                     radius: parent.radius
                     color: Theme.colors.accent
+
+                    // O progresso chega aos pulos (uma leitura a cada `intervaloProgressoMs`);
+                    // interpolar linearmente pela MESMA duração faz a barra chegar ao alvo no
+                    // instante em que o próximo valor chega — avanço contínuo, sem acelerar o
+                    // poller (que faz chamadas ao player a cada disparo).
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: playerController.intervaloProgressoMs
+                            easing.type: Easing.Linear
+                        }
+                    }
                 }
             }
             Text {

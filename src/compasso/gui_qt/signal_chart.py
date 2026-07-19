@@ -37,7 +37,7 @@ _ESCALA_Y_PADRAO = 30.0
 # Taxa de quadros fixa. Não é configurável de propósito: 30 fps já entrega uma linha contínua
 # para qualquer taxa de amostragem do BITalino (a decimação garante custo por quadro constante),
 # e deixar o usuário elevá-la só aumentava o consumo sem ganho visual perceptível.
-_FPS = 30
+_FPS = 60
 _INTERVALO_QUADRO_MS = max(1, int(round(1000.0 / _FPS)))
 
 # Limite (nº de amostras) da fila entre a thread de aquisição e a da GUI. Se a GUI estagnar, é

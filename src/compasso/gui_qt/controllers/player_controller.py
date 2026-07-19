@@ -17,6 +17,9 @@ from compasso.utils import format_time
 
 _PROGRESS_MS = 150        # polling de progresso/estado da faixa
 _VOLUME_DEBOUNCE_MS = 150  # atraso para aplicar o volume no sistema após o último passo do slider
+# Sincronização do slider com o volume real do SO. Cadência bem mais lenta que a do progresso
+# porque `get_system_volume` é uma chamada COM (pycaw) no Windows — barata, mas não de graça.
+_SINC_VOLUME_MS = 1000
 
 
 class PlayerController(QObject):
@@ -62,6 +65,14 @@ class PlayerController(QObject):
         self._timer_progresso.timeout.connect(self._atualizar_progresso)
         self._timer_progresso.start()
 
+        # o usuário pode mexer no volume por fora (bandeja do Windows, teclas de mídia) — e
+        # durante o experimento essa é a ÚNICA via, já que o app para de escrever. Sem esta
+        # sincronização o slider passaria a mentir sobre o volume real da coleta.
+        self._timer_sinc_volume = QTimer(self)
+        self._timer_sinc_volume.setInterval(_SINC_VOLUME_MS)
+        self._timer_sinc_volume.timeout.connect(self._sincronizar_volume_do_sistema)
+        self._timer_sinc_volume.start()
+
         self._atualizar_calibrar()
 
     # ------------------------------------------------------------ propriedades
@@ -69,6 +80,14 @@ class PlayerController(QObject):
         return self._music_progress
 
     musicProgress = Property(float, _get_music_progress, notify=musicProgressChanged)
+
+    def _get_intervalo_progresso_ms(self):
+        return _PROGRESS_MS
+
+    # exposto ao QML para a barra de progresso interpolar EXATAMENTE entre duas leituras: com
+    # a animação durando o mesmo que o intervalo do poller, a barra chega ao alvo no instante
+    # em que o próximo valor chega, e o avanço fica contínuo em vez de aos saltos.
+    intervaloProgressoMs = Property(int, _get_intervalo_progresso_ms, constant=True)
 
     def _get_gravando(self):
         return self._gravando
@@ -99,9 +118,28 @@ class PlayerController(QObject):
     calibrarHabilitado = Property(bool, _get_calibrar_habilitado, notify=calibrarChanged)
 
     # ----------------------------------------------------------------- volume
+    def _sessao_ativa(self) -> bool:
+        """True enquanto houver experimento em andamento (inclusive entre faixas).
+
+        É `is_running()`, não `is_acquiring()`: entre uma faixa e outra (esperando o
+        "Continuar") a aquisição está parada, mas a sessão continua — e mexer no volume ali
+        mudaria as condições da coleta no meio dela.
+        """
+        runner = self._ctx.runner
+        return runner is not None and runner.is_running()
+
     @Slot(int)
     def definir_volume(self, valor: int) -> None:
-        """Atualiza o rótulo imediatamente e aplica o volume no sistema com debounce."""
+        """Atualiza o rótulo imediatamente e aplica o volume no sistema com debounce.
+
+        Ignorado enquanto o experimento roda: a partir do "Começar", o app **não escreve mais**
+        no volume do sistema, com ou sem calibração. O slider também fica desabilitado, mas a
+        guarda fica aqui porque é este o ponto que escreve.
+        """
+        if self._sessao_ativa():
+            gui_logger.logger.info(
+                f"Pedido de volume ({valor}%) ignorado: experimento em andamento.")
+            return
         vol = int(valor)
         if vol != self._volume:
             self._volume = vol
@@ -111,9 +149,8 @@ class PlayerController(QObject):
         self._timer_volume.start()   # reinicia o debounce
 
     def _aplicar_volume_pendente(self) -> None:
-        """Aplica o último volume solicitado (defesa: não aplica com aquisição em andamento)."""
-        runner = self._ctx.runner
-        if runner is not None and runner.is_acquiring():
+        """Aplica o último volume solicitado (nunca com um experimento em andamento)."""
+        if self._sessao_ativa():
             return
         if self._pending_volume is None:
             return
@@ -121,8 +158,33 @@ class PlayerController(QObject):
             self._volume_avisado = True
             self._ctx.status_text.set("Controle de volume do sistema indisponível.")
 
+    def _sincronizar_volume_do_sistema(self) -> None:
+        """Traz para a UI o volume real do SO, sem nunca escrever de volta.
+
+        Só leitura: durante o experimento o app não altera o volume, então o SO é a única
+        fonte de verdade. Passa ``padrao=None`` de propósito — `get_system_volume` devolveria
+        50 numa falha de leitura, e adotar esse 50 como "volume atual" faria a interface (e,
+        fora da sessão, o próximo `definir_volume`) empurrar a máquina para 50 sozinha.
+        """
+        if self._timer_volume.isActive():
+            return   # há uma escrita nossa a caminho; não brigar com o que o usuário arrasta
+        atual = get_system_volume(padrao=None)
+        if atual is None:
+            return
+        atual = int(round(atual))
+        if atual != self._volume:
+            self._volume = atual
+            self.volumeChanged.emit()
+            self._ctx.volume_text.set(f"{atual}%")
+
     def aplicar_volume_calibrado(self, volume) -> None:
         """Aplica o volume ótimo achado na calibração ao sistema e ao slider, e trava o slider."""
+        if self._sessao_ativa():
+            # a calibração já é bloqueada durante a sessão; esta é a última linha de defesa
+            # da regra "iniciado o experimento, o app não escreve mais no volume".
+            gui_logger.logger.warning(
+                "Volume calibrado ignorado: experimento em andamento.")
+            return
         try:
             vol = int(volume)
             set_system_volume(vol)
@@ -220,6 +282,8 @@ class PlayerController(QObject):
             self._gravando = gravando
             self.gravandoChanged.emit()
 
-        travado = gravando or bool(getattr(self._ctx, "volume_travado", False))
+        # trava pela SESSÃO inteira (não só durante a aquisição): entre faixas o app também
+        # não deve mexer no volume, senão as faixas seriam ouvidas em condições diferentes.
+        travado = self._sessao_ativa() or bool(getattr(self._ctx, "volume_travado", False))
         self._set_travado(travado)
         self._atualizar_calibrar()

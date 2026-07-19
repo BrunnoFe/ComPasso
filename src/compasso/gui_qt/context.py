@@ -365,7 +365,9 @@ class Context(QObject):
         mais ``pendente`` (não feita e não atual) para o QML colorir sem recalcular.
         """
         etapas = [
-            ("Configurações", bool(self.config_loaded)),
+            # "Experimento" (não "Configurações"): o rótulo espelha o menu de onde a etapa é
+            # cumprida (Experimento → Novo/Abrir), e evita confusão com "Configurações → App".
+            ("Experimento", bool(self.config_loaded)),
             ("Conectar", self.bitalino is not None),
             ("Participante", bool(self.infos_saved)),
             ("Arquivos", bool(self.music_condition_mapping) and bool(self.save_dir)),
