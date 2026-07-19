@@ -35,7 +35,12 @@ instalação editável (`pip install -e .`), por isso ela é obrigatória antes 
 | `test_audio_volume.py` | `set/get_system_volume` (Windows/macOS/Linux mockados, clamp, fallbacks) |
 | `test_paths.py` | estrutura de pastas + `ensure_app_dirs` |
 | `test_button_state_logic.py` | `experiment_controller.validar_prerequisitos` via ctx falso (sem renderizar GUI) |
-| `test_graph.py` | `GraficoSinal` (QQuickPaintedItem): decimação por coluna, relógio de exibição, `reset_idle` — sem renderizar de verdade (QGuiApplication headless) |
+| `test_graph.py` | `GraficoSinal` (QQuickPaintedItem): decimação por coluna, relógio de exibição, `reset_idle`, marcas/rótulos do eixo X sem sobreposição, grade discreta nos temas claros — sem renderizar de verdade (QGuiApplication headless) |
+| `test_experiment_timing.py` | Agendamento da faixa por instantes absolutos: intervalo beep→áudio, alvo do áudio e **ausência de deriva ao longo de 20 faixas** (o bug de dessincronização cumulativa) |
+| `test_graph_settings.py` | Preview ao vivo + persistência do menu Gráfico; regressão do "salvar e fechar reverte o gráfico" |
+| `test_field_validation.py` | Regras de validação de campo (MAC, colunas iguais, quantidades, beep, faixa de volume) |
+| `test_updates.py` | Verificação de nova versão: comparação **numérica** de versões, leitura da resposta do GitHub e os três desfechos do controller (sem tocar a rede) |
+| `test_player_api.py` | Contrato de superfície do `Player` (mantém o backend *drop-in*) |
 
 ## Fakes e fixtures (`conftest.py`)
 
@@ -52,7 +57,7 @@ instalação editável (`pip install -e .`), por isso ela é obrigatória antes 
 
 ## Deliberadamente NÃO coberto (e por quê)
 
-- **`player.py`** (reprodução real do pygame) e **`connectar_bitalino` end-to-end**
+- **`player.py`** (reprodução real de áudio via QtMultimedia) e **`connectar_bitalino` end-to-end**
   (resolução LSL real / rede) — dependem de hardware/áudio; apenas a lógica isolável
   (normalização de MAC, ramos de erro) é testada com mocks.
 - **Renderização visual do QML** — alto esforço, baixo valor para uma ferramenta de

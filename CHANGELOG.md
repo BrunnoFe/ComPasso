@@ -5,6 +5,66 @@ Todas as mudanças notáveis deste projeto são documentadas neste arquivo, segu
 
 ## [Não lançado]
 
+## [2026.4.0] - 2026-07-19
+
+### Corrigido
+
+- ⏱️ **Dessincronização cumulativa entre beep, áudio e gráfico** — o problema tinha **duas causas
+  independentes**, ambas corrigidas:
+  - *Relógios distintos tratados como um só.* O timestamp das amostras do LSL vem do relógio do
+    **emissor** (host do OpenSignals), não do relógio local. Os dois derivam entre si (~0,17 s ao
+    longo de uma sessão de 12 faixas, medido em hardware real), o que deslocava por igual todos os
+    marcadores de cada faixa, cada vez mais. As amostras passam a ser convertidas com
+    `inlet.time_correction()`, reconsultado periodicamente durante a aquisição.
+  - *Contagem regressiva por passos acumulados.* Era um laço de `sleep(1 s)`, e cada volta custava
+    um pouco mais que 1 s; um beep configurado para "t-5" tocava progressivamente mais cedo. Os
+    instantes do beep, do gráfico e do áudio passam a ser calculados como alvos absolutos a partir
+    do início do estímulo. Erro medido: sub-milissegundo, igual na 1ª e na 20ª faixa.
+- 📉 **Vão no fim do gráfico** — a cauda de amostras ainda em trânsito no LSL era descartada antes
+  de chegar ao traço, que parava antes do fim do eixo enquanto o ponteiro saltava. A aquisição
+  agora é encerrada **antes** de fechar o gráfico, garantindo que todas as amostras cheguem.
+- 🏷️ **Eixo X do gráfico instável** — os rótulos de tempo ora apareciam de 1 em 1 segundo, ora de
+  5 em 5, conforme a duração da faixa, e um rótulo isolado sumia perto do fim. Agora são sempre
+  múltiplos de 5 s, e um rótulo só é omitido quando de fato se sobreporia ao rótulo final.
+- 💾 **Configurações do gráfico não permaneciam** — salvar e fechar revertia o gráfico ao estado
+  anterior (as preferências ficavam corretas em disco, mas só voltavam a valer ao reabrir a
+  janela). Ajustes de escala, grade e rótulos também passam a ter preview com a aplicação ociosa.
+- 🎨 **Grade escura demais nos temas claros** (Sereno/Aurora) — as linhas competiam com o traço do
+  sinal. A grade passou a usar a cor da própria paleta com bem menos opacidade (medido: de
+  `#cdd0d4` para `#eff1f3` sobre branco), e o Aurora ganhou uma grade de tom quente.
+- 🗂️ **Coluna `audio` vazia em `dados_da_execucao.xlsx`** — divergência de acentuação entre a
+  chave gravada e o cabeçalho declarado fazia a planilha sair com a coluna toda em branco.
+- 🛡️ **App travado após um erro inesperado** — uma exceção na thread do experimento a encerrava em
+  silêncio, deixando a interface bloqueada sem aviso. Agora o erro é registrado, informado e a
+  sessão é encerrada de forma limpa.
+- 🪟 **Mensagens de erro na janela errada** — ao salvar uma configuração inválida, o aviso abria
+  atrás da janela de configuração (que é modal) e ficava inacessível.
+
+### Adicionado
+
+- 🔄 **Menu "Atualizações"** — verifica automaticamente, uma vez por execução e de forma discreta,
+  se há uma versão mais recente publicada. Havendo, o menu ganha um ponto vermelho e o item passa a
+  "Baixar atualização!", levando à página de releases. A verificação manual mostra uma janela com o
+  andamento e informa o resultado, inclusive quando não há conexão.
+- 🌗 **Botão sol/lua na barra de menus** — atalho para alternar entre tema claro e escuro, que
+  retoma o último tema usado de cada família (sair de Iris para o claro e voltar devolve Iris).
+- ✅ **Validação de campos com aviso na hora** — endereço MAC, quantidade de músicas/ruído, colunas
+  da planilha (não podem ser a mesma), tempo do beep e faixa de volume da calibração passam a
+  contornar o campo de vermelho e explicar o problema logo abaixo dele.
+- 🔔 **Marcador `BEEP` nos dados** — o instante do beep passa a ser gravado no CSV/XLSX, tornando o
+  intervalo beep→áudio auditável a posteriori.
+
+### Alterado
+
+- 🔊 **Áudio migrado para QtMultimedia** — faixa e beep passam a usar o mesmo backend (o beep num
+  canal dedicado e pré-carregado no arranque), o que também elimina a diferença de latência entre
+  os dois. A dependência `pygame-ce` deixou de ser necessária.
+- 📈 **Taxa de atualização do gráfico fixa em 30 fps** — a opção saiu do menu Gráfico: a decimação
+  já mantém o custo constante, e elevar o valor só consumia mais processamento. O gráfico também
+  passou a usar memória constante ao longo da faixa, independentemente da duração.
+- 🧭 **Eixo X do gráfico sempre de t-5 até o fim exato da faixa**, com marcas em três níveis de
+  destaque (1 s, 5 s e o início do áudio).
+
 ## [2026.3.0] - 2026-07-11
 
 ### Adicionado

@@ -39,7 +39,7 @@
 - **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado** (veja [Antes de abrir o programa](#-antes-de-abrir-o-programa)).
 - **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals (LSL ativo).
 
-As dependências Python estão em [`pyproject.toml`](pyproject.toml) (**PySide6** — Qt/QML —, pygame-ce, pylsl, pandas, openpyxl, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
+As dependências Python estão em [`pyproject.toml`](pyproject.toml) (**PySide6** — Qt/QML e QtMultimedia —, pylsl, pandas, openpyxl, entre outras). O controle de volume usa `pycaw` no Windows, `osascript` no macOS e `amixer` no Linux (sem dependências extras para macOS/Linux).
 
 ---
 
@@ -300,12 +300,13 @@ O menu **Configurações → Gráfico** abre uma janela para ajustar como o grá
 | --- | --- | --- |
 | Escala do eixo Y (µV, simétrica) | ±10 a ±50 (passo 10) | ±30 |
 | Média móvel (suavização visual) | liga/desliga + janela de 1 a 15 colunas | ligada, janela 5 |
-| Atualização (FPS) | 10 / 15 / 30 / 60 | 60 |
 | Espessura da linha | 0.5 a 4.0 px | 1.5 |
 | Linhas de grade | liga/desliga | ligadas |
 | Rótulos dos eixos | liga/desliga | ligados |
 
 > ⚠️ A **escala do eixo Y** não pode ser alterada enquanto um experimento está em andamento (fica travada durante a sessão, para não mudar a referência visual no meio de uma gravação); as demais configurações podem ser ajustadas a qualquer momento. Os botões **Salvar**, **Restaurar padrões** e **Cancelar** funcionam como nas demais janelas do app.
+>
+> A taxa de atualização do gráfico é fixa em **30 fps** e deixou de ser configurável: a decimação já mantém o custo por quadro constante, então elevar o valor só consumia mais processamento sem ganho visual.
 
 ### Rodapé — Progresso e início do experimento
 

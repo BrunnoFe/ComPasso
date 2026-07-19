@@ -158,7 +158,6 @@ execuções:
 | --- | --- | --- |
 | Escala do eixo Y (µV, simétrica) | ±10 a ±50 (passo 10) | ±30 |
 | Média móvel (suavização visual) | liga/desliga + janela de 1 a 15 colunas | ligada, janela 5 |
-| Atualização (FPS) | 10 / 15 / 30 / 60 | 60 |
 | Espessura da linha | 0.5 a 4.0 px | 1.5 |
 | Linhas de grade | liga/desliga | ligadas |
 | Rótulos dos eixos | liga/desliga | ligados |
@@ -166,6 +165,8 @@ execuções:
 > ⚠️ A **escala do eixo Y** fica travada durante um experimento em andamento; as demais
 > configurações podem ser ajustadas a qualquer momento. Botões: **Salvar**, **Restaurar padrões**
 > e **Cancelar**.
+>
+> A taxa de atualização é fixa em **30 fps** e deixou de ser configurável.
 
 ## Interrompendo a sessão
 

@@ -5,7 +5,7 @@ from compasso.utils import SetLogger
 
 main_logger = SetLogger(category='main', namelogger='mainLogger')
 
-VERSION = "2026.3.0"
+VERSION = "2026.4.0"
 
 
 def main():

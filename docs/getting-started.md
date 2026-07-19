@@ -18,16 +18,18 @@ Para gerar o executável você mesmo, consulte o `BUILD.md` na raiz do projeto.
 
 ### Dependências Python
 
-As dependências de runtime estão em `requirements.txt`. As principais:
+As dependências de runtime estão em `pyproject.toml` (com `uv.lock` fixando as versões). As
+principais:
 
-- **CustomTkinter** (+ CTkMessagebox, CTkMenuBar) — interface gráfica e menus.
-- **pygame-ce** — reprodução de áudio.
+- **PySide6** — interface gráfica (Qt Quick/QML), reprodução de áudio (QtMultimedia) e o
+  desenho do gráfico do sinal (QPainter).
 - **pylsl** — comunicação via Lab Streaming Layer.
 - **pandas** + **openpyxl** — leitura da planilha de condições e geração do XLSX.
-- **pillow** — imagens da interface.
-- **pywinstyles** — cor da borda/barra de título da janela no Windows.
-- **pycaw** / **comtypes** — controle de volume no Windows (marcados como `win32` no
-  `requirements.txt`; em macOS/Linux o volume usa `osascript`/`amixer`, sem dependências extras).
+- **pycaw** / **comtypes** — controle de volume no Windows (marcados como `sys_platform ==
+  "win32"` no `pyproject.toml`; em macOS/Linux o volume usa `osascript`/`amixer`, sem
+  dependências extras).
+
+A verificação de atualizações usa apenas `urllib`, da biblioteca padrão — sem dependência extra.
 
 ## Instalação
 
