@@ -96,6 +96,7 @@ Rectangle {
 
         BotaoMenu {
             titulo: "Configurações"
+            ItemMenu { text: "App…"; onTriggered: appController.pedirAppSettings() }
             ItemMenu { text: "Gráfico…"; onTriggered: appController.pedirGraphSettings() }
         }
 

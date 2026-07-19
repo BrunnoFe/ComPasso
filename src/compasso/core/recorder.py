@@ -7,6 +7,7 @@ from datetime import datetime
 from pylsl import local_clock
 
 from . import recorder_logger
+from . import app_prefs
 from .constants import SESSION_TIMESTAMP_FORMAT, TRACK_ORDER_MIN_WIDTH
 from compasso.utils import ENCODING_FORMAT
 
@@ -28,7 +29,10 @@ def build_session_dirname(ctx) -> str:
     experimento), de modo que todas as faixas da mesma coleta fiquem na mesma pasta.
     """
     agora = datetime.now()
-    suffix = agora.strftime(SESSION_TIMESTAMP_FORMAT)
+    # o formato é preferência do app (ISO ordena alfabeticamente na listagem de arquivos, o que
+    # costuma ser o desejado na hora de analisar); o de fábrica segue sendo dia-mês-ano.
+    formato = app_prefs.obter().get("formato_timestamp_sessao") or SESSION_TIMESTAMP_FORMAT
+    suffix = agora.strftime(formato)
     nome = _sanitize(ctx.nome)
     idade = _sanitize(ctx.idade)
     genero = _sanitize(ctx.genero)
@@ -288,9 +292,17 @@ class LSLRecorder:
     def finalize(self):
         """Garante o término da thread e gera o XLSX a partir do mesmo CSV.
 
+        A geração do XLSX é opcional (preferência ``gerar_xlsx``): ele é 100% derivado do CSV,
+        que é o dado primário, e o ``to_excel`` roda ao fim de **cada** faixa — em sessões longas
+        desligá-lo economiza um tempo real, sem perder nada.
+
         :return: (csv_path, xlsx_path)
         """
         self.stop()
+        if not app_prefs.obter().get("gerar_xlsx", True):
+            recorder_logger.logger.info(
+                f"XLSX desabilitado nas preferências; arquivo finalizado: {self.csv_path}")
+            return self.csv_path, None
         try:
             import pandas as pd   # import tardio (custo fora do arranque) — ver musics.py.
 

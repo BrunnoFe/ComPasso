@@ -25,8 +25,13 @@ def scan_music_files(folder: str) -> list:
     if not os.path.exists(folder):
         raise FileNotFoundError(folder)
 
+    # as extensões aceitas são preferência do app; AUDIO_EXTENSIONS é o padrão de fábrica.
+    from . import app_prefs   # import local: evita ciclo na montagem de `compasso.core`.
+
+    extensoes = tuple(str(e).lower() for e in
+                      (app_prefs.obter().get("extensoes_audio") or AUDIO_EXTENSIONS))
     music_files = [os.path.join(folder, f) for f in os.listdir(folder)
-                   if f.lower().endswith(AUDIO_EXTENSIONS)]
+                   if f.lower().endswith(extensoes)]
     for music in music_files:
         musics_logger.logger.info(f"Arquivo de música encontrado: {music}")
     return music_files

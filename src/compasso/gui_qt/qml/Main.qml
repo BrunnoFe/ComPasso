@@ -62,6 +62,18 @@ Window {
     // Minimizar: sem animacao (vai direto para a barra de tarefas).
     function minimizarSuave() { win.showMinimized() }
 
+    // Preferência "abrir maximizado": aplicada sem animação (não faz sentido animar uma
+    // expansão que o usuário nunca viu começar) — apenas assume o estado maximizado.
+    Component.onCompleted: {
+        if (prefsApp.abrir_maximizado) {
+            geomAnterior = Qt.rect(win.x, win.y, win.width, win.height)
+            maximizado = true
+            win.x = Screen.virtualX; win.y = Screen.virtualY
+            win.width = Screen.desktopAvailableWidth
+            win.height = Screen.desktopAvailableHeight
+        }
+    }
+
     // Diálogo de mensagem (erros/avisos), acionado por qualquer controller.
     MessageDialog { id: dialogoMensagem }
     Connections {
@@ -114,6 +126,7 @@ Window {
             else dialogoMensagem.abrir("Editar", "Abra ou crie uma configuração primeiro.", "info")
         }
         function onPedirGraphSettings() { janelaGrafico.abrir() }
+        function onPedirAppSettings() { janelaAppSettings.abrir() }
     }
     Connections {
         target: configController
@@ -143,6 +156,7 @@ Window {
     ExperimentConfigWindow { id: janelaConfig }
     GraphSettingsWindow { id: janelaGrafico }
     CalibrationWindow { id: janelaCalibracao }
+    AppSettingsWindow { id: janelaAppSettings }
 
     // Confirmação de parada do experimento (Sim/Não).
     ConfirmDialog {

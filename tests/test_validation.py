@@ -19,11 +19,11 @@ def test_validar_nome_genero(nome, genero, esperado):
 
 
 @pytest.mark.parametrize("idade, esperado", [
-    ("0", False),      # abaixo do limite mínimo (MIN_IDADE = 18)
-    ("18", True),      # limite mínimo
+    ("0", True),       # faixa de fábrica agora é 0–120: coleta com crianças é caso legítimo
+    ("18", True),
     ("27", True),
-    ("100", True),     # limite máximo
-    ("101", False),    # acima do limite
+    ("120", True),     # limite máximo de fábrica
+    ("121", False),    # acima do limite
     ("-1", False),     # isdigit() é False para '-1'
     ("abc", False),
     ("", False),
@@ -31,3 +31,16 @@ def test_validar_nome_genero(nome, genero, esperado):
 ])
 def test_validar_idade(idade, esperado):
     assert validar_idade(idade) is esperado
+
+
+@pytest.mark.parametrize("idade, minimo, maximo, esperado", [
+    ("17", 18, 100, False),   # faixa restrita explicitamente pelo chamador
+    ("18", 18, 100, True),
+    ("100", 18, 100, True),
+    ("101", 18, 100, False),
+    ("8", 6, 12, True),       # estudo com crianças: impossível antes de a faixa ser configurável
+    ("5", 6, 12, False),
+])
+def test_validar_idade_faixa_personalizada(idade, minimo, maximo, esperado):
+    """A faixa efetiva vem das preferências do app e é passada pelo chamador."""
+    assert validar_idade(idade, minimo, maximo) is esperado

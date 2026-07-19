@@ -16,7 +16,7 @@ Rectangle {
     // Tempo mínimo em tela: o carregamento pode terminar em poucos ms (sem .config, tudo em
     // cache) e a splash viraria um flash desagradável. Não é espera artificial no caso comum —
     // o carregamento real costuma passar disso.
-    property int minimoMs: 900
+    property int minimoMs: prefsApp.splash_minimo_ms !== undefined ? prefsApp.splash_minimo_ms : 900
     property bool tempoMinimoCumprido: false
     property real progresso: carregador.progresso
 

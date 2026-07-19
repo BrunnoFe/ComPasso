@@ -14,7 +14,7 @@ from PySide6.QtCore import QObject, Property, Signal, Slot
 
 from . import gui_logger
 from . import palettes
-from compasso.core import config_manager
+from compasso.core import config_manager, app_prefs
 
 
 class Theme(QObject):
@@ -41,6 +41,7 @@ class Theme(QObject):
         claro = self._nome in palettes.PALETAS_CLARAS
         self._ultimo_claro = self._nome if claro else palettes.TEMA_CLARO_PADRAO
         self._ultimo_escuro = palettes.TEMA_ESCURO_PADRAO if claro else self._nome
+        self._escalar(int(app_prefs.obter().get("escala_ui", 100)))
         gui_logger.logger.info(f"Tema inicial: {self._nome}")
 
     # ------------------------------------------------------------------ nome
@@ -66,14 +67,36 @@ class Theme(QObject):
     colors = Property("QVariant", _get_colors, notify=changed)
 
     def _get_metrics(self):
-        return palettes.METRICS
+        return self._metrics
 
     metrics = Property("QVariant", _get_metrics, constant=True)
 
     def _get_fonts(self):
-        return palettes.FONTS
+        return self._fonts
 
     fonts = Property("QVariant", _get_fonts, constant=True)
+
+    def _escalar(self, escala: int) -> None:
+        """Aplica a escala da UI (preferência ``escala_ui``) a métricas e tamanhos de fonte.
+
+        Feito uma única vez, na construção: ambas as propriedades são ``constant=True`` no QML
+        (nenhum *binding* as reavalia), e é por isso que a mudança de escala exige reinício —
+        ao contrário da paleta, que é reativa e troca a quente.
+
+        Só valores numéricos são escalados: as chaves de fonte trazem também nomes de família
+        (strings), que precisam passar intactas.
+        """
+        self._metrics = dict(palettes.METRICS)
+        self._fonts = dict(palettes.FONTS)
+        if escala == 100:
+            return
+        fator = escala / 100.0
+        for origem, destino in ((palettes.METRICS, self._metrics), (palettes.FONTS, self._fonts)):
+            for chave, valor in origem.items():
+                if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+                    continue
+                destino[chave] = max(1, int(round(valor * fator)))
+        gui_logger.logger.info(f"Escala da interface aplicada: {escala}%")
 
     # ---------------------------------------------------------------- troca
     @Slot(str, result=bool)

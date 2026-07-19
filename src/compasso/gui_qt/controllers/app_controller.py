@@ -22,6 +22,7 @@ class AppController(QObject):
     pedirAbrirConfig = Signal()
     pedirEditarConfig = Signal()
     pedirGraphSettings = Signal()
+    pedirAppSettings = Signal()
 
     @Slot()
     def abrir_pasta_logs(self) -> None:

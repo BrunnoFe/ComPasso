@@ -1,7 +1,12 @@
 """Validações puras dos dados do participante (sem dependência de GUI)."""
 
-MIN_IDADE = 18
-MAX_IDADE = 100
+# Faixa etária de fábrica. Continua aqui como *default* das funções, mas a faixa efetiva é uma
+# preferência do app (``core.app_prefs``): a trava antiga de 18–100 impedia, sem aviso, qualquer
+# coleta com crianças e adolescentes. Este módulo permanece puro de propósito — quem conhece as
+# preferências é o chamador, que as passa como argumento (``utils`` não importa ``core``).
+MIN_IDADE = 0
+MAX_IDADE = 120
+
 
 def validar_nome_genero(nome: str, genero: str) -> bool:
     """Valida nome e gênero do participante: ambos devem conter apenas letras e espaços."""
@@ -12,9 +17,12 @@ def validar_nome_genero(nome: str, genero: str) -> bool:
     return True
 
 
-def validar_idade(idade: str) -> bool:
-    """Valida a idade do participante: deve ser um inteiro entre 18 e 100."""
+def validar_idade(idade: str, minimo: int = MIN_IDADE, maximo: int = MAX_IDADE) -> bool:
+    """Valida a idade do participante: inteiro dentro da faixa aceita.
+
+    :param minimo: idade mínima aceita (padrão: faixa de fábrica).
+    :param maximo: idade máxima aceita (padrão: faixa de fábrica).
+    """
     if not idade.isdigit():
         return False
-    valor = int(idade)
-    return MIN_IDADE <= valor <= MAX_IDADE
+    return minimo <= int(idade) <= maximo

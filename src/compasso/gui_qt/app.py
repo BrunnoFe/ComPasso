@@ -5,8 +5,10 @@ Sobe o ``QApplication``, cria o ``Context`` e o ``Theme`` (expostos ao QML), car
 + ``app.mainloop()``, porém a construção da UI passa a ser declarativa (QML).
 """
 
+import logging
 import os
 import sys
+import time
 from pathlib import Path
 
 from PySide6.QtCore import QUrl
@@ -29,9 +31,11 @@ from .controllers.graph_settings_controller import GraphSettingsController
 from .controllers.calibration_controller import CalibrationController
 from .controllers.config_controller import ConfigController
 from .controllers.updates_controller import UpdatesController
+from .controllers.app_settings_controller import AppSettingsController
 from .signal_chart import GraficoSinal
-from compasso.core import config_manager, set_system_volume
+from compasso.core import config_manager, set_system_volume, app_prefs
 from compasso.core.constants import SENSOR_TYPES
+from compasso.utils import get_logs_dir
 
 # Volume principal do sistema aplicado uma única vez no arranque (como no app antigo).
 _INIT_VOLUME = 50
@@ -57,6 +61,30 @@ def _resolver_qml_dir() -> Path:
     return QML_DIR
 
 
+def _limpar_logs_antigos(dias: int) -> None:
+    """Apaga arquivos de log com mais de ``dias`` dias (preferência ``retencao_logs_dias``).
+
+    Só remove ``*.log`` dentro da pasta de logs — nunca toca em dados de participante, que
+    ficam em outra árvore (Documentos/ComPasso/Dados).
+    """
+    limite = time.time() - dias * 86400
+    removidos = 0
+    try:
+        for arquivo in get_logs_dir().rglob("*.log"):
+            try:
+                if arquivo.stat().st_mtime < limite:
+                    arquivo.unlink()
+                    removidos += 1
+            except OSError:
+                # arquivo em uso (o log desta execução) ou sem permissão: seguir adiante.
+                continue
+    except Exception as e:
+        gui_logger.logger.warning(f"Falha ao limpar logs antigos: {e}")
+        return
+    if removidos:
+        gui_logger.logger.info(f"Logs antigos removidos: {removidos} arquivo(s) (> {dias} dias).")
+
+
 def _montar_carregador(app, ctx, config_controller) -> Carregador:
     """Monta a fila de etapas do arranque, na ordem em que devem rodar sob a splash.
 
@@ -76,8 +104,31 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
     def carregar_preferencias() -> None:
         ctx.graph_settings = config_manager.get_graph_prefs()
 
+    def aplicar_diagnostico() -> None:
+        """Aplica nível de log e retenção — daí serem preferências de reinício.
+
+        Os loggers são criados no import de cada pacote, antes de qualquer preferência poder
+        ser lida; por isso o nível é reaplicado aqui, a todos os loggers já existentes.
+        """
+        prefs = app_prefs.obter()
+        nivel = logging.getLevelName(str(prefs.get("nivel_log", "INFO")).upper())
+        if isinstance(nivel, int):
+            for nome in list(logging.Logger.manager.loggerDict):
+                logger = logging.getLogger(nome)
+                if logger.handlers:            # só os nossos (SetLogger anexa handlers)
+                    logger.setLevel(nivel)
+            gui_logger.logger.info(f"Nível de log aplicado: {prefs.get('nivel_log')}")
+
+        dias = int(prefs.get("retencao_logs_dias", 0))
+        if dias > 0:
+            _limpar_logs_antigos(dias)
+
     def ajustar_volume() -> None:
-        set_system_volume(_INIT_VOLUME)
+        prefs = app_prefs.obter()
+        if not prefs.get("controlar_volume_sistema", True):
+            gui_logger.logger.info("Controle de volume do sistema desabilitado nas preferências.")
+            return
+        set_system_volume(int(prefs.get("volume_inicial", _INIT_VOLUME)))
 
     def iniciar_bitalino_fake() -> None:
         if not _fake_bitalino_habilitado():
@@ -92,7 +143,10 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
             f"Modo BITalino FAKE ativo ({_FAKE_ENV}): stream em {mac_fake} — clique em Conectar.")
 
     def carregar_ultima_config() -> None:
-        config_controller.carregar_ultima()
+        if app_prefs.obter().get("auto_carregar_config", True):
+            config_controller.carregar_ultima()
+        else:
+            gui_logger.logger.info("Auto-carregamento do último .config desabilitado nas preferências.")
         mac_fake = estado.get("mac_fake")
         if mac_fake:
             # depois do auto-load, para o modo de teste vencer o MAC do .config.
@@ -105,6 +159,7 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
 
     carregador.adicionar("Preparando o áudio...", preparar_audio)
     carregador.adicionar("Lendo preferências do gráfico...", carregar_preferencias)
+    carregador.adicionar("Aplicando preferências de diagnóstico...", aplicar_diagnostico)
     carregador.adicionar("Ajustando o volume do sistema...", ajustar_volume)
     carregador.adicionar("Iniciando sensor simulado...", iniciar_bitalino_fake)
     carregador.adicionar("Carregando a última configuração...", carregar_ultima_config)
@@ -148,6 +203,7 @@ def executar_app(versao: str = "") -> int:
     calibration_controller = CalibrationController(ctx)
     config_controller = ConfigController(ctx, files_controller)
     updates_controller = UpdatesController(ctx, versao_atual=versao)
+    app_settings_controller = AppSettingsController(ctx)
     # O gráfico (GraficoSinal) é instanciado pelo QML e se registra em ctx.signal_plot ao
     # receber o `contexto` — não é criado aqui.
 
@@ -170,6 +226,9 @@ def executar_app(versao: str = "") -> int:
     ctx_qml.setContextProperty("configController", config_controller)
     ctx_qml.setContextProperty("updatesController", updates_controller)
     ctx_qml.setContextProperty("carregador", carregador)
+    ctx_qml.setContextProperty("appSettingsController", app_settings_controller)
+    # preferências que o QML lê direto no arranque (splash, geometria da janela).
+    ctx_qml.setContextProperty("prefsApp", app_prefs.obter())
     ctx_qml.setContextProperty("appVersion", versao)
     ctx_qml.setContextProperty("assetsDir", QUrl.fromLocalFile(str(ASSETS_DIR)).toString())
     ctx_qml.setContextProperty("sensoresDisponiveis", list(SENSOR_TYPES))
@@ -190,8 +249,10 @@ def executar_app(versao: str = "") -> int:
     carregador.iniciar()
 
     # Verificação silenciosa de nova versão, uma vez por execução. Roda em thread de trabalho
-    # e cabe folgada na splash; se a rede falhar, ninguém é incomodado.
-    updates_controller.verificar_automatico()
+    # e cabe folgada na splash; se a rede falhar, ninguém é incomodado. Desligável para quem
+    # roda em laboratório sem internet, onde a espera pela rede só atrasa o arranque.
+    if app_prefs.obter().get("verificar_atualizacoes", True):
+        updates_controller.verificar_automatico()
     app._compasso_carregador = carregador          # type: ignore[attr-defined]
     # Mantém referências vivas enquanto o app roda (evita coleta pelo GC).
     app._compasso_ctx = ctx                       # type: ignore[attr-defined]
@@ -200,6 +261,6 @@ def executar_app(versao: str = "") -> int:
         conn_controller, part_controller, files_controller,
         player_controller, experiment_controller, app_controller,
         graph_settings_controller, calibration_controller, config_controller,
-        updates_controller,
+        updates_controller, app_settings_controller,
     ]
     return app.exec()

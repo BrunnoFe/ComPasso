@@ -27,6 +27,11 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
         :return: Um objeto StreamInlet se a conexão for bem-sucedida, ou uma mensagem de erro caso contrário.
 
     """
+    from . import app_prefs   # import local: evita ciclo na montagem de `compasso.core`.
+
+    # Timeout configurável: 2 s é apertado em máquina lenta ou rede congestionada, e o usuário
+    # só via "falha ao conectar" sem nenhum recurso para contornar.
+    timeout_resolucao = app_prefs.obter().get("lsl_timeout_s", LSL_RESOLVE_TIMEOUT)
     mac_match: re.Match[str] | None = MAC_RE.match(mac_addr)
 
     if mac_match is not None:
@@ -34,7 +39,7 @@ def connectar_bitalino(mac_addr: str) -> StreamInlet | str:
         connection_logger.logger.info(f'Endereço MAC selecionado = {mac_addr}. Conectando a stream ao OpenSignals ...')
         try:
             bitalino_inlet: StreamInlet = StreamInlet(resolve_byprop(prop='type', value=mac_addr,
-                                                                      minimum=1, timeout=LSL_RESOLVE_TIMEOUT)[0],
+                                                                      minimum=1, timeout=timeout_resolucao)[0],
                                                                       recover=False, 
                                                                       processing_flags=proc_clocksync | proc_dejitter | proc_monotonize)
 
@@ -85,7 +90,12 @@ class ConnectionWatchdog:
     POLL = 1.0       # s entre verificações
 
     def __init__(self, ctx):
+        from . import app_prefs   # import local: evita ciclo na montagem de `compasso.core`.
+
         self.ctx = ctx
+        # instância sobrepõe o padrão da classe: o tempo tolerado sem amostras é preferência do
+        # app (montagens com rede mais lenta precisam de mais folga antes do alarme falso).
+        self.TIMEOUT = float(app_prefs.obter().get("watchdog_timeout_s", self.TIMEOUT))
         self._stop_event = threading.Event()
         self._thread = None
         self._last_ok = None

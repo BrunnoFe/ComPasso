@@ -15,6 +15,7 @@ from .musics import scan_music_files, match_conditions
 from .audio import set_system_volume, get_system_volume
 from . import config_manager
 from . import calibration
+from . import app_prefs
 
 __all__ = [
     'connection_logger',
@@ -35,5 +36,6 @@ __all__ = [
     'set_system_volume',
     'get_system_volume',
     'config_manager',
-    'calibration'
+    'calibration',
+    'app_prefs'
 ]

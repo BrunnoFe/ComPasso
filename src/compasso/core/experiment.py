@@ -10,6 +10,7 @@ from .constants import (MARKER_COUNTDOWN_START, MARKER_BEEP, MARKER_MUSIC_START,
                        MARKER_MUSIC_END, MARKER_STOP, CONDITION_MUSICA, CONDITION_RUIDO,
                        RUIDO_KEYWORDS)
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
+from . import app_prefs
 
 # Planilha (uma por sessão) com o resumo de cada faixa executada: ordem, arquivo, fator,
 # volume do sistema no momento da reprodução e intervalo de reação até o "continuar".
@@ -24,7 +25,10 @@ def _classify_condition(fator: str) -> str:
     Por padrão, qualquer faixa que não seja ruído é tratada como música.
     """
     f = (fator or "").strip().lower()
-    if any(kw in f for kw in RUIDO_KEYWORDS):
+    # as palavras vêm das preferências do app: uma planilha que rotula o controle de outro jeito
+    # ("silêncio", "branco") era classificada como música em silêncio, sem nenhum aviso.
+    palavras = app_prefs.obter().get("palavras_ruido") or RUIDO_KEYWORDS
+    if any(str(kw).strip().lower() in f for kw in palavras):
         return CONDITION_RUIDO
     return CONDITION_MUSICA
 
@@ -281,6 +285,26 @@ class ExperimentRunner:
             self._recorder = None
             self._plot_active = False
 
+    def _registrar_ambiente(self) -> None:
+        """Grava ``ambiente.json`` na pasta da sessão e loga as preferências fora do padrão.
+
+        As preferências do app são globais e invisíveis no dado; sem este registro, ninguém
+        conseguiria dizer, meses depois, se aquela coleta rodou com a faixa etária ampliada ou o
+        volume inicial alterado. O log ajuda no suporte imediato; o arquivo viaja com os CSVs.
+        """
+        diferencas = app_prefs.resumo_para_log()
+        if diferencas:
+            experiment_logger.logger.info(f"Preferências do app fora do padrão: {diferencas}")
+
+        app_prefs.escrever_ambiente(self._session_dir, extras={
+            "sensor": getattr(self.ctx, "sensor_type", None),
+            "canal_sinal": getattr(self.ctx, "signal_channel", None),
+            "pre_estimulo_s": getattr(self.ctx, "pre_stimulus_seconds", None),
+            "beep_habilitado": getattr(self.ctx, "beep_habilitado", None),
+            "volume_calibrado": getattr(self.ctx, "volume_calibrado", None),
+            "config_path": getattr(self.ctx, "config_path", None),
+        })
+
     def _executar_sessao(self) -> None:
         # pasta única da sessão de coleta (criada uma vez, antes da primeira faixa)
         session_name = build_session_dirname(self.ctx)
@@ -292,6 +316,7 @@ class ExperimentRunner:
             self._post_status("Erro ao criar a pasta de salvamento. Experimento abortado.")
             return
         experiment_logger.logger.info(f"Pasta da sessão criada: {self._session_dir}")
+        self._registrar_ambiente()
 
         totals = count_totals(self._order, self.ctx.music_condition_mapping or {})
         self._done = {CONDITION_MUSICA: 0, CONDITION_RUIDO: 0}
@@ -452,7 +477,7 @@ class ExperimentRunner:
             "volume": volume,
             "intervalo": intervalo,
         })
-        if self._session_dir is not None:
+        if self._session_dir is not None and app_prefs.obter().get("gerar_xlsx", True):
             caminho = os.path.join(self._session_dir, EXECUCAO_XLSX_FILENAME)
             try:
                 import pandas as pd   # import tardio (custo fora do arranque) — ver musics.py.

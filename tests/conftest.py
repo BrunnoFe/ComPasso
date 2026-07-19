@@ -110,6 +110,21 @@ class FakeClock:
         self.value = float(value)
 
 
+@pytest.fixture(autouse=True)
+def prefs_padrao():
+    """Isola as preferências do app: todo teste roda com os padrões de fábrica.
+
+    Sem isto, ``app_prefs.obter()`` (chamado por recorder/experiment/musics/conexão) leria o
+    ``prefs.json`` REAL da máquina — a suíte passaria ou falharia conforme os ajustes pessoais
+    de quem a roda. Preenche o cache em memória, então nada é lido nem escrito em disco.
+    """
+    from compasso.core import app_prefs
+
+    app_prefs._cache = app_prefs.padroes()
+    yield
+    app_prefs.recarregar()
+
+
 @pytest.fixture
 def make_inlet():
     """Fábrica de ``FakeInlet`` (ver docstring da classe)."""

@@ -11,7 +11,8 @@ from PySide6.QtCore import QObject, Property, Signal, Slot
 
 from .. import gui_logger
 from ..context import Context
-from compasso.utils import validar_nome_genero, validar_idade, MIN_IDADE, MAX_IDADE
+from compasso.utils import validar_nome_genero, validar_idade
+from compasso.core import app_prefs
 
 
 class ParticipantController(QObject):
@@ -92,8 +93,12 @@ class ParticipantController(QObject):
         if not validar_nome_genero(nome, genero):
             self.mensagem.emit("Erro", "Nome e gênero devem conter apenas letras e espaços.", "warning")
             return False
-        if not validar_idade(idade):
-            self.mensagem.emit("Erro", f"Idade deve ser um número entre {MIN_IDADE} e {MAX_IDADE}.",
+        # a faixa vem das preferências do app, e a mensagem cita a faixa CONFIGURADA — citar a
+        # de fábrica mandaria o usuário conferir um limite que não é mais o dele.
+        prefs = app_prefs.obter()
+        minimo, maximo = prefs["idade_minima"], prefs["idade_maxima"]
+        if not validar_idade(idade, minimo, maximo):
+            self.mensagem.emit("Erro", f"Idade deve ser um número entre {minimo} e {maximo}.",
                                "warning")
             return False
 
