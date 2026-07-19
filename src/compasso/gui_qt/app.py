@@ -15,6 +15,7 @@ from PySide6.QtQml import QQmlApplicationEngine, qmlRegisterType
 from PySide6.QtQuickControls2 import QQuickStyle
 
 from . import gui_logger
+from .carregamento import Carregador
 from .context import Context
 from .theme import Theme
 from .assets import ASSETS_DIR, ICON_FILENAME, BEEP_FILENAME
@@ -56,6 +57,64 @@ def _resolver_qml_dir() -> Path:
     return QML_DIR
 
 
+def _montar_carregador(app, ctx, config_controller) -> Carregador:
+    """Monta a fila de etapas do arranque, na ordem em que devem rodar sob a splash.
+
+    A ordem importa: o áudio vem primeiro (é a etapa mais cara e o beep precisa estar pronto
+    antes de o usuário alcançar o botão "Começar"); o MAC do modo fake é escrito depois do
+    auto-load do ``.config``, senão o ``.config`` o sobrescreveria.
+    """
+    carregador = Carregador(app)
+    estado: dict = {}   # carrega o MAC fake entre as etapas.
+
+    def preparar_audio() -> None:
+        # pré-carrega o beep aqui para pagar o custo de inicialização do backend de áudio fora
+        # da contagem regressiva do experimento: durante o experimento, tocar o beep precisa
+        # ser só um play(), sem latência variável — ver Player.preload_beep.
+        ctx.player.preload_beep(ctx.beep_caminho)
+
+    def carregar_preferencias() -> None:
+        ctx.graph_settings = config_manager.get_graph_prefs()
+
+    def ajustar_volume() -> None:
+        set_system_volume(_INIT_VOLUME)
+
+    def iniciar_bitalino_fake() -> None:
+        if not _fake_bitalino_habilitado():
+            return
+        from compasso.core.fake_bitalino import MAC_PADRAO, iniciar_em_thread
+        mac_fake = os.environ.get("COMPASSO_FAKE_BITALINO_MAC", MAC_PADRAO)
+        thread, parar = iniciar_em_thread(mac_fake)
+        # mantém referências vivas (evita GC do evento/thread durante a execução).
+        app._compasso_fake = (thread, parar)          # type: ignore[attr-defined]
+        estado["mac_fake"] = mac_fake
+        gui_logger.logger.info(
+            f"Modo BITalino FAKE ativo ({_FAKE_ENV}): stream em {mac_fake} — clique em Conectar.")
+
+    def carregar_ultima_config() -> None:
+        config_controller.carregar_ultima()
+        mac_fake = estado.get("mac_fake")
+        if mac_fake:
+            # depois do auto-load, para o modo de teste vencer o MAC do .config.
+            ctx.mac_addr = mac_fake
+            ctx.marcar_conexao_info_mudou()
+
+    def ha_varredura_pendente() -> bool:
+        """Só espera pelas durações se há de fato músicas+planilha para varrer."""
+        return bool(ctx.music_folder and ctx.conditions_file and not ctx.duracoes_audio)
+
+    carregador.adicionar("Preparando o áudio...", preparar_audio)
+    carregador.adicionar("Lendo preferências do gráfico...", carregar_preferencias)
+    carregador.adicionar("Ajustando o volume do sistema...", ajustar_volume)
+    carregador.adicionar("Iniciando sensor simulado...", iniciar_bitalino_fake)
+    carregador.adicionar("Carregando a última configuração...", carregar_ultima_config)
+    # a varredura de músicas/planilha disparada acima é assíncrona; a splash segura aqui até a
+    # pré-varredura de durações terminar, para o app abrir com o material já pronto.
+    carregador.adicionar_espera("Analisando as faixas de áudio...",
+                                ctx.sonda_duracao.concluida, condicao=ha_varredura_pendente)
+    return carregador
+
+
 def executar_app(versao: str = "") -> int:
     """Cria e executa a aplicação Qt/QML. Retorna o código de saída do ``exec()``."""
     app = QGuiApplication(sys.argv)
@@ -76,45 +135,14 @@ def executar_app(versao: str = "") -> int:
     # Estado + tema, expostos ao QML como propriedades de contexto globais.
     ctx = Context()
     ctx.beep_caminho = str(ASSETS_DIR / BEEP_FILENAME)
-    # carrega o beep aqui (arranque do app) para pagar o custo de inicialização do backend de
-    # áudio fora da contagem regressiva do experimento: durante o experimento, tocar o beep
-    # precisa ser só um play(), sem latência variável — ver Player.preload_beep.
-    ctx.player.preload_beep(ctx.beep_caminho)
-    try:
-        ctx.graph_settings = config_manager.get_graph_prefs()
-    except Exception as e:
-        gui_logger.logger.warning(f"Falha ao carregar preferências do gráfico: {e}")
-
-    # Modo de teste sem hardware: sobe a stream LSL fake (o MAC é pré-preenchido depois do
-    # auto-load do .config, para não ser sobrescrito). Ativado por COMPASSO_FAKE_BITALINO=1.
-    mac_fake = None
-    if _fake_bitalino_habilitado():
-        try:
-            from compasso.core.fake_bitalino import MAC_PADRAO, iniciar_em_thread
-            mac_fake = os.environ.get("COMPASSO_FAKE_BITALINO_MAC", MAC_PADRAO)
-            thread, parar = iniciar_em_thread(mac_fake)
-            # mantém referências vivas (evita GC do evento/thread durante a execução).
-            app._compasso_fake = (thread, parar)          # type: ignore[attr-defined]
-            gui_logger.logger.info(
-                f"Modo BITalino FAKE ativo ({_FAKE_ENV}): stream em {mac_fake} — clique em Conectar.")
-        except Exception as e:
-            gui_logger.logger.warning(f"Falha ao iniciar o BITalino fake: {e}")
-            mac_fake = None
-
     theme = Theme()
-
-    # volume principal do sistema no arranque (uma única vez, como no app antigo).
-    try:
-        set_system_volume(_INIT_VOLUME)
-    except Exception as e:
-        gui_logger.logger.warning(f"Falha ao definir o volume inicial do sistema: {e}")
 
     # Controllers (backend das views). Ligados ao Context; expostos ao QML por nome.
     conn_controller = ConnectionController(ctx)
     part_controller = ParticipantController(ctx)
     files_controller = FilesController(ctx)
     player_controller = PlayerController(ctx)
-    experiment_controller = ExperimentController(ctx)
+    experiment_controller = ExperimentController(ctx, part_controller, player_controller)
     app_controller = AppController()
     graph_settings_controller = GraphSettingsController(ctx)
     calibration_controller = CalibrationController(ctx)
@@ -123,16 +151,9 @@ def executar_app(versao: str = "") -> int:
     # O gráfico (GraficoSinal) é instanciado pelo QML e se registra em ctx.signal_plot ao
     # receber o `contexto` — não é criado aqui.
 
-    # Auto-carrega o último .config usado (se existir), deixando o app já configurado no arranque.
-    try:
-        config_controller.carregar_ultima()
-    except Exception as e:
-        gui_logger.logger.warning(f"Falha ao auto-carregar a última configuração: {e}")
-
-    # Pré-preenche o MAC fake DEPOIS do auto-load, para o modo de teste vencer o MAC do .config.
-    if mac_fake:
-        ctx.mac_addr = mac_fake
-        ctx.marcar_conexao_info_mudou()
+    # Fila de carregamento: tudo que antes bloqueava o arranque roda agora DEPOIS do
+    # engine.load(), sob a splash, que mostra a etapa e o progresso — ver carregamento.py.
+    carregador = _montar_carregador(app, ctx, config_controller)
 
     engine = QQmlApplicationEngine()
     ctx_qml = engine.rootContext()
@@ -148,6 +169,7 @@ def executar_app(versao: str = "") -> int:
     ctx_qml.setContextProperty("calibController", calibration_controller)
     ctx_qml.setContextProperty("configController", config_controller)
     ctx_qml.setContextProperty("updatesController", updates_controller)
+    ctx_qml.setContextProperty("carregador", carregador)
     ctx_qml.setContextProperty("appVersion", versao)
     ctx_qml.setContextProperty("assetsDir", QUrl.fromLocalFile(str(ASSETS_DIR)).toString())
     ctx_qml.setContextProperty("sensoresDisponiveis", list(SENSOR_TYPES))
@@ -163,9 +185,14 @@ def executar_app(versao: str = "") -> int:
 
     gui_logger.logger.info("Interface QML carregada com sucesso.")
 
+    # A janela já existe (só a splash é visível): agora sim roda o trabalho pesado, etapa a
+    # etapa, com o progresso aparecendo na tela de carregamento.
+    carregador.iniciar()
+
     # Verificação silenciosa de nova versão, uma vez por execução. Roda em thread de trabalho
     # e cabe folgada na splash; se a rede falhar, ninguém é incomodado.
     updates_controller.verificar_automatico()
+    app._compasso_carregador = carregador          # type: ignore[attr-defined]
     # Mantém referências vivas enquanto o app roda (evita coleta pelo GC).
     app._compasso_ctx = ctx                       # type: ignore[attr-defined]
     app._compasso_theme = theme                   # type: ignore[attr-defined]

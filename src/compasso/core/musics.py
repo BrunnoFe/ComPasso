@@ -7,9 +7,12 @@ decide como exibir os resultados/erros.
 
 import os
 
-import pandas as pd
-
 from . import musics_logger
+
+# `pandas` é importado sob demanda dentro de `match_conditions` (e não no topo) porque é o
+# import mais caro da stack (~centenas de ms) e este módulo é alcançado por `compasso.core`
+# no arranque — pagá-lo aqui atrasava a janela a aparecer. Agora o custo cai dentro da
+# varredura, que já roda em thread de trabalho e sob a tela de carregamento.
 
 AUDIO_EXTENSIONS = ('.mp3', '.wav', '.ogg')
 
@@ -50,7 +53,9 @@ def match_conditions(music_files: list, conditions_path: str,
     if not os.path.exists(conditions_path):
         raise FileNotFoundError(conditions_path)
 
-    conditions: pd.DataFrame = pd.read_excel(conditions_path)
+    import pandas as pd   # import tardio: ver nota no topo do módulo.
+
+    conditions = pd.read_excel(conditions_path)
     if conditions.empty or music_column not in conditions.columns or factor_column not in conditions.columns:
         return None, []
 

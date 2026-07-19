@@ -9,15 +9,27 @@ Rectangle {
     anchors.fill: parent
     z: 1000
     color: Theme.colors.win_bg
-    radius: Theme.metrics.cornerCard   // acompanha os cantos arredondados da janela
+    // acompanha os cantos arredondados da janela (0 quando maximizada, como o `quadro`).
+    radius: (typeof win !== "undefined" && win.maximizado) ? 0 : Theme.metrics.cornerCard
     clip: true
-    property int duracaoMs: 2600
 
-    // leve gradiente radial de profundidade (bar_bg no centro → win_bg nas bordas).
+    // Tempo mínimo em tela: o carregamento pode terminar em poucos ms (sem .config, tudo em
+    // cache) e a splash viraria um flash desagradável. Não é espera artificial no caso comum —
+    // o carregamento real costuma passar disso.
+    property int minimoMs: 900
+    property bool tempoMinimoCumprido: false
+    property real progresso: carregador.progresso
+
+    // fecha quando o carregamento acabou E o tempo mínimo passou (o que vier por último).
+    readonly property bool podeFechar: !carregador.ativo && tempoMinimoCumprido
+    onPodeFecharChanged: if (podeFechar && splash.visible) fade.start()
+
+    // leve gradiente de profundidade (bar_bg no centro → win_bg nas bordas). Precisa do MESMO
+    // raio e caber dentro do splash: `clip` recorta pelo retângulo, não pelo raio — um filho
+    // maior que o pai reaparecia como quatro cantos quadrados por cima das bordas arredondadas.
     Rectangle {
-        anchors.centerIn: parent
-        width: parent.width * 1.2
-        height: parent.height * 1.2
+        anchors.fill: parent
+        radius: splash.radius
         gradient: Gradient {
             GradientStop { position: 0.0; color: Theme.colors.bar_bg }
             GradientStop { position: 1.0; color: Theme.colors.win_bg }
@@ -93,17 +105,39 @@ Rectangle {
             font.letterSpacing: 2
         }
 
-        Text {
-            id: carregando
+        // ---- progresso real do carregamento (alimentado por `carregador`) ----
+        Item {
+            width: 300
+            height: 34
             anchors.horizontalCenter: parent.horizontalCenter
-            color: Theme.colors.faint
-            font.family: Theme.fonts.mono
-            font.pixelSize: 12
-            property int pontos: 1
-            text: "CARREGANDO " + ".".repeat(pontos)
-            Timer {
-                interval: 420; running: splash.visible; repeat: true
-                onTriggered: carregando.pontos = (carregando.pontos % 3) + 1
+
+            Text {
+                id: rotuloEtapa
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: carregador.rotulo.toUpperCase()
+                color: Theme.colors.faint
+                font.family: Theme.fonts.mono
+                font.pixelSize: 11
+                font.letterSpacing: 1
+            }
+
+            // trilho + preenchimento; a largura anima para o progresso não "pular" entre etapas.
+            Rectangle {
+                anchors.top: rotuloEtapa.bottom
+                anchors.topMargin: 12
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width
+                height: 3
+                radius: 1.5
+                color: Theme.colors.border
+
+                Rectangle {
+                    width: parent.width * splash.progresso
+                    height: parent.height
+                    radius: parent.radius
+                    color: Theme.colors.accent
+                    Behavior on width { NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+                }
             }
         }
     }
@@ -148,10 +182,10 @@ Rectangle {
         return out
     }
 
-    // fecha após duracaoMs com fade suave para a interface.
+    // piso de exibição; o fechamento em si é decidido por `podeFechar`.
     Timer {
-        interval: splash.duracaoMs; running: true; repeat: false
-        onTriggered: fade.start()
+        interval: splash.minimoMs; running: true; repeat: false
+        onTriggered: splash.tempoMinimoCumprido = true
     }
     NumberAnimation {
         id: fade; target: splash; property: "opacity"; from: 1; to: 0; duration: 420

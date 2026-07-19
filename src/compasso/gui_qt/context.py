@@ -205,6 +205,9 @@ class Context(QObject):
         self.save_participant_infos_if_filled = None
         self.atualizar_botao_calibrar = None
         self.aplicar_volume_calibrado = None
+        # invocado (já na thread da GUI) quando a sessão termina por conta própria — registrado
+        # pelo ExperimentController, que avisa o usuário e rearma o app para uma nova coleta.
+        self.on_session_completed = None
 
     def _aplicar_lock_experimento(self, ativo: bool) -> None:
         """Trava/destrava a UI durante uma sessão: recolhe os cards e marca o bloqueio global.

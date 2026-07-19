@@ -137,6 +137,16 @@ class PlayerController(QObject):
         except Exception as e:
             gui_logger.logger.warning(f"Falha ao aplicar volume calibrado: {e}")
 
+    @Slot()
+    def limpar_calibracao(self) -> None:
+        """Descarta o volume calibrado e destrava o slider (nova coleta = novo participante)."""
+        self._ctx.volume_calibrado = None
+        self._ctx.volume_travado = False
+        self._set_travado(False)
+        self._ctx.notify_stepper()   # apaga a etapa "Calibragem"
+        self._atualizar_calibrar()
+        gui_logger.logger.info("Calibração de volume descartada para uma nova coleta.")
+
     def _set_travado(self, travado: bool) -> None:
         if self._volume_travado != travado:
             self._volume_travado = travado

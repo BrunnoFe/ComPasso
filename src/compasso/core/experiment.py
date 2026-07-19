@@ -2,7 +2,6 @@ import os
 import random
 import threading
 
-import pandas as pd
 from pylsl import local_clock
 
 from . import experiment_logger
@@ -456,6 +455,8 @@ class ExperimentRunner:
         if self._session_dir is not None:
             caminho = os.path.join(self._session_dir, EXECUCAO_XLSX_FILENAME)
             try:
+                import pandas as pd   # import tardio (custo fora do arranque) — ver musics.py.
+
                 df = pd.DataFrame(self._linhas_execucao, columns=EXECUCAO_COLUNAS)
                 df.to_excel(caminho, index=False)
             # amplo de propósito: nem toda falha do openpyxl é OSError, e uma planilha que não
@@ -499,6 +500,11 @@ class ExperimentRunner:
         if not self._stop_event.is_set():
             experiment_logger.logger.info("Experimento finalizado.")
             self._post_status("Experimento finalizado.")
+            # avisa a GUI que a coleta chegou ao fim naturalmente (sessão interrompida pelo
+            # usuário não dispara): ela mostra o aviso e prepara o app para uma nova coleta.
+            cb = getattr(self.ctx, "on_session_completed", None)
+            if cb is not None:
+                self.ctx.run_after(cb)
 
     # ------------------------------------------------------------------ #
     # Controle do gráfico do sinal (fachada opcional em ctx.signal_plot).

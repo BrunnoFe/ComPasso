@@ -8,7 +8,6 @@ views observam (conexão/arquivos/stepper/calibração), tornando o experimento 
 
 import os
 
-import pandas as pd
 from PySide6.QtCore import QObject, Property, Signal, Slot, QUrl
 
 from .. import gui_logger
@@ -189,6 +188,8 @@ class ConfigController(QObject):
         if not caminho or not os.path.isfile(caminho):
             return
         try:
+            import pandas as pd   # import tardio (custo fora do arranque) — ver core/musics.py.
+
             self._colunas = [str(c) for c in pd.read_excel(caminho, nrows=0).columns]
         except Exception as e:
             gui_logger.logger.warning(f"Não foi possível ler as colunas de '{caminho}': {e}")
@@ -244,6 +245,8 @@ class ConfigController(QObject):
         fatores = self._d.get("factors_file", "")
         if fatores and os.path.isfile(fatores):
             try:
+                import pandas as pd   # import tardio — ver core/musics.py.
+
                 cols = {str(c) for c in pd.read_excel(fatores, nrows=0).columns}
             except Exception as e:
                 self.mensagem.emit("Erro", f"Não foi possível ler as colunas da planilha:\n{e}", "warning")

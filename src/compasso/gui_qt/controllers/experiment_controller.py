@@ -38,10 +38,14 @@ class ExperimentController(QObject):
     """Inicia/para/continua o experimento, validando os pré-requisitos."""
 
     mensagem = Signal(str, str, str)   # (titulo, texto, tipo)
+    coletaFinalizada = Signal()        # sessão chegou ao fim sozinha (QML avisa e rearma o app)
 
-    def __init__(self, ctx: Context):
+    def __init__(self, ctx: Context, part_controller=None, player_controller=None):
         super().__init__()
         self._ctx = ctx
+        self._part_controller = part_controller
+        self._player_controller = player_controller
+        ctx.on_session_completed = self.coletaFinalizada.emit
 
     @Slot()
     def comecar(self) -> None:
@@ -69,6 +73,43 @@ class ExperimentController(QObject):
         if self._ctx.runner is not None:
             self._ctx.status_text.set("Continuando...")
             self._ctx.runner.continuar()
+
+    @Slot()
+    def preparar_nova_coleta(self) -> None:
+        """Devolve o app ao estado inicial para uma nova coleta, sem fechar/reabrir.
+
+        Zera participante, calibração, gráfico e todos os indicadores da sessão. Deliberadamente
+        **não** mexe na conexão do Bitalino nem nos arquivos carregados (pasta de músicas,
+        planilha, diretório de saída, .config): a próxima coleta costuma usar exatamente o mesmo
+        material, só trocando o participante.
+        """
+        if self._part_controller is not None:
+            self._part_controller.limpar()
+        if self._player_controller is not None:
+            self._player_controller.limpar_calibracao()
+
+        # gráfico de volta ao repouso.
+        plot = getattr(self._ctx, "signal_plot", None)
+        if plot is not None:
+            try:
+                plot.reset_idle()
+            except Exception as e:
+                gui_logger.logger.warning(f"Falha ao resetar o gráfico do sinal: {e}")
+
+        # indicadores da sessão.
+        self._ctx.current_music_text.set("—")
+        self._ctx.current_condition_text.set("")
+        self._ctx.time_begin_text.set("00:00")
+        self._ctx.time_end_text.set("00:00")
+        self._ctx.music_done_text.set("0")
+        self._ctx.ruido_done_text.set("0")
+        self._ctx.session_progress.set(0.0)
+        self._ctx.session_status_text.set("0 / 0")
+        self._ctx.status_text.set("Pronto para uma nova coleta.")
+
+        # descarta o runner da sessão encerrada (o próximo "Começar" cria um novo).
+        self._ctx.runner = None
+        gui_logger.logger.info("Interface preparada para uma nova coleta.")
 
     @Slot()
     def parar(self) -> None:

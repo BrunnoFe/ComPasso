@@ -90,6 +90,19 @@ Window {
     Connections {
         target: experimentController
         function onMensagem(titulo, texto, tipo) { dialogoMensagem.abrir(titulo, texto, tipo) }
+        // fim natural da sessão: avisa e, ao fechar o aviso, rearma o app para a próxima coleta.
+        function onColetaFinalizada() {
+            dialogoFimColeta.abrir("Coleta finalizada",
+                                   "Coleta de dados finalizada!\n\nOs arquivos da sessão já foram "
+                                   + "salvos. Ao continuar, o aplicativo fica pronto para uma nova "
+                                   + "coleta (o Bitalino permanece conectado).", "info")
+        }
+    }
+
+    // Aviso de fim de coleta: instância própria porque só ele dispara o reset ao ser fechado.
+    MessageDialog {
+        id: dialogoFimColeta
+        onClosed: experimentController.preparar_nova_coleta()
     }
     // Pedidos de janelas auxiliares.
     Connections {

@@ -115,6 +115,22 @@ class ParticipantController(QObject):
         self._ctx.notify_stepper()
         gui_logger.logger.info("Edição das informações do participante habilitada.")
 
+    @Slot()
+    def limpar(self) -> None:
+        """Zera participante e formulário, como num app recém-aberto (nova coleta)."""
+        self._rascunho_nome = ""
+        self._rascunho_idade = ""
+        self._rascunho_genero = ""
+        self._ctx.nome = None
+        self._ctx.idade = None
+        self._ctx.genero = None
+        self._ctx.infos_saved = False
+        self.rascunhoChanged.emit()
+        self.resumoChanged.emit()
+        self.salvosChanged.emit()
+        self._ctx.notify_stepper()
+        gui_logger.logger.info("Informações do participante limpas para uma nova coleta.")
+
     def salvar_se_preenchido(self) -> bool:
         """Salva em silêncio se o form estiver preenchido mas não salvo (usado pelo 'Começar').
 

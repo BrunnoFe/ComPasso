@@ -4,7 +4,6 @@ import time
 import threading
 from datetime import datetime
 
-import pandas as pd
 from pylsl import local_clock
 
 from . import recorder_logger
@@ -293,6 +292,8 @@ class LSLRecorder:
         """
         self.stop()
         try:
+            import pandas as pd   # import tardio (custo fora do arranque) — ver musics.py.
+
             df = pd.read_csv(self.csv_path)
             df.to_excel(self.xlsx_path, index=False)
             recorder_logger.logger.info(f"Arquivos finalizados: {self.csv_path} | {self.xlsx_path}")
