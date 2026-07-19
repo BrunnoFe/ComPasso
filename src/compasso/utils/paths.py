@@ -16,7 +16,8 @@ import platform
 import subprocess
 from pathlib import Path
 
-from .configs import (APP_NAME, DATA_DIRNAME, LOGS_DIRNAME, ERRORS_LOG_FILENAME)
+from .configs import (APP_NAME, DATA_DIRNAME, LOGS_DIRNAME, ERRORS_LOG_FILENAME,
+                     FULL_LOGS_DIRNAME, FULL_LOG_FILENAME)
 
 
 def _windows_documents() -> Path:
@@ -86,6 +87,16 @@ def get_errors_log_path() -> Path:
     return get_app_data_dir() / APP_NAME / ERRORS_LOG_FILENAME
 
 
+def get_full_logs_dir() -> Path:
+    """Pasta do log consolidado: ``<app-data>/ComPasso/logs/full``."""
+    return get_logs_dir() / FULL_LOGS_DIRNAME
+
+
+def get_full_log_path() -> Path:
+    """Arquivo consolidado com todos os níveis de todos os módulos: ``.../logs/full/full.log``."""
+    return get_full_logs_dir() / FULL_LOG_FILENAME
+
+
 def open_path(path) -> None:
     """Abre um arquivo ou pasta no gerenciador de arquivos do SO (multiplataforma).
 
@@ -109,6 +120,9 @@ def ensure_app_dirs() -> dict:
     """
     data_dir = get_data_dir()
     logs_dir = get_logs_dir()
+    full_dir = get_full_logs_dir()
     data_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
-    return {"data": data_dir, "logs": logs_dir, "errors": get_errors_log_path()}
+    full_dir.mkdir(parents=True, exist_ok=True)
+    return {"data": data_dir, "logs": logs_dir, "full": full_dir,
+            "errors": get_errors_log_path()}

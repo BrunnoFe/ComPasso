@@ -395,6 +395,16 @@ mantendo o ponteiro sempre atualizado em `prefs.json["last_config"]`.
   `guiQtLogger`, categoria `gui`), `main`.
 - `<app-data>/ComPasso/errors.log`: só WARNING/ERROR/CRITICAL de tudo (handler no logger raiz,
   rotativo). `bootstrap()` cria as pastas na 1ª execução.
+- `<app-data>/ComPasso/logs/full/full.log`: **consolidado, TODOS os níveis de TODOS os módulos**
+  (handler DEBUG no logger raiz, rotativo 5 MB × 5 backups, `delay=True`) — coexiste com os
+  arquivos por categoria e o `errors.log`, não os substitui. Cada linha traz `[%(session)s)]`
+  (`LOG_FORMAT` em `configs.py`): o nome da pasta da sessão de coleta em curso, ou `"-"` fora de
+  uma coleta — carimbado via `logging.setLogRecordFactory` (`bootstrap.py`), lido de
+  `utils/log_context.py` (`definir_sessao`/`limpar_sessao`/`sessao_atual`; thread-safe).
+  `ExperimentRunner._executar_sessao`/`_finish` chamam `definir_sessao`/`limpar_sessao` — correlaciona
+  linhas de recorder/experiment/player de uma mesma coleta no `full.log`. Loggers de terceiros
+  excessivamente verbosos (`comtypes`, da camada COM do pycaw) são elevados a WARNING em
+  `bootstrap._silenciar_terceiros_ruidosos` para não afogar o consolidado.
 - CSV/XLSX colunas (ordem exata): `timestamp, signal, markers, music_file, fator`.
   `markers` ∈ {`INICIO_CONTAGEM`, `INICIO_MUSICA`, `FIM_MUSICA`, `PARADA_FORCADA`} (constantes
   `MARKER_*` em `constants.py`) na amostra mais próxima do evento; `music_file`/`fator` são

@@ -11,6 +11,7 @@ from .constants import (MARKER_COUNTDOWN_START, MARKER_BEEP, MARKER_MUSIC_START,
                        RUIDO_KEYWORDS)
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
 from . import app_prefs
+from compasso.utils import definir_sessao, limpar_sessao
 
 # Planilha (uma por sessão) com o resumo de cada faixa executada: ordem, arquivo, fator,
 # volume do sistema no momento da reprodução e intervalo de reação até o "continuar".
@@ -308,6 +309,9 @@ class ExperimentRunner:
     def _executar_sessao(self) -> None:
         # pasta única da sessão de coleta (criada uma vez, antes da primeira faixa)
         session_name = build_session_dirname(self.ctx)
+        # a partir daqui toda linha de log é carimbada com o nome da sessão (campo %(session)s),
+        # correlacionando as mensagens desta coleta no full.log; limpo em `_finish`.
+        definir_sessao(session_name)
         self._session_dir = os.path.join(self.ctx.save_dir, session_name)
         try:
             os.makedirs(self._session_dir, exist_ok=True)
@@ -518,6 +522,9 @@ class ExperimentRunner:
 
     def _finish(self) -> None:
         self._running = False
+        # a coleta terminou (naturalmente ou por parada/erro): linhas seguintes voltam a ser
+        # "fora de sessão". Casa com o `definir_sessao` de `_executar_sessao`.
+        limpar_sessao()
         self._set_button("comecar")
         self._set_participant_editable(True)
         self._set_experiment_ui_lock(False)  # expande os cards e libera o botão de recolher

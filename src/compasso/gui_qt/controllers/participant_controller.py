@@ -88,9 +88,11 @@ class ParticipantController(QObject):
         genero = self._rascunho_genero.strip()
 
         if not (nome and idade and genero):
+            gui_logger.logger.warning("Salvamento do participante bloqueado: campo(s) obrigatório(s) em branco.")
             self.mensagem.emit("Erro", "Todos os campos são obrigatórios.", "warning")
             return False
         if not validar_nome_genero(nome, genero):
+            gui_logger.logger.warning("Salvamento do participante bloqueado: nome/gênero com caracteres inválidos.")
             self.mensagem.emit("Erro", "Nome e gênero devem conter apenas letras e espaços.", "warning")
             return False
         # a faixa vem das preferências do app, e a mensagem cita a faixa CONFIGURADA — citar a
@@ -98,6 +100,8 @@ class ParticipantController(QObject):
         prefs = app_prefs.obter()
         minimo, maximo = prefs["idade_minima"], prefs["idade_maxima"]
         if not validar_idade(idade, minimo, maximo):
+            gui_logger.logger.warning(
+                f"Salvamento do participante bloqueado: idade '{idade}' fora da faixa [{minimo}, {maximo}].")
             self.mensagem.emit("Erro", f"Idade deve ser um número entre {minimo} e {maximo}.",
                                "warning")
             return False

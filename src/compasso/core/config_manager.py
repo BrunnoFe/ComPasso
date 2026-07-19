@@ -294,6 +294,15 @@ def load_config(path: str):
     if not any(msg.startswith("Campo ausente") for msg in errors):
         errors.extend(validate_values(data))
 
+    # o resultado da validação era invisível no log: um `.config` recusado (campo ausente, pasta
+    # inexistente, MAC malformado) só aparecia na GUI. Registrar o porquê ajuda o suporte quando o
+    # usuário relata "não abre" sem dizer qual campo.
+    if errors:
+        config_logger.logger.warning(
+            f"Configuração '{path}' recusada por {len(errors)} problema(s): {errors}")
+    else:
+        config_logger.logger.info(f"Configuração carregada e validada: {path}")
+
     return data, errors
 
 
@@ -301,9 +310,18 @@ def _read_prefs() -> dict:
     try:
         with open(get_prefs_path(), "r", encoding=ENCODING_FORMAT) as f:
             data = json.load(f)
-            return data if isinstance(data, dict) else {}
-    except (OSError, json.JSONDecodeError):
+    except FileNotFoundError:
+        # ausência é o caso normal de primeira execução — não é erro, não loga.
         return {}
+    except OSError as e:
+        config_logger.logger.warning(f"Falha ao ler preferências ({get_prefs_path()}): {e}")
+        return {}
+    except json.JSONDecodeError as e:
+        # prefs.json corrompido é silenciosamente ignorado (cai nos defaults): sem este aviso, o
+        # usuário perde tema/último .config/ajustes do gráfico sem nenhuma pista do motivo.
+        config_logger.logger.warning(f"Preferências corrompidas em {get_prefs_path()}; usando padrões: {e}")
+        return {}
+    return data if isinstance(data, dict) else {}
 
 
 def _write_prefs(prefs: dict) -> None:

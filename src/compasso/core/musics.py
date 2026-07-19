@@ -30,10 +30,19 @@ def scan_music_files(folder: str) -> list:
 
     extensoes = tuple(str(e).lower() for e in
                       (app_prefs.obter().get("extensoes_audio") or AUDIO_EXTENSIONS))
+    musics_logger.logger.debug(
+        f"Varrendo '{folder}' por áudios (extensões aceitas: {extensoes}).")
     music_files = [os.path.join(folder, f) for f in os.listdir(folder)
                    if f.lower().endswith(extensoes)]
     for music in music_files:
         musics_logger.logger.info(f"Arquivo de música encontrado: {music}")
+    if not music_files:
+        # pasta vazia ou com extensões fora das aceitas é um erro de configuração comum e
+        # silencioso: sem áudios, a playlist fica vazia e o experimento não inicia.
+        musics_logger.logger.warning(
+            f"Nenhum áudio encontrado em '{folder}' (extensões aceitas: {extensoes}).")
+    else:
+        musics_logger.logger.info(f"Varredura concluída: {len(music_files)} áudio(s) em '{folder}'.")
     return music_files
 
 
@@ -60,8 +69,16 @@ def match_conditions(music_files: list, conditions_path: str,
 
     import pandas as pd   # import tardio: ver nota no topo do módulo.
 
+    musics_logger.logger.debug(
+        f"Casando {len(music_files)} áudio(s) com '{conditions_path}' "
+        f"(coluna música='{music_column}', coluna fator='{factor_column}').")
     conditions = pd.read_excel(conditions_path)
     if conditions.empty or music_column not in conditions.columns or factor_column not in conditions.columns:
+        # falha silenciosa antes deste log: a planilha certa com nomes de coluna errados devolvia
+        # (None, []) sem pista alguma — o casamento música↔condição simplesmente não acontecia.
+        musics_logger.logger.warning(
+            f"Planilha de condições inutilizável ({'vazia' if conditions.empty else 'sem as colunas esperadas'}): "
+            f"colunas presentes={list(conditions.columns)}, esperadas música='{music_column}' e fator='{factor_column}'.")
         return None, []
 
     mapping = {}
@@ -75,4 +92,6 @@ def match_conditions(music_files: list, conditions_path: str,
             continue
         mapping[music] = fatores[0]
         musics_logger.logger.info(f"Condição encontrada para {music_name}: {fatores[0]}")
+    musics_logger.logger.info(
+        f"Casamento concluído: {len(mapping)} música(s) casada(s), {len(ignoradas)} ignorada(s).")
     return mapping, ignoradas

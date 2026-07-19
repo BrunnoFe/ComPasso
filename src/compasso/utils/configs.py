@@ -8,8 +8,11 @@ PROJECT_URL = 'https://github.com/BrunnoFe/Compasso'
 
 PROJECT_GITSITE = 'https://brunnofe.github.io/ComPasso/'
 
-# Formato único dos registros de log (reutilizado pelos loggers e pelo errors.log).
-LOG_FORMAT = '%(asctime)s:%(filename)s: %(name)s: %(levelname)s: %(funcName)s -> %(message)s'
+# Formato único dos registros de log (reutilizado pelos loggers, pelo errors.log e pelo full.log).
+# O campo `[%(session)s]` correlaciona linhas de módulos diferentes numa mesma coleta; é injetado
+# em todo LogRecord pela fábrica instalada no bootstrap (ver log_context.py) — vale "-" fora de
+# uma coleta.
+LOG_FORMAT = '%(asctime)s [%(session)s] %(filename)s: %(name)s: %(levelname)s: %(funcName)s -> %(message)s'
 
 # ---------------------------------------------------------------------------
 # Nomes de pastas e arquivos da aplicação (resolvidos em src/utils/paths.py e
@@ -18,6 +21,8 @@ LOG_FORMAT = '%(asctime)s:%(filename)s: %(name)s: %(levelname)s: %(funcName)s ->
 # ---------------------------------------------------------------------------
 DATA_DIRNAME = 'Dados'                          # <Documentos>/ComPasso/<DATA_DIRNAME>
 LOGS_DIRNAME = 'logs'                          # <app-data>/ComPasso/<LOGS_DIRNAME>
+FULL_LOGS_DIRNAME = 'full'                     # <app-data>/ComPasso/logs/<FULL_LOGS_DIRNAME>
+FULL_LOG_FILENAME = 'full.log'                 # arquivo consolidado (todos os níveis/módulos)
 EXPERIMENT_FILES_DIRNAME = 'Configurações do Experimento'  # <Documentos>/ComPasso/<...>
 ERRORS_LOG_FILENAME = 'errors.log'             # <app-data>/ComPasso/<ERRORS_LOG_FILENAME>
 PREFS_FILENAME = 'prefs.json'                  # <app-data>/ComPasso/<PREFS_FILENAME>
