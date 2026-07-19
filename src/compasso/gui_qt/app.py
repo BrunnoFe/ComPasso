@@ -101,9 +101,6 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
         # ser só um play(), sem latência variável — ver Player.preload_beep.
         ctx.player.preload_beep(ctx.beep_caminho)
 
-    def carregar_preferencias() -> None:
-        ctx.graph_settings = config_manager.get_graph_prefs()
-
     def aplicar_diagnostico() -> None:
         """Aplica nível de log e retenção — daí serem preferências de reinício.
 
@@ -131,16 +128,31 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
         set_system_volume(int(prefs.get("volume_inicial", _INIT_VOLUME)))
 
     def iniciar_bitalino_fake() -> None:
-        if not _fake_bitalino_habilitado():
+        """Sobe o simulador se a preferência OU a variável de ambiente pedirem.
+
+        As duas portas coexistem: a variável de ambiente serve a scripts/CI (e continua tendo a
+        última palavra sobre o MAC), a preferência serve ao usuário pela janela de configurações.
+        """
+        from compasso.core import fake_bitalino
+
+        por_env = _fake_bitalino_habilitado()
+        por_pref = app_prefs.obter().get("simular_bitalino", False)
+        if not (por_env or por_pref):
             return
-        from compasso.core.fake_bitalino import MAC_PADRAO, iniciar_em_thread
-        mac_fake = os.environ.get("COMPASSO_FAKE_BITALINO_MAC", MAC_PADRAO)
-        thread, parar = iniciar_em_thread(mac_fake)
-        # mantém referências vivas (evita GC do evento/thread durante a execução).
-        app._compasso_fake = (thread, parar)          # type: ignore[attr-defined]
+
+        mac_pedido = os.environ.get("COMPASSO_FAKE_BITALINO_MAC", fake_bitalino.MAC_PADRAO)
+        # o provedor faz o sinal simulado seguir o sensor/canal escolhidos na GUI, inclusive
+        # quando o usuário os troca com a stream já publicada.
+        mac_fake = fake_bitalino.iniciar(
+            mac_pedido,
+            provedor_config=lambda: (ctx.sensor_type, ctx.signal_channel))
+        if mac_fake is None:
+            return
         estado["mac_fake"] = mac_fake
+        ctx.simulacaoAtiva = True     # a barra de conexão avisa que os dados não são reais.
+        origem = _FAKE_ENV if por_env else "preferência 'Simular BITalino'"
         gui_logger.logger.info(
-            f"Modo BITalino FAKE ativo ({_FAKE_ENV}): stream em {mac_fake} — clique em Conectar.")
+            f"BITalino simulado ativo ({origem}): stream em {mac_fake} — clique em Conectar.")
 
     def carregar_ultima_config() -> None:
         if app_prefs.obter().get("auto_carregar_config", True):
@@ -158,7 +170,6 @@ def _montar_carregador(app, ctx, config_controller) -> Carregador:
         return bool(ctx.music_folder and ctx.conditions_file and not ctx.duracoes_audio)
 
     carregador.adicionar("Preparando o áudio...", preparar_audio)
-    carregador.adicionar("Lendo preferências do gráfico...", carregar_preferencias)
     carregador.adicionar("Aplicando preferências de diagnóstico...", aplicar_diagnostico)
     carregador.adicionar("Ajustando o volume do sistema...", ajustar_volume)
     carregador.adicionar("Iniciando sensor simulado...", iniciar_bitalino_fake)
@@ -190,6 +201,18 @@ def executar_app(versao: str = "") -> int:
     # Estado + tema, expostos ao QML como propriedades de contexto globais.
     ctx = Context()
     ctx.beep_caminho = str(ASSETS_DIR / BEEP_FILENAME)
+
+    # As preferências do gráfico precisam existir ANTES do `engine.load()`: o `GraficoSinal` lê
+    # `ctx.graph_settings` no instante em que o QML o cria (ver `signal_chart._set_contexto`) e
+    # não relê depois. Levá-las para a fila de carregamento (que roda após o load) fazia o
+    # gráfico nascer com os defaults e só assumir as preferências salvas quando o usuário
+    # abrisse a janela "Configurações → Gráfico" — que é o que as reaplica. É uma leitura de
+    # um JSON pequeno; não há o que ganhar adiando-a.
+    try:
+        ctx.graph_settings = config_manager.get_graph_prefs()
+    except Exception as e:
+        gui_logger.logger.warning(f"Falha ao carregar preferências do gráfico: {e}")
+
     theme = Theme()
 
     # Controllers (backend das views). Ligados ao Context; expostos ao QML por nome.
@@ -229,6 +252,8 @@ def executar_app(versao: str = "") -> int:
     ctx_qml.setContextProperty("appSettingsController", app_settings_controller)
     # preferências que o QML lê direto no arranque (splash, geometria da janela).
     ctx_qml.setContextProperty("prefsApp", app_prefs.obter())
+    # geometria da última sessão (ou {} se desligado/ausente) — aplicada por Main.qml.
+    ctx_qml.setContextProperty("geometriaSalva", app_prefs.obter_geometria() or {})
     ctx_qml.setContextProperty("appVersion", versao)
     ctx_qml.setContextProperty("assetsDir", QUrl.fromLocalFile(str(ASSETS_DIR)).toString())
     ctx_qml.setContextProperty("sensoresDisponiveis", list(SENSOR_TYPES))
@@ -243,6 +268,16 @@ def executar_app(versao: str = "") -> int:
         return 1
 
     gui_logger.logger.info("Interface QML carregada com sucesso.")
+
+    # Rede de segurança do ponto acima: se por algum motivo o gráfico foi criado antes de
+    # `ctx.graph_settings` existir, ele ficaria com os defaults até alguém abrir a janela de
+    # configurações. Reaplicar aqui é barato e idempotente (nada está gravando ainda).
+    plot = getattr(ctx, "signal_plot", None)
+    if plot is not None and ctx.graph_settings:
+        try:
+            plot.apply_settings(dict(ctx.graph_settings))
+        except Exception as e:
+            gui_logger.logger.warning(f"Falha ao aplicar as preferências ao gráfico: {e}")
 
     # A janela já existe (só a splash é visível): agora sim roda o trabalho pesado, etapa a
     # etapa, com o progresso aparecendo na tela de carregamento.

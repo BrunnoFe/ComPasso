@@ -8,9 +8,16 @@ Dialog {
     id: dlg
     signal confirmado()
     signal recusado()
+    // Terceira via OPCIONAL, entre "recusar" e "confirmar": aparece só quando `textoAlternativo`
+    // é preenchido, então os diálogos de duas opções que já existiam continuam iguais.
+    signal alternativo()
     // rótulos dos botões (padrão Sim/Não; a calibração usa Sim/Reiniciar).
     property string textoSim: "Sim"
     property string textoNao: "Não"
+    property string textoAlternativo: ""
+    // dado que o chamador queira carregar até a resposta (ex.: o MAC a conectar), para não
+    // precisar de estado paralelo do lado de quem abriu o diálogo.
+    property var carga: undefined
     modal: true
     anchors.centerIn: parent
     padding: 0
@@ -94,6 +101,14 @@ Dialog {
                 text: dlg.textoNao
                 Layout.preferredWidth: 110
                 onClicked: { dlg.recusado(); dlg.close() }
+            }
+            GhostButton {
+                visible: dlg.textoAlternativo.length > 0
+                text: dlg.textoAlternativo
+                // largura maior: os rótulos da terceira via costumam ser uma ação por extenso
+                // ("Desabilitar teste"), não um "Sim"/"Não".
+                Layout.preferredWidth: 150
+                onClicked: { dlg.alternativo(); dlg.close() }
             }
             GhostButton {
                 text: dlg.textoSim

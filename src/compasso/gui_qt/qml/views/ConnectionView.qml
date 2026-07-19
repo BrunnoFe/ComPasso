@@ -63,9 +63,18 @@ Card {
         AppButton {
             visible: !ctx.connected
             enabled: !connController.conectando && view.macDigitado.length > 0
-            text: connController.conectando ? "Conectando…" : "Conectar"
-            dica: "Conectar ao Bitalino no endereço MAC informado"
-            Layout.preferredWidth: 140
+            // com o simulador no ar o botão fica VERMELHO e assumido como "(teste)": os dados
+            // que virão não são do participante, e isso precisa saltar aos olhos antes do
+            // clique, não só no diálogo depois dele.
+            text: connController.conectando ? "Conectando…"
+                  : ctx.simulacaoAtiva ? "Conectar (teste)" : "Conectar"
+            corFundo: ctx.simulacaoAtiva ? Theme.colors.danger : Theme.colors.accent
+            // o "ink" do acento não tem contraste sobre o vermelho; o fundo da janela tem.
+            corTexto: ctx.simulacaoAtiva ? Theme.colors.win_bg : Theme.colors.accent_ink
+            dica: ctx.simulacaoAtiva
+                  ? "Modo de teste ativo: conectará ao BITalino SIMULADO, não ao aparelho real"
+                  : "Conectar ao Bitalino no endereço MAC informado"
+            Layout.preferredWidth: ctx.simulacaoAtiva ? 170 : 140
             onClicked: view._conectar()
         }
 
@@ -156,7 +165,9 @@ Card {
     }
 
     function _conectar() {
+        // passa por `solicitar_conectar`: é ele que intercepta o modo de teste e pede
+        // confirmação antes de conectar ao simulador.
         if (view.macDigitado.length > 0 && !connController.conectando)
-            connController.conectar(view.macDigitado)
+            connController.solicitar_conectar(view.macDigitado)
     }
 }

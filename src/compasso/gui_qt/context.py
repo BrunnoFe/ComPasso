@@ -76,6 +76,7 @@ class Context(QObject):
     calibrarVisibleChanged = Signal()
     stepperChanged = Signal()
     sensorTypeChanged = Signal()
+    simulacaoAtivaChanged = Signal()
     configLoadedChanged = Signal()
     macAddrChanged = Signal()
     signalChannelChanged = Signal()
@@ -153,6 +154,8 @@ class Context(QObject):
         self._participant_editable = True
         self._cards_collapsed = False
         self._calibrar_visible = False
+        # BITalino simulado no ar: a UI de conexão avisa que os dados NÃO são reais.
+        self._simulacao_ativa = False
 
         # Camada de compatibilidade com o antigo AppContext (mantém o core intocado).
         self._instalar_camada_compatibilidade()
@@ -344,6 +347,8 @@ class Context(QObject):
     cardsCollapsed = Property(bool, _gb, _sb, notify=cardsCollapsedChanged)
     _gb, _sb = _mk_bool_prop("_calibrar_visible", "calibrarVisibleChanged")
     calibrarVisible = Property(bool, _gb, _sb, notify=calibrarVisibleChanged)
+    _gb, _sb = _mk_bool_prop("_simulacao_ativa", "simulacaoAtivaChanged")
+    simulacaoAtiva = Property(bool, _gb, _sb, notify=simulacaoAtivaChanged)
 
     def _get_connected(self):
         return self.bitalino is not None

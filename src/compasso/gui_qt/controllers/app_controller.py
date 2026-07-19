@@ -24,6 +24,13 @@ class AppController(QObject):
     pedirGraphSettings = Signal()
     pedirAppSettings = Signal()
 
+    @Slot(int, int, int, int)
+    def salvar_geometria(self, x: int, y: int, largura: int, altura: int) -> None:
+        """Guarda a geometria da janela ao fechar (preferência ``lembrar_geometria``)."""
+        from compasso.core import app_prefs
+
+        app_prefs.definir_geometria(x, y, largura, altura)
+
     @Slot()
     def abrir_pasta_logs(self) -> None:
         """Abre a pasta de logs no gerenciador de arquivos do SO."""

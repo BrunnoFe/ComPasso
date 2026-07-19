@@ -117,6 +117,9 @@ METRICS = {
     "padSm": 8,
     "padMd": 16,
     "padLg": 22,
+    # Durações de animação (ms). Chaves terminadas em "Ms" NÃO são multiplicadas pela escala
+    # da UI — ver Theme._escalar: tempo não é tamanho.
+    "animJanelaMs": 220,   # maximizar/restaurar da janela frameless
 }
 
 # ---------------------------------------------------------------------------

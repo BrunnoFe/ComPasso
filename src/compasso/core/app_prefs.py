@@ -81,6 +81,9 @@ _SCHEMA = {
     "nivel_log": ("INFO", str, None, None),
     "retencao_logs_dias": (30, int, 0, 365),         # 0 = nunca apagar
 
+    # --- Simulação (teste da interface sem hardware) ---
+    "simular_bitalino": (False, bool, None, None),
+
     # --- Avançado (afeta a coleta; a UI exige consentimento) ---
     "idade_minima": (0, int, 0, 120),
     "idade_maxima": (120, int, 0, 120),
@@ -241,6 +244,46 @@ def _migrar(salvas: dict) -> dict:
             f"prefs.json foi gravado por uma versão mais nova do ComPasso (schema {versao} > "
             f"{PREFS_SCHEMA_VERSION}); chaves desconhecidas serão ignoradas.")
     return salvas
+
+
+# ---------------------------------------------------------------------------
+# Geometria da janela — ESTADO, não preferência.
+# Fica fora do schema (em prefs["janela"]) de propósito: não é algo que o usuário escolhe na
+# janela de configurações, é o app lembrando onde a janela estava. Misturar as duas coisas
+# faria "Restaurar padrões" mexer na posição da janela, o que ninguém espera.
+# ---------------------------------------------------------------------------
+def obter_geometria() -> dict | None:
+    """Retorna ``{x, y, largura, altura}`` da última sessão, ou ``None`` se não houver.
+
+    Só devolve algo se a preferência ``lembrar_geometria`` estiver ligada e os valores forem
+    plausíveis — uma geometria salva com um monitor que não existe mais deixaria a janela
+    invisível fora da área da tela.
+    """
+    if not obter().get("lembrar_geometria", True):
+        return None
+    dados = _read_prefs().get("janela")
+    if not isinstance(dados, dict):
+        return None
+    try:
+        geo = {chave: int(dados[chave]) for chave in ("x", "y", "largura", "altura")}
+    except (KeyError, TypeError, ValueError):
+        return None
+    if geo["largura"] < 200 or geo["altura"] < 150:
+        return None
+    return geo
+
+
+def definir_geometria(x, y, largura, altura) -> None:
+    """Guarda a geometria da janela (silencioso: falhar aqui nunca deve atrapalhar o usuário)."""
+    if not obter().get("lembrar_geometria", True):
+        return
+    try:
+        prefs = _read_prefs()
+        prefs["janela"] = {"x": int(x), "y": int(y),
+                           "largura": int(largura), "altura": int(altura)}
+        _write_prefs(prefs)
+    except Exception as e:
+        config_logger.logger.warning(f"Não foi possível salvar a geometria da janela: {e}")
 
 
 def resumo_para_log() -> str:

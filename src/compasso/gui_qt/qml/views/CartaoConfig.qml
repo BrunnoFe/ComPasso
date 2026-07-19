@@ -48,6 +48,9 @@ Rectangle {
     FolderDialog {
         id: dlgSaida
         title: "Selecione o diretório para salvar os dados"
+        // abre já na pasta padrão de dados definida nas preferências do app (quando houver),
+        // poupando o usuário de navegar até ela a cada nova configuração.
+        currentFolder: filesController.pastaDadosPadraoUrl || currentFolder
         onAccepted: filesController.definir_saida(selectedFolder)
     }
 
@@ -331,8 +334,11 @@ Rectangle {
                 }
 
                 // ============================== ARQUIVOS & DADOS ==============================
-                // Linhas bem distribuídas (space-around): espaçadores iguais no topo, entre as
-                // linhas e na base — ocupam o card de forma harmônica.
+                // Linhas agrupadas e centradas na vertical: os espaçadores INTERNOS têm um teto
+                // (`maximumHeight`), então as três linhas ficam próximas entre si; os das pontas
+                // continuam sem teto e absorvem a sobra, mantendo o grupo centrado no card.
+                // Sem o teto, `fillHeight` esticava os quatro por igual e as linhas se afastavam
+                // conforme a coluna vizinha (Participante) crescia.
                 ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
@@ -352,14 +358,22 @@ Rectangle {
                         caminho: filesController.musicaTexto; ok: filesController.musicaOk
                         onEscolher: dlgMusicas.open()
                     }
-                    Item { Layout.fillHeight: true; Layout.minimumHeight: Theme.metrics.padMd }
+                    Item {
+                        Layout.fillHeight: true
+                        Layout.minimumHeight: Theme.metrics.padSm
+                        Layout.maximumHeight: Theme.metrics.padMd
+                    }
                     LinhaArquivo {
                         rotulo: "Condições (.xlsx)"; textoBotao: "Buscar"
                         dicaBotao: "Selecionar a planilha de condições/fatores"
                         caminho: filesController.condicoesTexto; ok: filesController.condicoesOk
                         onEscolher: dlgCondicoes.open()
                     }
-                    Item { Layout.fillHeight: true; Layout.minimumHeight: Theme.metrics.padMd }
+                    Item {
+                        Layout.fillHeight: true
+                        Layout.minimumHeight: Theme.metrics.padSm
+                        Layout.maximumHeight: Theme.metrics.padMd
+                    }
                     LinhaArquivo {
                         rotulo: "Salvar dados em"; textoBotao: "Escolher"
                         dicaBotao: "Selecionar a pasta onde os dados serão salvos"

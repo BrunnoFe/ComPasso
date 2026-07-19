@@ -348,7 +348,9 @@ def get_theme_pref():
 # atuais do gráfico; são usados na primeira execução e sempre que uma chave estiver
 # ausente ou inválida no prefs.json.
 DEFAULT_GRAPH_SETTINGS = {
-    "y_scale": 30,               # escala Y simétrica (µV): ±20/±30/±40/±50
+    # Fallback genérico apenas; na prática a escala vem do sensor ativo
+    # (SENSOR_GRAPH_PARAMS[...]["padrao"], hoje a mais ampla de cada um) — ver signal_chart.
+    "y_scale": 30,
     "smoothing_enabled": True,   # média móvel de exibição ligada?
     "smoothing_window": 5,       # janela da média móvel (colunas de exibição, 1–15)
     # a taxa de quadros do gráfico é fixa (30 fps, em gui_qt/signal_chart.py) e deixou de ser

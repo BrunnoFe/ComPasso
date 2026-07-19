@@ -32,15 +32,19 @@ Window {
     property bool maximizado: false
     property rect geomAnterior: Qt.rect(x, y, width, height)
 
-    // Transicao de maximizar/restaurar mais fluida: duracao maior e easing InOutQuart, que
-    // acelera e desacelera suavemente (sem o arranque abrupto do OutCubic anterior).
+    // Transicao de maximizar/restaurar. `OutQuint` reage no primeiro quadro e desacelera longo
+    // no fim — parece mais rapida que o `InOutQuart` anterior mesmo com duracao MENOR (220 ms
+    // contra 320), porque o InOut gastava o inicio acelerando, e e o inicio que o olho le como
+    // "resposta ao clique". Menos quadros tambem significa menos reflow do conteudo por
+    // transicao, o que suaviza o resultado numa janela real.
     ParallelAnimation {
         id: animGeom
         property real nx; property real ny; property real nw; property real nh
-        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: 320; easing.type: Easing.InOutQuart }
-        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: 320; easing.type: Easing.InOutQuart }
-        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: 320; easing.type: Easing.InOutQuart }
-        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: 320; easing.type: Easing.InOutQuart }
+        readonly property int dur: Theme.metrics.animJanelaMs
+        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: animGeom.dur; easing.type: Easing.OutQuint }
+        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: animGeom.dur; easing.type: Easing.OutQuint }
+        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: animGeom.dur; easing.type: Easing.OutQuint }
+        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: animGeom.dur; easing.type: Easing.OutQuint }
     }
     function _animarGeom(nx, ny, nw, nh) {
         animGeom.stop()
@@ -59,12 +63,24 @@ Window {
         }
     }
 
-    // Minimizar: sem animacao (vai direto para a barra de tarefas).
+    // Minimizar: `showMinimized()` e so isso. A animacao de encolher para a barra de tarefas e
+    // do proprio Windows (DWM) e ja acontece — NAO tente "melhorar" mexendo no estilo nativo da
+    // janela (WS_MINIMIZEBOX/WS_SYSMENU via SetWindowLong): ja foi tentado e o efeito foi o
+    // inverso, a animacao parou de acontecer. Animar a geometria em QML tambem nao serve: o
+    // Windows restaura a janela instantaneamente, entao a volta ficaria sem animacao.
     function minimizarSuave() { win.showMinimized() }
 
     // Preferência "abrir maximizado": aplicada sem animação (não faz sentido animar uma
     // expansão que o usuário nunca viu começar) — apenas assume o estado maximizado.
     Component.onCompleted: {
+        // geometria lembrada da última sessão (só quando a preferência está ligada e o app não
+        // vai abrir maximizado, caso em que ela seria imediatamente sobrescrita).
+        if (!prefsApp.abrir_maximizado && geometriaSalva.largura !== undefined) {
+            win.x = geometriaSalva.x
+            win.y = geometriaSalva.y
+            win.width = Math.max(win.minimumWidth, geometriaSalva.largura)
+            win.height = Math.max(win.minimumHeight, geometriaSalva.altura)
+        }
         if (prefsApp.abrir_maximizado) {
             geomAnterior = Qt.rect(win.x, win.y, win.width, win.height)
             maximizado = true
@@ -82,6 +98,35 @@ Window {
         function onPedirConfirmarDesconectar() {
             dialogoDesconectar.abrir("Desconectar Bitalino",
                                      "Tem certeza que deseja desconectar o Bitalino?")
+        }
+        function onPedirConfirmarConectarTeste(mac) {
+            dialogoConectarTeste.carga = mac
+            dialogoConectarTeste.abrir(
+                "Modo de teste ativo",
+                "Modo de testes com Bitalino simulado habilitado.\n\nOs dados coletados serão "
+                + "SIMULADOS, não vêm do participante. Deseja prosseguir?")
+        }
+    }
+
+    // Aviso ao conectar com o simulador ligado. Três saídas: prosseguir mesmo assim, desligar
+    // o teste e conectar de verdade, ou desistir.
+    ConfirmDialog {
+        id: dialogoConectarTeste
+        textoSim: "Sim"
+        textoNao: "Cancelar"
+        textoAlternativo: "Desabilitar teste"
+        onConfirmado: connController.conectar(carga)
+        onAlternativo: {
+            var macSimulado = appSettingsController.desativar_simulacao()
+            // se o MAC na tela era o do próprio simulador, ele acabou de sumir: conectar agora
+            // só produziria "não foi possível conectar" sem explicar o porquê.
+            if (carga.toUpperCase() === macSimulado.toUpperCase())
+                dialogoMensagem.abrir(
+                    "Modo de teste desligado",
+                    "O BITalino simulado foi encerrado.\n\nInforme o endereço MAC do aparelho "
+                    + "real e clique em Conectar.", "info")
+            else
+                connController.conectar(carga)
         }
     }
     Connections {
@@ -168,6 +213,30 @@ Window {
     ConfirmDialog {
         id: dialogoDesconectar
         onConfirmado: connController.desconectar()
+    }
+
+    // Fechar a janela com uma coleta em andamento perderia a faixa corrente: pede confirmação
+    // (comportamento desligável na preferência "confirmar_saida_em_experimento").
+    property bool _saidaConfirmada: false
+    ConfirmDialog {
+        id: dialogoSaida
+        onConfirmado: { win._saidaConfirmada = true; win.close() }
+    }
+    onClosing: function(evento) {
+        // guarda a geometria RESTAURADA: salvar a maximizada faria a janela reabrir ocupando a
+        // tela inteira mesmo com "abrir maximizado" desligado.
+        var g = win.maximizado ? win.geomAnterior
+                               : Qt.rect(win.x, win.y, win.width, win.height)
+        appController.salvar_geometria(g.x, g.y, g.width, g.height)
+
+        if (win._saidaConfirmada || !prefsApp.confirmar_saida_em_experimento)
+            return
+        if (ctx.buttonState === "rodando" || ctx.buttonState === "continuar") {
+            evento.accepted = false
+            dialogoSaida.abrir("Sair do ComPasso",
+                               "Há um experimento em andamento. Sair agora encerra a coleta e a "
+                               + "faixa atual não será concluída.\n\nDeseja sair mesmo assim?")
+        }
     }
 
     Rectangle {

@@ -33,6 +33,21 @@ class FilesController(QObject):
         self._scan_em_curso = False
         self._ctx.sonda_duracao.concluida.connect(self._on_duracoes_prontas)
 
+    def _get_pasta_dados_padrao_url(self) -> str:
+        """URL (file://) da pasta padrão de dados, ou "" se não houver preferência definida.
+
+        Usada como ponto de partida do diálogo "Salvar dados em" — é o que dá utilidade prática
+        à preferência ``pasta_dados_padrao``.
+        """
+        from compasso.core import app_prefs
+
+        caminho = app_prefs.obter().get("pasta_dados_padrao", "")
+        if caminho and os.path.isdir(caminho):
+            return QUrl.fromLocalFile(caminho).toString()
+        return ""
+
+    pastaDadosPadraoUrl = Property(str, _get_pasta_dados_padrao_url, notify=estadoChanged)
+
     # ------------------------------------------------------------ propriedades
     def _texto(self, caminho, hint):
         return caminho if caminho else hint

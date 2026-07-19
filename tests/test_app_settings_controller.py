@@ -133,6 +133,32 @@ def test_avancado_nasce_bloqueado_a_cada_abertura(controller):
     assert controller.avancadoLiberado is False
 
 
+def test_desativar_simulacao_desliga_e_persiste(controller, monkeypatch):
+    """O aviso do botão Conectar precisa desligar o teste DE VERDADE, não só na janela."""
+    from compasso.core import fake_bitalino
+
+    monkeypatch.setattr(fake_bitalino, "esta_ativo", lambda: True)
+    monkeypatch.setattr(fake_bitalino, "mac_ativo", lambda: "AA:BB:CC:DD:EE:FF")
+    parou = []
+    monkeypatch.setattr(fake_bitalino, "parar_simulador", lambda: parou.append(True))
+
+    controller.simularBitalino = True
+    mac = controller.desativar_simulacao()
+
+    assert mac == "AA:BB:CC:DD:EE:FF"    # quem chamou precisa saber qual MAC deixou de existir
+    assert controller.simularBitalino is False
+    assert app_prefs.obter()["simular_bitalino"] is False   # persistido, não só na tela
+    assert parou, "o simulador não foi encerrado"
+
+
+def test_desativar_simulacao_com_teste_desligado_nao_faz_nada(controller, monkeypatch):
+    from compasso.core import fake_bitalino
+
+    monkeypatch.setattr(fake_bitalino, "mac_ativo", lambda: None)
+    assert controller.desativar_simulacao() == ""
+    assert controller.simularBitalino is False
+
+
 def test_salvar_valor_invalido_corrige_e_avisa(controller):
     """Valor fora de faixa cai no padrão e a UI passa a refletir o que ficou salvo."""
     avisos = []

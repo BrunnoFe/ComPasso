@@ -35,12 +35,16 @@ instalação editável (`pip install -e .`), por isso ela é obrigatória antes 
 | `test_audio_volume.py` | `set/get_system_volume` (Windows/macOS/Linux mockados, clamp, fallbacks) |
 | `test_paths.py` | estrutura de pastas + `ensure_app_dirs` |
 | `test_button_state_logic.py` | `experiment_controller.validar_prerequisitos` via ctx falso (sem renderizar GUI) |
-| `test_graph.py` | `GraficoSinal` (QQuickPaintedItem): decimação por coluna, relógio de exibição, `reset_idle`, marcas/rótulos do eixo X sem sobreposição, grade discreta nos temas claros — sem renderizar de verdade (QGuiApplication headless) |
+| `test_graph.py` | `GraficoSinal` (QQuickPaintedItem): decimação por coluna, relógio de exibição, `reset_idle`, marcas/rótulos do eixo X sem sobreposição, grade discreta nos temas claros — sem renderizar de verdade (QGuiApplication headless). Também: **preferências salvas valem desde a criação do item** (regressão do "gráfico começa no padrão e muda ao abrir a janela"), escala alterável durante a gravação, clamp aos limites do sensor e zoom +/- publicando no mesmo valor que o slider lê |
 | `test_experiment_timing.py` | Agendamento da faixa por instantes absolutos: intervalo beep→áudio, alvo do áudio e **ausência de deriva ao longo de 20 faixas** (o bug de dessincronização cumulativa) |
 | `test_graph_settings.py` | Preview ao vivo + persistência do menu Gráfico; regressão do "salvar e fechar reverte o gráfico" |
 | `test_field_validation.py` | Regras de validação de campo (MAC, colunas iguais, quantidades, beep, faixa de volume) |
 | `test_updates.py` | Verificação de nova versão: comparação **numérica** de versões, leitura da resposta do GitHub e os três desfechos do controller (sem tocar a rede) |
 | `test_player_api.py` | Contrato de superfície do `Player` (mantém o backend *drop-in*) |
+| `test_app_prefs.py` | `core.app_prefs`: schema/padrões, validação (faixa, tipo, `bool` vs `int`, chave desconhecida, faixa etária invertida), persistência (round-trip, versão do schema, preserva `theme`/`last_config`), geometria da janela e rastreabilidade (`resumo_para_log`/`ambiente.json`) |
+| `test_app_settings_controller.py` | Janela "Configurações → App": parsing das listas digitadas (extensões/palavras de ruído), rótulo↔formato de timestamp, detecção de "requer reinício", ciclo abrir/cancelar/salvar, consentimento da aba Avançado e `desativar_simulacao` |
+| `test_fake_bitalino.py` | BITalino simulado: contrato de canais (sinal do sensor escolhido no canal escolhido, resto em ruído), dinâmica e fidelidade por sensor (SCRs, variabilidade do RR, rajadas, sacadas, fusos de alfa, onda gástrica), amplitude dentro da escala padrão do sensor, normalização de MAC/sensor/canal, provedor de configuração e **regressão da grade de tempo** (timestamps na grade exata com relógio irregular, taxa sem deriva, realinhamento após pausa longa) |
+| `test_connection_teste_simulado.py` | Guarda de conexão: com o simulador ativo o clique pede confirmação em vez de conectar; sem ele conecta direto; o MAC sobrevive até a resposta do diálogo |
 
 ## Fakes e fixtures (`conftest.py`)
 

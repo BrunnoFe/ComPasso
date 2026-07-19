@@ -15,7 +15,7 @@ from ..context import Context
 from compasso.core.audio import get_system_volume, set_system_volume
 from compasso.utils import format_time
 
-_PROGRESS_MS = 500        # polling de progresso/estado da faixa
+_PROGRESS_MS = 150        # polling de progresso/estado da faixa
 _VOLUME_DEBOUNCE_MS = 150  # atraso para aplicar o volume no sistema após o último passo do slider
 
 

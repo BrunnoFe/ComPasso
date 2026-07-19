@@ -83,6 +83,9 @@ class AppSettingsController(QObject):
     _g, _s = _mk("retencao_logs_dias", int)
     retencaoLogs = Property(int, _g, _s, notify=mudou)
 
+    _g, _s = _mk("simular_bitalino", bool)
+    simularBitalino = Property(bool, _g, _s, notify=mudou)
+
     _g, _s = _mk("idade_minima", int)
     idadeMinima = Property(int, _g, _s, notify=mudou)
     _g, _s = _mk("idade_maxima", int)
@@ -260,12 +263,90 @@ class AppSettingsController(QObject):
         """True se alguma preferência que só vale no arranque mudou nesta edição."""
         return any(self._v.get(c) != self._snapshot.get(c) for c in app_prefs.REQUEREM_REINICIO)
 
+    @Slot(result=str)
+    def desativar_simulacao(self) -> str:
+        """Desliga o modo de teste na hora e persiste — usado pelo aviso do botão Conectar.
+
+        Persiste de imediato (em vez de só marcar o campo da janela) porque o pedido não vem
+        da janela de preferências: o usuário está no meio de um fluxo de conexão e espera que
+        o modo fique desligado, não que ele volte no próximo arranque.
+
+        :return: o MAC que estava sendo simulado (``""`` se não havia simulação). Quem chamou
+            usa isso para decidir se ainda faz sentido conectar: se o MAC na tela era o do
+            simulador, ele acabou de deixar de existir e a conexão só daria um erro obscuro.
+        """
+        from compasso.core import fake_bitalino
+
+        mac_simulado = fake_bitalino.mac_ativo() or ""
+        if not self._v.get("simular_bitalino"):
+            return mac_simulado
+        self._v["simular_bitalino"] = False
+        self._snapshot["simular_bitalino"] = False
+        app_prefs.definir(self._v)
+        self._aplicar_simulador()
+        self.mudou.emit()
+        gui_logger.logger.info("Modo de teste desligado a partir do aviso de conexão.")
+        return mac_simulado
+
+    def _config_simulada(self) -> tuple:
+        """(sensor, canal) atuais do contexto — consultado pela thread do simulador.
+
+        Lido a cada amostra, então a stream acompanha o usuário trocando o sensor ou o canal na
+        interface, mesmo com a coleta já conectada.
+        """
+        return (getattr(self._ctx, "sensor_type", None),
+                getattr(self._ctx, "signal_channel", None))
+
+    def _aplicar_simulador(self) -> None:
+        """Liga/desliga o BITalino simulado conforme a preferência, sem reiniciar o app.
+
+        Ao ligar, pré-preenche o MAC simulado no campo de conexão: sem isso o usuário teria de
+        saber o endereço de cor para conseguir clicar em Conectar.
+        """
+        from compasso.core import fake_bitalino
+
+        ligado = bool(self._v.get("simular_bitalino"))
+        if ligado == fake_bitalino.esta_ativo():
+            self._ctx.simulacaoAtiva = ligado    # ressincroniza a UI mesmo sem transição
+            return   # já está no estado pedido; nada a fazer.
+
+        if ligado:
+            mac = fake_bitalino.iniciar(provedor_config=self._config_simulada)
+            if mac is None:
+                self.mensagem.emit("Erro", "Não foi possível iniciar o BITalino simulado.\n"
+                                           "Verifique o log para detalhes.", "warning")
+                return
+            self._ctx.mac_addr = mac
+            self._ctx.simulacaoAtiva = True
+            marcar = getattr(self._ctx, "marcar_conexao_info_mudou", None)
+            if marcar is not None:
+                marcar()
+            self.mensagem.emit(
+                "BITalino simulado ativo",
+                f"Uma stream de teste foi publicada no endereço {mac}, já preenchido no campo de "
+                "conexão.\n\nClique em Conectar para usá-la. O sinal simulado acompanha o sensor "
+                "e o canal escolhidos na tela de conexão, e muda junto se você trocar qualquer "
+                "um dos dois.", "info")
+        else:
+            # desligar com a GUI conectada derruba a stream, e o watchdog vai acusar perda de
+            # conexão em alguns segundos. Avisar aqui evita que isso pareça um defeito do app.
+            conectado = getattr(self._ctx, "bitalino", None) is not None
+            fake_bitalino.parar_simulador()
+            self._ctx.simulacaoAtiva = False
+            if conectado:
+                self.mensagem.emit(
+                    "BITalino simulado desligado",
+                    "A stream de teste foi encerrada. Como o app está conectado a ela, a conexão "
+                    "será reportada como perdida em instantes — é o comportamento esperado.",
+                    "info")
+
     def _aplicar_a_quente(self) -> None:
         """Aplica agora o que não depende de reinício.
 
         Timeouts de LSL/watchdog não aparecem aqui de propósito: são lidos de ``app_prefs`` a
         cada nova conexão e a cada novo watchdog, então já valem sem nada a fazer.
         """
+        self._aplicar_simulador()
         if self._v.get("controlar_volume_sistema"):
             try:
                 set_system_volume(int(self._v.get("volume_inicial", 50)))

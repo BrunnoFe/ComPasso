@@ -317,26 +317,53 @@ class GraficoSinal(QQuickPaintedItem):
         if abs(nova - self._escala_y) < 1e-9:
             return
         self._escala_y = nova
-        # persiste no ctx p/ o slider da janela de configurações e a próxima sessão.
+        # o zoom ao vivo e o slider da janela de configurações são o MESMO ajuste: escrever no
+        # ctx mantém o slider em dia, e gravar no disco faz a escolha sobreviver ao fechamento
+        # do app — antes só o slider persistia, então o zoom feito aqui evaporava no arranque
+        # seguinte e o usuário via os dois controles "discordando".
         settings = getattr(self._ctx, "graph_settings", None) if self._ctx is not None else None
         if isinstance(settings, dict):
             settings["y_scale"] = nova
+            self._persistir_escala(settings)
         self.escalaChanged.emit()
         self.update()
 
+    def _persistir_escala(self, settings: dict) -> None:
+        """Grava as preferências do gráfico em disco (falha aqui nunca pode travar o zoom)."""
+        try:
+            from compasso.core import config_manager
+
+            config_manager.set_graph_prefs(settings)
+        except Exception as e:
+            from . import gui_logger
+
+            gui_logger.logger.warning(f"Falha ao persistir a escala do gráfico: {e}")
+
     def apply_settings(self, settings: dict) -> None:
-        """Aplica configurações de exibição ao vivo (escala Y só fora de gravação)."""
+        """Aplica configurações de exibição ao vivo, inclusive durante a gravação.
+
+        A escala Y já foi bloqueada durante a sessão, o que deixou de fazer sentido quando os
+        botões +/- de zoom ao vivo entraram: os dois controles mexem no mesmo valor pelo mesmo
+        caminho, então proibir um e permitir o outro só criava a inconsistência de o slider
+        ignorar o que o usuário pedia no meio da coleta. Mudar a escala é seguro a qualquer
+        momento — a decimação guarda valores BRUTOS, e a escala só entra no mapeamento na hora
+        de pintar; nada do dado gravado depende dela.
+        """
         if not isinstance(settings, dict):
             return
         if "unidade" in settings:
             self._unidade = settings["unidade"]
         if "y_step" in settings:
             self._passo_y = settings["y_step"]
-        if "y_scale" in settings and not self._gravando:
+        if "y_scale" in settings:
             try:
-                self._escala_y = abs(float(settings["y_scale"])) or self._escala_y
+                nova = abs(float(settings["y_scale"]))
             except (TypeError, ValueError):
-                pass
+                nova = 0.0
+            if nova:
+                # clamp aos limites do sensor: um valor salvo por outro sensor (ou editado à
+                # mão no prefs.json) deixaria o traço fora da tela sem explicação.
+                self._escala_y = max(self._escala_min, min(self._escala_max, nova))
         if "smoothing_enabled" in settings:
             self._suavizacao_ativa = bool(settings["smoothing_enabled"])
         if "smoothing_window" in settings:

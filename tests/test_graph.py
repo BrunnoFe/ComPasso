@@ -41,6 +41,92 @@ def _alimentar(g, duracao, n, valor):
     g._drenar_pendentes()
 
 
+from PySide6.QtCore import QObject as _QObject
+
+
+class _CtxFalso(_QObject):
+    """Contexto mínimo com a superfície que o `GraficoSinal` lê ao receber o `contexto`.
+
+    Precisa ser um QObject de verdade: a propriedade `contexto` do item é declarada como
+    ``Property(QObject, ...)`` e recusa qualquer outra coisa.
+    """
+
+    def __init__(self, graph_settings=None, sensor_type="ECG"):
+        super().__init__()
+        self.graph_settings = graph_settings or {}
+        self.sensor_type = sensor_type
+        self.signal_channel = 1
+        self.signal_plot = None
+
+
+def test_configuracoes_salvas_valem_desde_a_criacao(_app):
+    """O gráfico precisa nascer com as preferências do usuário, sem abrir a janela de config.
+
+    Regressão: as preferências passaram a ser lidas DEPOIS do `engine.load()`, então o item
+    era criado com `ctx.graph_settings` vazio e mantinha os defaults; só a abertura de
+    "Configurações → Gráfico" (que reaplica tudo) corrigia a aparência — exatamente o que o
+    usuário via ao começar uma coleta.
+    """
+    g = _grafico(_app)
+    salvas = {"smoothing_enabled": True, "smoothing_window": 9, "line_width": 3.0,
+              "grid_visible": False, "axis_labels_visible": False, "y_scale": 2.0}
+    ctx = _CtxFalso(graph_settings=salvas)
+
+    g.contexto = ctx      # é o que o QML faz ao criar o item
+
+    assert g._suavizacao_ativa is True
+    assert g._janela_suavizacao == 9
+    assert g._largura_linha == 3.0
+    assert g._grade_visivel is False
+    assert g._rotulos_visiveis is False
+    assert g._escala_y == 2.0
+    assert ctx.signal_plot is g, "o gráfico deve se registrar como fachada no contexto"
+
+
+def test_escala_pode_mudar_durante_a_gravacao(_app):
+    """O slider da janela de configurações vale durante a sessão, como os botões +/-.
+
+    Bloquear um e permitir o outro era inconsistente: os dois mexem no mesmo valor pelo mesmo
+    caminho, e a escala é só exibição (a decimação guarda valores brutos).
+    """
+    g = _grafico(_app)
+    g.contexto = _CtxFalso(graph_settings={"y_scale": 2.0})
+    g.begin(30.0, 5.0)
+    assert g._gravando is True
+
+    g.apply_settings({"y_scale": 1.0})
+    assert g._escala_y == 1.0, "a escala foi ignorada durante a gravação"
+
+
+def test_escala_fora_da_faixa_do_sensor_e_limitada(_app):
+    """Um valor salvo por outro sensor não pode jogar o traço para fora da tela."""
+    g = _grafico(_app)
+    g.contexto = _CtxFalso(graph_settings={})
+    g.apply_settings({"y_scale": 999.0})
+    assert g._escala_y == g._escala_max
+
+
+def test_zoom_ao_vivo_e_slider_compartilham_o_mesmo_valor(_app):
+    """Os botões +/- precisam publicar no ctx o valor que a janela de configurações lê."""
+    g = _grafico(_app)
+    ctx = _CtxFalso(graph_settings={"y_scale": 2.0})
+    g.contexto = ctx
+    antes = g._escala_y
+
+    g.ampliar_zoom()
+
+    assert g._escala_y < antes
+    assert ctx.graph_settings["y_scale"] == g._escala_y
+
+
+def test_contexto_sem_configuracoes_mantem_os_defaults(_app):
+    """Sem preferências salvas (1ª execução), os defaults do sensor continuam valendo."""
+    g = _grafico(_app)
+    padrao_escala = g._escala_y
+    g.contexto = _CtxFalso(graph_settings={})
+    assert g._escala_y == padrao_escala
+
+
 def test_decimacao_limita_pontos(_app):
     """120k amostras devem virar no máximo ~_COLUNAS_DECIMACAO pontos (custo constante)."""
     from compasso.gui_qt.signal_chart import _COLUNAS_DECIMACAO

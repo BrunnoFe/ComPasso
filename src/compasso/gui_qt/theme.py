@@ -84,7 +84,9 @@ class Theme(QObject):
         ao contrário da paleta, que é reativa e troca a quente.
 
         Só valores numéricos são escalados: as chaves de fonte trazem também nomes de família
-        (strings), que precisam passar intactas.
+        (strings), que precisam passar intactas. Chaves terminadas em ``Ms`` são **durações de
+        animação** e também ficam de fora — escalar tempo junto com tamanho deixaria as
+        transições lentas a 150%, o que não é o que "interface maior" significa.
         """
         self._metrics = dict(palettes.METRICS)
         self._fonts = dict(palettes.FONTS)
@@ -94,6 +96,8 @@ class Theme(QObject):
         for origem, destino in ((palettes.METRICS, self._metrics), (palettes.FONTS, self._fonts)):
             for chave, valor in origem.items():
                 if isinstance(valor, bool) or not isinstance(valor, (int, float)):
+                    continue
+                if chave.endswith("Ms"):     # duração de animação: não é dimensão
                     continue
                 destino[chave] = max(1, int(round(valor * fator)))
         gui_logger.logger.info(f"Escala da interface aplicada: {escala}%")

@@ -191,6 +191,43 @@ def test_escrever_ambiente_grava_prefs_e_extras(tmp_path):
     assert dados["versao_schema_prefs"] == app_prefs.PREFS_SCHEMA_VERSION
 
 
+# --------------------------------------------------------------------------- #
+# Geometria da janela (estado, fora do schema)
+# --------------------------------------------------------------------------- #
+def test_geometria_roundtrip(prefs_isoladas):
+    app_prefs.definir_geometria(100, 50, 1200, 700)
+    assert app_prefs.obter_geometria() == {"x": 100, "y": 50, "largura": 1200, "altura": 700}
+
+
+def test_geometria_ausente_retorna_none(prefs_isoladas):
+    assert app_prefs.obter_geometria() is None
+
+
+def test_geometria_ignorada_quando_preferencia_desligada(prefs_isoladas):
+    app_prefs.definir_geometria(10, 10, 900, 600)
+    app_prefs.definir(dict(app_prefs.padroes(), lembrar_geometria=False))
+    assert app_prefs.obter_geometria() is None
+
+
+def test_geometria_absurda_e_descartada(prefs_isoladas):
+    """Uma janela de 10x10 (monitor que sumiu, valor corrompido) deixaria o app inutilizável."""
+    app_prefs.definir_geometria(0, 0, 10, 10)
+    assert app_prefs.obter_geometria() is None
+
+
+def test_geometria_corrompida_nao_levanta(prefs_isoladas):
+    prefs_isoladas.write_text(json.dumps({"janela": {"x": "abc"}}), encoding="utf-8")
+    app_prefs.recarregar()
+    assert app_prefs.obter_geometria() is None
+
+
+def test_geometria_nao_e_afetada_por_restaurar_padroes(prefs_isoladas):
+    """'Restaurar padrões' mexe em preferências, não em onde a janela estava."""
+    app_prefs.definir_geometria(300, 200, 1000, 800)
+    app_prefs.restaurar_padroes()
+    assert app_prefs.obter_geometria() == {"x": 300, "y": 200, "largura": 1000, "altura": 800}
+
+
 def test_escrever_ambiente_nao_levanta_em_destino_invalido(tmp_path):
     """Uma sessão não pode ser perdida porque o arquivo de metadados falhou."""
     assert app_prefs.escrever_ambiente(str(tmp_path / "pasta" / "inexistente")) is None

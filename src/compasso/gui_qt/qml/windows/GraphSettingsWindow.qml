@@ -68,7 +68,8 @@ AppWindow {
                                 from: graphSettingsController.yMin; to: graphSettingsController.yMax
                                 stepSize: graphSettingsController.yStep
                                 value: graphSettingsController.yScale
-                                enabled: !graphSettingsController.sessaoAtiva
+                                // habilitado TAMBÉM durante a sessão: é o mesmo ajuste dos
+                                // botões +/- de zoom ao vivo, que sempre funcionaram gravando.
                                 onMovido: graphSettingsController.yScale = valor
                             }
                             Text {
@@ -80,8 +81,11 @@ AppWindow {
                         }
                         Text {
                             visible: graphSettingsController.sessaoAtiva
-                            text: "A escala Y não pode ser alterada durante um experimento."
+                            text: "A escala pode ser ajustada durante o experimento — é só exibição, "
+                                  + "o dado gravado não muda."
                             color: Theme.colors.faint; font.family: Theme.fonts.display; font.pixelSize: Theme.fonts.s11
+                            wrapMode: Text.WordWrap
+                            Layout.fillWidth: true
                         }
                     }
                 }

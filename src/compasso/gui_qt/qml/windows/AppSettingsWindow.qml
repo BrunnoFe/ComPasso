@@ -187,6 +187,33 @@ AppWindow {
                         valorAtual: appSettingsController.splashMinimoMs
                         onMovido: appSettingsController.splashMinimoMs = Math.round(valor)
                     }
+
+                    // Modo de teste: destacado numa moldura própria para não ser confundido com
+                    // uma preferência de uso normal — quem liga isto não está coletando dados.
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.topMargin: Theme.metrics.padSm
+                        implicitHeight: linhaSim.implicitHeight + 2 * Theme.metrics.padMd
+                        radius: Theme.metrics.cornerSm
+                        color: Theme.colors.input_bg
+                        border.color: appSettingsController.simularBitalino
+                                      ? Theme.colors.accent : Theme.colors.border
+                        border.width: 1
+
+                        LinhaSwitch {
+                            id: linhaSim
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.margins: Theme.metrics.padMd
+                            rotulo: "Simular BITalino  (modo de teste)"
+                            descricao: "Publica uma stream de sinais simulados para testar a interface "
+                                       + "sem hardware nem OpenSignals. Os canais A1 a A6 simulam, nesta "
+                                       + "ordem: EDA, ECG, EMG, EOG, EEG e EGG. Liga e desliga na hora."
+                            marcado: appSettingsController.simularBitalino
+                            onAlternado: appSettingsController.simularBitalino = valor
+                        }
+                    }
                     Item { Layout.fillHeight: true }
                 }
             }

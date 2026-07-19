@@ -111,15 +111,18 @@ class FakeClock:
 
 
 @pytest.fixture(autouse=True)
-def prefs_padrao():
-    """Isola as preferências do app: todo teste roda com os padrões de fábrica.
+def prefs_padrao(tmp_path, monkeypatch):
+    """Isola as preferências: todo teste roda com os padrões e nunca toca o prefs.json real.
 
     Sem isto, ``app_prefs.obter()`` (chamado por recorder/experiment/musics/conexão) leria o
     ``prefs.json`` REAL da máquina — a suíte passaria ou falharia conforme os ajustes pessoais
-    de quem a roda. Preenche o cache em memória, então nada é lido nem escrito em disco.
+    de quem a roda. E há caminhos que **escrevem**: o zoom ao vivo do gráfico persiste a escala
+    via ``config_manager.set_graph_prefs``, o que sem esta proteção alteraria as preferências
+    de quem rodasse os testes.
     """
-    from compasso.core import app_prefs
+    from compasso.core import app_prefs, config_manager
 
+    monkeypatch.setattr(config_manager, "get_prefs_path", lambda: tmp_path / "prefs.json")
     app_prefs._cache = app_prefs.padroes()
     yield
     app_prefs.recarregar()

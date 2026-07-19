@@ -21,6 +21,8 @@ class ConnectionController(QObject):
     # (titulo, texto, tipo) — tipo em {"warning", "info"} para o diálogo do QML.
     mensagem = Signal(str, str, str)
     pedirConfirmarDesconectar = Signal()   # pede ao QML confirmar a desconexão manual
+    # (mac) — pede confirmação antes de conectar ao BITalino SIMULADO; ver `solicitar_conectar`.
+    pedirConfirmarConectarTeste = Signal(str)
 
     def __init__(self, ctx: Context):
         super().__init__()
@@ -66,6 +68,21 @@ class ConnectionController(QObject):
         gui_logger.logger.info(f"Tipo de sensor selecionado: {sensor}")
 
     # --------------------------------------------------------------- conexão
+    @Slot(str)
+    def solicitar_conectar(self, mac_addr: str) -> None:
+        """Pedido de conexão vindo do botão: avisa se o modo de teste estiver ligado.
+
+        Conectar com o simulador ativo produz dados que **não são do participante**. É um erro
+        fácil de cometer (o modo fica ligado de uma sessão de testes para a seguinte) e caro de
+        descobrir depois, com a coleta inteira já gravada — por isso a confirmação explícita.
+        """
+        from compasso.core import fake_bitalino
+
+        if fake_bitalino.esta_ativo():
+            self.pedirConfirmarConectarTeste.emit(mac_addr)
+            return
+        self.conectar(mac_addr)
+
     @Slot(str)
     def conectar(self, mac_addr: str) -> None:
         """Conecta ao BITalino fora da thread da GUI; trata o resultado na thread principal."""

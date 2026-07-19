@@ -30,15 +30,21 @@ RUIDO_KEYWORDS = ("ruido", "ruído", "Ruído", "Ruido", "noise", "barulho", "whi
 # padrão, mínimo, máximo e passo do slider/grade — todos na unidade do sensor.
 # "Só exibição": o dado gravado continua BRUTO; o sensor muda apenas o rótulo e a
 # janela de exibição do gráfico (não há conversão do sinal). Ver graph_frame.py.
+#
+# `padrao` == `maximo` de propósito: o padrão é a escala MAIS AMPLA de cada sensor, para que
+# nenhum sinal saia da tela sem que ninguém tenha pedido isso. Um padrão apertado corta picos
+# legítimos (um artefato de piscada no EOG, uma resposta grande de EDA) e o usuário vê um traço
+# ceifado sem saber por quê. Apertar a escala é fácil e reversível pelos botões +/- de zoom do
+# eixo Y, que funcionam ao vivo — já sair da tela por padrão, não.
 SENSOR_DEFAULT = "ECG"
 SENSOR_TYPES = ("EDA", "ECG", "EMG", "EOG", "EEG", "EGG")
 SENSOR_GRAPH_PARAMS = {
-    "EDA": {"unidade": "µS", "padrao": 4.0, "minimo": 2.0, "maximo": 20.0, "passo": 1.0},
-    "ECG": {"unidade": "mV", "padrao": 1.0, "minimo": 0.4, "maximo": 3.0, "passo": 0.2},
-    "EMG": {"unidade": "mV", "padrao": 1.0, "minimo": 0.4, "maximo": 3.0, "passo": 0.2},
-    "EOG": {"unidade": "mV", "padrao": 0.5, "minimo": 0.1, "maximo": 2.0, "passo": 0.1},
-    "EEG": {"unidade": "µV", "padrao": 30.0, "minimo": 10.0, "maximo": 50.0, "passo": 10.0},
-    "EGG": {"unidade": "mV", "padrao": 0.5, "minimo": 0.1, "maximo": 2.0, "passo": 0.1},
+    "EDA": {"unidade": "µS", "padrao": 20.0, "minimo": 2.0, "maximo": 20.0, "passo": 1.0},
+    "ECG": {"unidade": "mV", "padrao": 3.0, "minimo": 0.4, "maximo": 3.0, "passo": 0.2},
+    "EMG": {"unidade": "mV", "padrao": 3.0, "minimo": 0.4, "maximo": 3.0, "passo": 0.2},
+    "EOG": {"unidade": "mV", "padrao": 2.0, "minimo": 0.1, "maximo": 2.0, "passo": 0.1},
+    "EEG": {"unidade": "µV", "padrao": 50.0, "minimo": 10.0, "maximo": 50.0, "passo": 10.0},
+    "EGG": {"unidade": "mV", "padrao": 2.0, "minimo": 0.1, "maximo": 2.0, "passo": 0.1},
 }
 
 # ---------------------------------------------------------------------------
