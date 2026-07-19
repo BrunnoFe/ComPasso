@@ -1,7 +1,9 @@
-# 🗂️ Menus Experimento / Configurações / Tema / Ajuda
+# 🗂️ Menus Experimento / Configurações / Tema / Atualizações / Ajuda
 
-A barra de menus da janela principal tem quatro cascatas: **Experimento**, **Configurações**,
-**Tema** e **Ajuda**.
+A barra de menus da janela principal tem cinco cascatas — **Experimento**, **Configurações**,
+**Tema**, **Atualizações** e **Ajuda** — mais um atalho avulso na ponta direita da barra: um
+botão **sol/lua** que troca entre a última paleta clara e a última escura usadas, sem precisar
+abrir o menu Tema.
 
 ![Menu](docs\assets\images\menu.png)
 
@@ -107,11 +109,16 @@ ausente/vazio (`Campo ausente: ...` / `Campo vazio: ...`).
 
 ## ⚙️ Menu Configurações
 
-Por enquanto tem uma única opção: **Gráfico**, que abre a janela **Configurações do Gráfico** —
-ajusta os parâmetros de exibição do gráfico do sinal em tempo real (escala do eixo Y, média
-móvel, taxa de atualização, espessura da linha, grade e rótulos dos eixos). Detalhes completos
-na seção [📈 Gráfico do sinal em tempo real](running-an-experiment.md#-gráfico-do-sinal-em-tempo-real)
-de "Executando um experimento".
+Duas opções:
+
+- **App…** — abre a janela **Configurações do App**, com as preferências do operador/máquina
+  (arranque, aparência, conexão, diagnóstico, e o modo **Simular BITalino**). Detalhes completos
+  em [Configurações do App](app-settings.md).
+- **Gráfico…** — abre a janela **Configurações do Gráfico** — ajusta os parâmetros de exibição do
+  gráfico do sinal em tempo real (escala do eixo Y, média móvel, espessura da linha, grade e
+  rótulos dos eixos). Detalhes completos na seção
+  [📈 Gráfico do sinal em tempo real](running-an-experiment.md#-gráfico-do-sinal-em-tempo-real)
+  de "Executando um experimento".
 
 <!-- SCREENSHOT: janela "Configurações do Gráfico" com todos os controles visíveis -->
 
@@ -143,19 +150,28 @@ disponíveis — três escuras e duas claras:
 
 A escolha é lembrada entre execuções (persistida em `prefs.json`).
 
-> ⚠️ A troca de tema só é permitida com a aplicação **ociosa** — sem BITalino conectado e sem
-> experimento em andamento —, pois ela reconstrói toda a interface. Se você tentar trocar o tema
-> conectado ou durante uma sessão, uma mensagem pede para desconectar/finalizar antes.
+> A troca de tema é **instantânea**, a qualquer momento — inclusive com o BITalino conectado ou
+> um experimento em andamento: a interface inteira recolore ao vivo, sem reiniciar nem perder o
+> estado da sessão. Além do menu Tema, o botão **sol/lua** no canto direito da barra alterna
+> rapidamente entre a última paleta clara e a última escura usadas.
 
 <!-- SCREENSHOT: menu Tema aberto mostrando as 6 paletas (Teal/Iris/Amber/Sereno/Aurora/Floresta) -->
 
+## 🔔 Menu Atualizações
+
+Verifica, na inicialização (se habilitado em [Configurações → App](app-settings.md)) e sob
+demanda, se há uma versão mais nova publicada nas Releases do GitHub. Quando há, um ponto
+vermelho marca o título do menu e o item passa a "Baixar atualização!" — clicar abre a página de
+Releases no navegador. A verificação usa só a biblioteca padrão (`urllib`), sem telemetria.
+
 ## 🆘 Menu Ajuda
 
-Duas opções:
+Três opções:
 
 - **Abrir pasta de logs** — abre a pasta de logs da aplicação no gerenciador de arquivos do SO.
 - **Página do projeto (GitHub)** — abre o repositório do projeto no navegador padrão.
+- **Site do projeto** — abre a página pública do projeto no navegador padrão.
 
 ---
 
-Anterior: [« Conexão com o BITalino](bitalino-connection.md) · Próximo: [Arquivo de configuração »](configuration-file.md)
+Anterior: [« BITalino simulado](bitalino-simulado.md) · Próximo: [Configurações do App »](app-settings.md)

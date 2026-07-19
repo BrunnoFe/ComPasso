@@ -4,17 +4,30 @@
 
 - **Sistema operacional:** Windows 10/11 ou macOS. Linux funciona como melhor esforço (a
   interface roda; o controle de volume via `amixer` pode exigir configuração adicional).
-- **Python 3.12+**.
+- **Python 3.12+** — só se for rodar a partir do código-fonte; o executável pronto não precisa.
 - **OpenSignals (r)evolution** instalado, com o **Lab Streaming Layer (LSL) ativado**
-  (veja [Conexão com o BITalino](bitalino-connection.md)).
+  (veja [Conexão com o BITalino](bitalino-connection.md)) — dispensável se for só testar a
+  interface com o [BITalino simulado](bitalino-simulado.md).
 - **BITalino emparelhado** ao computador e transmitindo pelo OpenSignals com o LSL ativo.
 
-## Executável pronto (sem Python)
+## Executável pronto (recomendado para a maioria dos usuários)
 
-Também é possível baixar um build pronto (Windows `.exe` / macOS `.app` [Em breve]) na
-[página de Releases do repositório](https://github.com/BrunnoFe/Compasso/releases).
+Não é preciso instalar Python nem nada além do próprio ComPasso: baixe o build pronto (Windows
+`.exe` / macOS `.app`) na [página de Releases do repositório](https://github.com/BrunnoFe/Compasso/releases)
+e rode direto. Veja o passo a passo em [Primeiros passos do README](../README.md#-instalação).
 
-Para gerar o executável você mesmo, consulte o `BUILD.md` na raiz do projeto.
+Quer compilar o executável você mesmo (ou gerar a variante `onefile`)? Consulte o `BUILD.md` na
+raiz do projeto.
+
+## Rodando a partir do código-fonte (desenvolvimento)
+
+Gerenciado com **[uv](https://docs.astral.sh/uv/)** — `pyproject.toml` + `uv.lock` são a única
+fonte de verdade das dependências, sem `requirements.txt`.
+
+```bash
+uv sync            # cria .venv/, instala runtime + dev e o pacote `compasso` em modo editável
+uv run main.py      # ponto de entrada (raiz)
+```
 
 ### Dependências Python
 
@@ -31,23 +44,7 @@ principais:
 
 A verificação de atualizações usa apenas `urllib`, da biblioteca padrão — sem dependência extra.
 
-## Instalação
-
-```bash
-# 1. Crie e ative um ambiente virtual
-python -m venv .venv
-venv\Scripts\activate          # Windows
-# source venv/bin/activate     # macOS/Linux
-
-# 2. Instale as dependências
-pip install -r requirements.txt
-```
-
 ## Como executar
-
-```bash
-python main.py
-```
 
 Ao iniciar, o ComPasso exibe uma **tela de carregamento** por alguns segundos. Em
 seguida, a janela principal abre com um tamanho mínimo definido.
@@ -55,6 +52,9 @@ seguida, a janela principal abre com um tamanho mínimo definido.
 Na **primeira execução**, o programa cria automaticamente as pastas de dados e de logs (veja
 [Dados de saída](output-data.md)). Se houver uma configuração usada anteriormente, ela é
 **carregada automaticamente** (veja [Menus](experiment-menu.md)).
+
+> Não tem um BITalino à mão para testar a interface? Veja
+> [BITalino simulado](bitalino-simulado.md).
 
 ---
 

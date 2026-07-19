@@ -10,7 +10,9 @@ gravação.
 O programa toca uma sequência pseudoaleatória de faixas (músicas e ruído) e grava, para cada
 faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento alinhados no tempo.
 
-<!-- SCREENSHOT: janela principal do ComPasso com a barra de menu (Experimento / Tema / Ajuda), o indicador de progresso em etapas, o player e o gráfico do sinal em tempo real -->
+<!-- SCREENSHOT: janela principal do ComPasso com a barra de menu completa (Experimento /
+     Configurações / Tema / Atualizações / Ajuda + botão sol/lua), o indicador de progresso em
+     etapas, o player e o gráfico do sinal em tempo real -->
 
 ## 🔎 Para que serve
 
@@ -26,13 +28,16 @@ faixa, um par de arquivos (CSV + XLSX) com o sinal e os marcadores de evento ali
 
 1. [Primeiros passos](getting-started.md) — requisitos, instalação e como executar.
 2. [Conexão com o BITalino](bitalino-connection.md) — OpenSignals, LSL e o watchdog de conexão.
-3. [Menus Experimento / Configurações / Tema / Ajuda](experiment-menu.md) — criação e uso de
-   configurações, incluindo as opções do gráfico do sinal.
-4. [Arquivo de configuração `.config`](configuration-file.md) — o schema real dos campos.
-5. [Arquivos de entrada](input-files.md) — pasta de músicas e planilha de condições.
-6. [Executando um experimento](running-an-experiment.md) — passo a passo completo de uma sessão,
-   incluindo o gráfico do sinal em tempo real.
-7. [Dados de saída](output-data.md) — nomes de pastas/arquivos e colunas do CSV/XLSX.
-8. [Solução de problemas](troubleshooting.md) — erros comuns e como resolvê-los.
+3. [BITalino simulado](bitalino-simulado.md) — teste a interface inteira sem hardware.
+4. [Menus Experimento / Configurações / Tema / Atualizações / Ajuda](experiment-menu.md) — criação
+   e uso de configurações, incluindo as opções do gráfico do sinal.
+5. [Configurações do App](app-settings.md) — preferências do operador/máquina (6 abas) e
+   `ambiente.json`.
+6. [Arquivo de configuração `.config`](configuration-file.md) — o schema real dos campos.
+7. [Arquivos de entrada](input-files.md) — pasta de músicas e planilha de condições.
+8. [Executando um experimento](running-an-experiment.md) — passo a passo completo de uma sessão,
+   incluindo o gráfico do sinal em tempo real e a calibração de volume.
+9. [Dados de saída](output-data.md) — nomes de pastas/arquivos e colunas do CSV/XLSX.
+10. [Solução de problemas](troubleshooting.md) — erros comuns e como resolvê-los.
 
 ---

@@ -30,7 +30,7 @@ Para o fluxo de conexão completo, veja [Conexão com o BITalino](bitalino-conne
 | Sintoma | Causa provável / solução |
 | --- | --- |
 | **"Nome e gênero devem conter apenas letras e espaços"** | Há dígitos ou símbolos nos campos Nome/Gênero. Use apenas letras e espaços. |
-| **"Idade deve ser um número entre 18 e 100"** | A idade está fora do intervalo aceito (18 a 100) ou não é um número inteiro. |
+| **"Idade deve ser um número entre X e Y"** | A idade está fora da faixa aceita ou não é um número inteiro. A faixa padrão de fábrica é **0 a 120**, mas pode ser restringida em [Configurações → App → Avançado](app-settings.md#avançado). |
 
 ## Arquivos de entrada
 

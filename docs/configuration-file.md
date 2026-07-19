@@ -86,4 +86,4 @@ Separado dos `.config`, o ComPasso mantém um arquivo `prefs.json` na pasta de d
 
 ---
 
-Anterior: [« Menus](experiment-menu.md) · Próximo: [Arquivos de entrada »](input-files.md)
+Anterior: [« Configurações do App](app-settings.md) · Próximo: [Arquivos de entrada »](input-files.md)

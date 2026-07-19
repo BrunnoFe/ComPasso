@@ -35,7 +35,8 @@ Esta página descreve o fluxo completo de uma sessão de coleta, do preparo ao e
 Preencha **Nome**, **Idade** e **Gênero** e clique em **Salvar informações**. Validações reais:
 
 - **Nome** e **Gênero:** apenas letras e espaços.
-- **Idade:** número inteiro entre **18 e 100**.
+- **Idade:** número inteiro dentro da faixa etária aceita — **0 a 120** por padrão de fábrica,
+  ajustável em [Configurações → App → Avançado](app-settings.md#avançado).
 - Todos os campos são obrigatórios.
 
 Após salvar, o cartão passa a mostrar um resumo (avatar com a inicial do nome + "idade anos ·

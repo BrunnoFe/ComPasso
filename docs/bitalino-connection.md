@@ -97,4 +97,4 @@ antes de desconectar.
 
 ---
 
-Anterior: [« Primeiros passos](getting-started.md) · Próximo: [Menus »](experiment-menu.md)
+Anterior: [« Primeiros passos](getting-started.md) · Próximo: [BITalino simulado »](bitalino-simulado.md)
