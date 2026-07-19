@@ -20,6 +20,9 @@ src/compasso/utils/
   bootstrap.py               ← bootstrap(): cria pastas + handler WARNING+ no logger raiz
   sys_logs.py                ← SetLogger(namelogger, category)
   validation.py / formatting.py
+  version.py                  ← get_app_version(): lê a versão do app via importlib.metadata
+                                (pyproject.toml é a fonte única — ver "Versionamento e release"
+                                no CLAUDE.md); usado por main.py no lugar do antigo hardcode
   __init__.py                ← chama bootstrap() AUTOMATICAMENTE na importação; exporta tudo
 src/compasso/core/  (__init__ instancia os loggers e exporta a API — INTOCADO pela migração de GUI)
   constants.py                ← constantes de domínio: MARKER_* (eventos), CONDITION_*/RUIDO_KEYWORDS,
@@ -138,6 +141,8 @@ tests/                        ← suíte pytest (ver seção Testes em CLAUDE.md
 scripts/
   fake_bitalino.py             ← wrapper CLI fino sobre core/fake_bitalino.py (ver "Ferramenta de
                                 desenvolvimento" abaixo)
+  generate_version_info.py     ← gera version_info.txt a partir de pyproject.toml antes do build
+                                (ver BUILD.md e RELEASE.md, seção "Versionamento e release")
 ```
 
 ## Context — o hub (src/compasso/gui_qt/context.py)

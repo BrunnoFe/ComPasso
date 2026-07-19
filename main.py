@@ -1,11 +1,13 @@
 import sys
 
 from compasso.gui_qt import executar_app
-from compasso.utils import SetLogger
+from compasso.utils import SetLogger, get_app_version
 
 main_logger = SetLogger(category='main', namelogger='mainLogger')
 
-VERSION = "2026.4.0"
+# Lida de pyproject.toml (`[project].version`) em runtime — fonte única, ver
+# src/compasso/utils/version.py. Nunca hardcode a versão aqui de novo.
+VERSION = get_app_version()
 
 
 def main():

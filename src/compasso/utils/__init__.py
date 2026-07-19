@@ -11,6 +11,7 @@ bootstrap()
 from .sys_logs import SetLogger
 from .validation import validar_nome_genero, validar_idade, MIN_IDADE, MAX_IDADE
 from .formatting import format_time
+from .version import get_app_version, VERSAO_DESCONHECIDA
 
 __all__ = [
     'ENCODING_FORMAT',
@@ -38,5 +39,7 @@ __all__ = [
     'MIN_IDADE',
     'MAX_IDADE',
     'format_time',
-    'PROJECT_GITSITE'
+    'PROJECT_GITSITE',
+    'get_app_version',
+    'VERSAO_DESCONHECIDA',
 ]

@@ -21,6 +21,21 @@ uv sync
 `uv sync` cria `.venv/` e instala dependências de runtime + build/teste (grupo `dev`) a
 partir de `pyproject.toml`/`uv.lock`, num único comando.
 
+## Antes de buildar: sincronizar a versão
+
+A versão do app é centralizada em **`pyproject.toml`** (`[project].version`) — é a única linha
+editada à mão a cada release. Antes de gerar o build, regenere `version_info.txt` (recurso de
+versão do executável Windows) a partir dela:
+
+```bash
+uv run python scripts/generate_version_info.py
+```
+
+`main.py` já lê a versão em runtime via `get_app_version()` (`importlib.metadata`), sem hardcode —
+não precisa de passo manual para isso. O que o script acima resolve é só `version_info.txt`, que é
+um arquivo estático que o PyInstaller não consegue gerar dinamicamente. Esqueceu de rodar o
+script depois de mudar a versão? `pytest tests/test_versioning.py` falha para avisar.
+
 ## Gerar o build
 
 ### onedir (padrão, recomendado para release)
