@@ -42,6 +42,11 @@ _pyside_datas, _pyside_bins, _pyside_hidden = collect_all("PySide6")
 datas += _pyside_datas
 binaries += _pyside_bins
 
+# QtMultimedia (reprodução de áudio, ver core/player.py) carrega em runtime o plugin de backend
+# de mídia (ffmpeg no Qt 6.11, em plugins/multimedia/) + os codecs (avcodec/avformat/...). O
+# collect_all("PySide6") acima já os inclui (verificado); só declaramos o import oculto abaixo
+# porque a análise estática não vê o módulo sendo importado por core/player.py.
+
 # --- imports que a análise estática não detecta ------------------------------
 hiddenimports = [
     "pylsl",
@@ -49,9 +54,8 @@ hiddenimports = [
     "et_xmlfile",
     "comtypes",
     "pycaw",
+    "PySide6.QtMultimedia",
 ] + _pyside_hidden
-
-# pygame-ce traz o próprio hook do PyInstaller — não precisa entrar aqui.
 
 # NÃO excluir psutil (importado por pycaw.utils) — dependência de runtime real.
 #
@@ -59,7 +63,7 @@ hiddenimports = [
 # então a análise estática já não os empacota; os excludes abaixo são uma salvaguarda
 # explícita para garantir que nunca entrem no executável de release.
 excludes = [
-    "tkinter.test", "pygame.tests", "numpy.tests",
+    "tkinter.test", "numpy.tests",
     "tests", "pytest", "_pytest", "pytest_mock",
 ]
 

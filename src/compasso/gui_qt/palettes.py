@@ -85,10 +85,17 @@ PALETAS_CLARAS = {"Sereno", "Aurora"}
 # ---------------------------------------------------------------------------
 # Dimensões / layout (nomes camelCase p/ exposição direta ao QML)
 # ---------------------------------------------------------------------------
-WIN_MIN_WIDTH: int = 1300
-WIN_MIN_HEIGHT: int = 720
+# Tamanho preferido de abertura (a janela abre assim quando a tela comporta).
+WIN_PREF_WIDTH: int = 1300
+WIN_PREF_HEIGHT: int = 720
+# Tamanho minimo absoluto: permite abrir/redimensionar em telas pequenas sem quebrar o
+# layout (o conteudo principal e rolavel, entao encolher so ativa a barra de rolagem).
+WIN_MIN_WIDTH: int = 600
+WIN_MIN_HEIGHT: int = 400
 
 METRICS = {
+    "winPrefWidth": WIN_PREF_WIDTH,
+    "winPrefHeight": WIN_PREF_HEIGHT,
     "winMinWidth": WIN_MIN_WIDTH,
     "winMinHeight": WIN_MIN_HEIGHT,
     # Raios de canto

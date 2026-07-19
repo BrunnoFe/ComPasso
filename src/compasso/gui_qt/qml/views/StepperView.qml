@@ -7,13 +7,19 @@ import "../components"
 
 Card {
     id: view
+    // Em janelas estreitas as 6 etapas nao cabem numa linha: vira um Flow que quebra em varias
+    // linhas e esconde os conectores (que so fazem sentido numa fileira unica horizontal).
+    readonly property bool compacto: width > 0 && width < 1180
     implicitHeight: linha.implicitHeight + 2 * Theme.metrics.padMd
 
-    RowLayout {
+    Flow {
         id: linha
         anchors.left: parent.left
+        anchors.right: parent.right
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 0
+        // sem conectores (modo compacto) o espacamento entre etapas vem daqui; na fileira unica
+        // ele fica 0 e a separacao vem dos proprios conectores.
+        spacing: view.compacto ? Theme.metrics.padLg : 0
 
         Repeater {
             model: ctx.stepperSteps
@@ -62,9 +68,9 @@ Card {
                     }
                 }
 
-                // ---- conector (some depois da última etapa) ----
+                // ---- conector (some depois da última etapa e no modo compacto) ----
                 Rectangle {
-                    visible: index < ctx.stepperSteps.length - 1
+                    visible: !view.compacto && index < ctx.stepperSteps.length - 1
                     Layout.leftMargin: 18
                     Layout.rightMargin: 18
                     Layout.preferredWidth: 56

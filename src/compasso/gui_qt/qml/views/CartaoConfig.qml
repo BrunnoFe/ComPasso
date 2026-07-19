@@ -15,6 +15,12 @@ Rectangle {
     property bool recolhido: false
     signal alternar()
 
+    // Em janelas estreitas as duas colunas (participante | arquivos) não cabem lado a lado:
+    // empilham numa coluna só, cada seção com seu próprio título e um divisor horizontal entre
+    // elas. O cabeçalho de dois títulos some no modo compacto (os títulos vão para dentro das
+    // seções); o divisor vertical vira horizontal.
+    readonly property bool compacto: width > 0 && width < 760
+
     color: Theme.colors.bar_bg
     border.color: Theme.colors.border
     border.width: 1
@@ -147,8 +153,10 @@ Rectangle {
         width: parent.width - 2 * Theme.metrics.padMd
         spacing: Theme.metrics.padMd
 
-        // ---- cabeçalho: dois títulos flush à esquerda de cada seção ----
+        // ---- cabeçalho: dois títulos flush à esquerda de cada seção (só no modo largo;
+        // no compacto cada título vai para dentro da sua seção empilhada) ----
         RowLayout {
+            visible: !card.compacto
             width: parent.width
             spacing: Theme.metrics.padLg
 
@@ -185,20 +193,30 @@ Rectangle {
             height: card.recolhido ? 0 : corpo.implicitHeight
             Behavior on height { NumberAnimation { duration: 130; easing.type: Easing.OutQuad } }
 
-            RowLayout {
+            GridLayout {
                 id: corpo
                 width: parent.width
                 opacity: card.recolhido ? 0 : 1
                 Behavior on opacity { NumberAnimation { duration: 110 } }
-                spacing: Theme.metrics.padLg
+                columns: card.compacto ? 1 : 3
+                columnSpacing: Theme.metrics.padLg
+                rowSpacing: Theme.metrics.padMd
 
                 // ======================= PARTICIPANTE (form OU resumo) =======================
                 // A altura desta coluna é sempre a do formulário; o resumo é sobreposto e
                 // centralizado ao salvar, então a ocupação de espaço do card não muda.
-                Item {
+                ColumnLayout {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     Layout.horizontalStretchFactor: card._pesoPart
+                    spacing: Theme.metrics.padSm
+
+                    // título só no modo compacto (no largo ele vem do cabeçalho).
+                    TituloCard { text: "Participante"; visible: card.compacto; Layout.fillWidth: true }
+
+                    Item {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
                     implicitHeight: formulario.implicitHeight
 
                     // ---------- formulário ----------
@@ -284,12 +302,15 @@ Rectangle {
                             onClicked: partController.editar()
                         }
                     }
+                    }
                 }
 
-                // ============================ DIVISOR discreto ============================
+                // ==================== DIVISOR discreto (vertical no largo, horizontal no compacto) ====================
                 Rectangle {
-                    Layout.preferredWidth: 1
-                    Layout.fillHeight: true
+                    Layout.fillWidth: card.compacto
+                    Layout.fillHeight: !card.compacto
+                    Layout.preferredWidth: card.compacto ? 0 : 1
+                    Layout.preferredHeight: card.compacto ? 1 : 0
                     Layout.topMargin: 2
                     Layout.bottomMargin: 2
                     color: Theme.colors.border
@@ -303,6 +324,12 @@ Rectangle {
                     Layout.fillHeight: true
                     Layout.horizontalStretchFactor: card._pesoArq
                     spacing: 0
+
+                    // título só no modo compacto (no largo ele vem do cabeçalho).
+                    TituloCard {
+                        text: "Arquivos & Dados"; visible: card.compacto
+                        Layout.fillWidth: true; Layout.bottomMargin: Theme.metrics.padSm
+                    }
 
                     Item { Layout.fillHeight: true; Layout.minimumHeight: 0 }
                     LinhaArquivo {

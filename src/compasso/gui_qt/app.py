@@ -75,6 +75,10 @@ def executar_app(versao: str = "") -> int:
     # Estado + tema, expostos ao QML como propriedades de contexto globais.
     ctx = Context()
     ctx.beep_caminho = str(ASSETS_DIR / BEEP_FILENAME)
+    # pré-carrega o QSoundEffect do beep aqui (arranque do app) para pagar o custo de
+    # inicialização do backend de áudio (~250ms na 1ª carga de um caminho, medido) fora da
+    # contagem regressiva do experimento — ver Player.preload_beep.
+    ctx.player.preload_beep(ctx.beep_caminho)
     try:
         ctx.graph_settings = config_manager.get_graph_prefs()
     except Exception as e:

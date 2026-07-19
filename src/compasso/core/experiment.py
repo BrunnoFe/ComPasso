@@ -363,9 +363,13 @@ class ExperimentRunner:
         ts_end = local_clock()
         self._ts_fim_faixa = ts_end
         recorder.add_marker(MARKER_MUSIC_END, ts_end, music_file=self.music_name, fator=self.music_fator)
-        # congela o traço completo no gráfico e bloqueia pushes tardios.
+        # congela o traço completo no gráfico e bloqueia pushes tardios. A duração real da
+        # faixa (do play() ao fim da reprodução, mesmo relógio das amostras) reajusta o eixo X
+        # para terminar exatamente onde a música terminou — a estimativa `get_length()` usada
+        # para fixar o eixo antes da reprodução pode divergir da reprodução real e deixaria um
+        # espaço vazio no fim do gráfico.
         self._plot_active = False
-        self._plot_end()
+        self._plot_end(ts_end - ts_start)
         recorder.stop()
         recorder.finalize()
         self._recorder = None
@@ -398,7 +402,7 @@ class ExperimentRunner:
 
     def _wait_track_end(self) -> None:
         """Aguarda enquanto o mixer estiver tocando, abortando se houver stop."""
-        # pequena folga para o pygame reportar busy=True após o play()
+        # pequena folga para o player reportar is_busy()=True após o play()
         time.sleep(0.3)
         while self.ctx.player.is_busy():
             if self._stop_event.is_set():
@@ -424,10 +428,10 @@ class ExperimentRunner:
         if p is not None:
             self.ctx.run_after(lambda: p.begin(duration, lead))
 
-    def _plot_end(self) -> None:
+    def _plot_end(self, duracao_real=None) -> None:
         p = getattr(self.ctx, "signal_plot", None)
         if p is not None:
-            self.ctx.run_after(p.end)
+            self.ctx.run_after(lambda: p.end(duracao_real))
 
     def _plot_reset(self) -> None:
         p = getattr(self.ctx, "signal_plot", None)

@@ -60,8 +60,8 @@ BEEP_LEAD_DEFAULT = 1
 # Calibracao de volume (opcional): se habilitada, um arquivo de audio dedicado e usado para
 # calibrar o volume com o participante antes da sessao (ver compasso.gui.calibration_window).
 # Desabilitada por padrao; so o flag e o caminho do audio sao persistidos no `.config` (os
-# parametros da rampa sao ajustados na janela de calibracao a cada uso). Extensoes aceitas
-# pelo pygame.mixer.
+# parametros da rampa sao ajustados na janela de calibracao a cada uso). Extensoes de audio
+# aceitas.
 CALIBRATION_ENABLED_DEFAULT = False
 CALIBRATION_AUDIO_EXTS = (".wav", ".ogg", ".mp3")
 

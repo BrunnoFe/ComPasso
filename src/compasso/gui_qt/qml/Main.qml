@@ -13,8 +13,13 @@ import "windows"
 Window {
     id: win
     visible: true
-    width: Theme.metrics.winMinWidth
-    height: Theme.metrics.winMinHeight
+    // Abre no tamanho preferido (1300x720); se a tela do usuario for menor, encolhe para caber
+    // (limitado ao minimo absoluto 600x400). O layout continua intacto porque o conteudo
+    // principal e rolavel — reduzir a janela so ativa a barra de rolagem, nao desconfigura nada.
+    width: Math.max(Theme.metrics.winMinWidth,
+                    Math.min(Theme.metrics.winPrefWidth, Screen.desktopAvailableWidth))
+    height: Math.max(Theme.metrics.winMinHeight,
+                     Math.min(Theme.metrics.winPrefHeight, Screen.desktopAvailableHeight))
     minimumWidth: Theme.metrics.winMinWidth
     minimumHeight: Theme.metrics.winMinHeight
     title: "ComPasso" + (appVersion ? " " + appVersion : "")
@@ -27,13 +32,15 @@ Window {
     property bool maximizado: false
     property rect geomAnterior: Qt.rect(x, y, width, height)
 
+    // Transicao de maximizar/restaurar mais fluida: duracao maior e easing InOutQuart, que
+    // acelera e desacelera suavemente (sem o arranque abrupto do OutCubic anterior).
     ParallelAnimation {
         id: animGeom
         property real nx; property real ny; property real nw; property real nh
-        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: 190; easing.type: Easing.OutCubic }
+        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: 320; easing.type: Easing.InOutQuart }
     }
     function _animarGeom(nx, ny, nw, nh) {
         animGeom.stop()
@@ -52,31 +59,8 @@ Window {
         }
     }
 
-    // Minimizar: encolhe/esmaece o conteúdo e então minimiza; ao restaurar, reaparece suave.
-    SequentialAnimation {
-        id: animMinimizar
-        ParallelAnimation {
-            NumberAnimation { target: quadro; property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InQuad }
-            NumberAnimation { target: quadro; property: "scale"; to: 0.90; duration: 150; easing.type: Easing.InQuad }
-        }
-        ScriptAction { script: win.showMinimized() }
-    }
-    SequentialAnimation {
-        id: animRestaurar
-        PropertyAction { target: quadro; property: "scale"; value: 0.94 }
-        ParallelAnimation {
-            NumberAnimation { target: quadro; property: "opacity"; to: 1.0; duration: 190; easing.type: Easing.OutQuad }
-            NumberAnimation { target: quadro; property: "scale"; to: 1.0; duration: 190; easing.type: Easing.OutCubic }
-        }
-    }
-    function minimizarSuave() { animMinimizar.restart() }
-    onVisibilityChanged: {
-        // ao voltar da bandeja (restaurado), reanima o conteúdo se ele estava encolhido.
-        // (usa win.visibility em vez do parâmetro injetado — injeção é depreciada no QML.)
-        if (win.visibility !== Window.Minimized && win.visibility !== Window.Hidden
-                && quadro.opacity < 1)
-            animRestaurar.restart()
-    }
+    // Minimizar: sem animacao (vai direto para a barra de tarefas).
+    function minimizarSuave() { win.showMinimized() }
 
     // Diálogo de mensagem (erros/avisos), acionado por qualquer controller.
     MessageDialog { id: dialogoMensagem }

@@ -1,93 +1,74 @@
 // Barra de conexão: logo, MAC, canal, sensor e o estado de conexão do BITalino.
 // Equivale ao antigo ConnectionFrame (top_frame.py). Dois estados mutuamente exclusivos:
 // desconectado (botão "Conectar") e conectado (pill "● Conectado" + equalizador + "Desconectar").
+//
+// Layout responsivo: em janelas largas, tudo numa linha (logo · MAC · canal · sensor ····
+// [Conectar] à direita). Em janelas estreitas (`compacto`), os campos quebram num Flow e o
+// estado de conexão desce para baixo — nada fica cortado. As duas montagens compartilham o
+// mesmo estado (view.macDigitado + ctx/controllers), então não há duplicação de dados.
 import QtQuick
 import QtQuick.Layouts
 import "../components"
 
 Card {
     id: view
-    implicitHeight: linha.implicitHeight + 2 * Theme.metrics.padMd
+    readonly property bool compacto: width > 0 && width < 860
+    // MAC digitado (ou vindo de um .config via ctx.macAddr); ligado às duas montagens.
+    property string macDigitado: ctx.macAddr
+    implicitHeight: (compacto ? compactoCol.implicitHeight : linhaWide.implicitHeight)
+                    + 2 * Theme.metrics.padMd
 
-    RowLayout {
-        id: linha
-        anchors.fill: parent
-        spacing: Theme.metrics.padLg
-
-        // ----- logo (desenhada em QML, compacta e à esquerda) -----
-        LogoMark {
-            Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: Theme.metrics.padSm
+    // -------------------------------------------------------- componentes reutilizáveis
+    component GrupoMac: ColumnLayout {
+        spacing: 5
+        Caption { texto: "Endereço MAC" }
+        AppTextField {
+            mono: true
+            enabled: !ctx.connected
+            placeholderText: "XX:XX:XX:XX:XX:XX"
+            Layout.preferredWidth: 210
+            text: view.macDigitado
+            onTextEdited: view.macDigitado = text
+            onAccepted: view._conectar()
         }
-
-        // divisor
-        Rectangle {
-            Layout.preferredWidth: 2
-            Layout.preferredHeight: 46
-            Layout.leftMargin: Theme.metrics.padSm
-            radius: 1
-            color: Theme.colors.border
+    }
+    component GrupoCanal: ColumnLayout {
+        spacing: 5
+        Caption { texto: "Canal" }
+        AppComboBox {
+            enabled: !ctx.connected
+            Layout.preferredWidth: 82
+            model: ["A1", "A2", "A3", "A4", "A5", "A6"]
+            // reflete o canal de um .config carregado (A1 => índice 0).
+            currentIndex: Math.max(0, ctx.signalChannel - 1)
+            onActivated: connController.definir_canal(currentText)
         }
-
-        // ----- MAC -----
-        ColumnLayout {
-            spacing: 5
-            Caption { texto: "Endereço MAC" }
-            AppTextField {
-                id: campoMac
-                mono: true
-                enabled: !ctx.connected
-                placeholderText: "XX:XX:XX:XX:XX:XX"
-                Layout.preferredWidth: 210
-                // reflete o MAC vindo de um .config carregado (apply_config).
-                text: ctx.macAddr
-                onAccepted: view._conectar()
-            }
+    }
+    component GrupoSensor: ColumnLayout {
+        spacing: 5
+        Caption { texto: "Sensor" }
+        AppComboBox {
+            enabled: !ctx.connected
+            Layout.preferredWidth: 92
+            model: sensoresDisponiveis
+            // reflete o sensor de um .config carregado.
+            currentIndex: Math.max(0, sensoresDisponiveis.indexOf(ctx.sensorType))
+            onActivated: connController.definir_sensor(currentText)
         }
+    }
+    // Estado de conexão (Conectar OU pill "Conectado" + equalizador + Desconectar).
+    component EstadoConexao: RowLayout {
+        spacing: Theme.metrics.padSm
 
-        // ----- Canal -----
-        ColumnLayout {
-            spacing: 5
-            Caption { texto: "Canal" }
-            AppComboBox {
-                id: comboCanal
-                enabled: !ctx.connected
-                Layout.preferredWidth: 82
-                model: ["A1", "A2", "A3", "A4", "A5", "A6"]
-                // reflete o canal de um .config carregado (A1 => índice 0).
-                currentIndex: Math.max(0, ctx.signalChannel - 1)
-                onActivated: connController.definir_canal(currentText)
-            }
-        }
-
-        // ----- Sensor -----
-        ColumnLayout {
-            spacing: 5
-            Caption { texto: "Sensor" }
-            AppComboBox {
-                id: comboSensor
-                enabled: !ctx.connected
-                Layout.preferredWidth: 92
-                model: sensoresDisponiveis
-                // reflete o sensor de um .config carregado.
-                currentIndex: Math.max(0, sensoresDisponiveis.indexOf(ctx.sensorType))
-                onActivated: connController.definir_sensor(currentText)
-            }
-        }
-
-        Item { Layout.fillWidth: true }   // espaçador
-
-        // ----- estado desconectado: botão Conectar -----
         AppButton {
             visible: !ctx.connected
-            enabled: !connController.conectando && campoMac.text.length > 0
+            enabled: !connController.conectando && view.macDigitado.length > 0
             text: connController.conectando ? "Conectando…" : "Conectar"
             dica: "Conectar ao Bitalino no endereço MAC informado"
             Layout.preferredWidth: 140
             onClicked: view._conectar()
         }
 
-        // ----- estado conectado: pill + equalizador + Desconectar -----
         RowLayout {
             visible: ctx.connected
             spacing: Theme.metrics.padSm
@@ -129,8 +110,53 @@ Card {
         }
     }
 
+    // ------------------------------------------------------------ montagem larga (1 linha)
+    RowLayout {
+        id: linhaWide
+        visible: !view.compacto
+        anchors.fill: parent
+        spacing: Theme.metrics.padLg
+
+        LogoMark {
+            Layout.alignment: Qt.AlignVCenter
+            Layout.leftMargin: Theme.metrics.padSm
+        }
+        Rectangle {
+            Layout.preferredWidth: 2
+            Layout.preferredHeight: 46
+            Layout.leftMargin: Theme.metrics.padSm
+            radius: 1
+            color: Theme.colors.border
+        }
+        GrupoMac {}
+        GrupoCanal {}
+        GrupoSensor {}
+        Item { Layout.fillWidth: true }   // espaçador empurra o estado para a direita
+        EstadoConexao {}
+    }
+
+    // ------------------------------------------------- montagem compacta (campos + estado abaixo)
+    ColumnLayout {
+        id: compactoCol
+        visible: view.compacto
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Theme.metrics.padMd
+
+        Flow {
+            Layout.fillWidth: true
+            spacing: Theme.metrics.padLg
+            LogoMark {}
+            GrupoMac {}
+            GrupoCanal {}
+            GrupoSensor {}
+        }
+        EstadoConexao { Layout.fillWidth: true }
+    }
+
     function _conectar() {
-        if (campoMac.text.length > 0 && !connController.conectando)
-            connController.conectar(campoMac.text)
+        if (view.macDigitado.length > 0 && !connController.conectando)
+            connController.conectar(view.macDigitado)
     }
 }

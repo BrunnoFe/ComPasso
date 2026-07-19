@@ -36,6 +36,25 @@ _ESCALA_Y_PADRAO = 30.0
 # Passos "bonitos" (s) para as marcas do eixo X; escolhe-se o menor que caiba sem aglomerar.
 _PASSOS_MARCA_X = (1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600)
 _ALVO_MARCAS_X = 8
+# A última marca do eixo X é sempre o tempo total exato da faixa; uma marca regular a menos de
+# tantos segundos do fim é omitida para não sobrepor esse rótulo final (ex.: 0:25 e faixa 0:26).
+_MARGEM_MARCA_FINAL_S = 2.0
+
+
+def _marcas_eixo_x(x_min, x_max, passo):
+    """Tempos (s) das marcas do eixo X, em ordem; a última é sempre ``x_max`` (fim da faixa).
+
+    Marcas regulares a cada ``passo`` a partir de 0 (cobrindo ``x_min``), omitindo a que ficaria
+    a menos de ``_MARGEM_MARCA_FINAL_S`` do fim para não colidir com a marca final — que é o
+    tempo total exato do áudio. Ex.: faixa de 26 s → [..., 20, 26]; de 27 s → [..., 25, 27].
+    """
+    marcas = []
+    t = math.ceil(x_min / passo) * passo
+    while t < x_max - _MARGEM_MARCA_FINAL_S + 1e-6:
+        marcas.append(t)
+        t += passo
+    marcas.append(x_max)
+    return marcas
 
 # Margens (px) da área de plotagem dentro do item.
 _MARGEM_ESQ, _MARGEM_DIR, _MARGEM_SUP, _MARGEM_INF = 52, 12, 10, 26
@@ -216,8 +235,27 @@ class GraficoSinal(QQuickPaintedItem):
         self.canalChanged.emit()
         self.update()
 
-    def end(self) -> None:
-        """Encerra a faixa: o relógio salta para o fim, revelando o registro completo."""
+    def end(self, duracao_real=None) -> None:
+        """Encerra a faixa: o relógio salta para o fim, revelando o registro completo.
+
+        Se ``duracao_real`` (duração real da faixa em segundos, medida pela reprodução) for
+        informada, o eixo X é reajustado para terminar exatamente onde a música terminou.
+        O eixo é fixado antes da reprodução com uma estimativa (``player.get_length()``) que
+        pode divergir da reprodução real; sem este ajuste a linha do sinal termina antes do
+        fim do eixo (espaço vazio) ou é comprimida contra a borda direita. Como a decimação
+        mapeia tempo→coluna por fração da duração, mudar a duração exige reprocessar as
+        amostras cruas com a nova referência.
+        """
+        self._drenar_pendentes()
+        if duracao_real is not None:
+            try:
+                nova_dur = self._antecedencia + float(duracao_real)
+            except (TypeError, ValueError):
+                nova_dur = 0.0
+            if nova_dur > 0 and abs(nova_dur - self._duracao) > 1e-6:
+                self._duracao = nova_dur
+                self._reiniciar_decimacao()
+        self._decimar_novas()
         self._gravando = False
         self._finalizado = True
 
@@ -409,8 +447,8 @@ class GraficoSinal(QQuickPaintedItem):
         return [((c / (_COLUNAS_DECIMACAO - 1)) * dur - self._antecedencia, valores[i])
                 for i, c in enumerate(cols)]
 
-    def _quadro(self) -> None:
-        """Um quadro: drena a fila, decima, avança o relógio, atualiza leitura e repinta."""
+    def _drenar_pendentes(self) -> None:
+        """Move as amostras enfileiradas (thread de aquisição) para os vetores de exibição."""
         with self._trava:
             novas = list(self._pendentes) if self._pendentes else None
             if novas:
@@ -422,6 +460,9 @@ class GraficoSinal(QQuickPaintedItem):
                 if t >= self._antecedencia:
                     self._acumular_estatistica(v)
 
+    def _quadro(self) -> None:
+        """Um quadro: drena a fila, decima, avança o relógio, atualiza leitura e repinta."""
+        self._drenar_pendentes()
         self._decimar_novas()
         self._avancar_relogio()
         self._atualizar_leitura()
@@ -547,36 +588,25 @@ class GraficoSinal(QQuickPaintedItem):
         cor_zero = self._cor("muted", "#8B949E")   # linha de t0 mantém-se forte
         passo = _escolher_passo_marca_x(self._duracao)
 
-        # x_max é o fim da faixa (= comprimento da música). Quando ele não cai num múltiplo do
-        # passo, o último rótulo regular fica antes do fim; mostramos então um rótulo extra com o
-        # comprimento real da faixa. Rótulos regulares perto demais do fim são suprimidos p/ não
-        # sobrepor esse rótulo final.
-        xpx_fim = px(x_max)
-        resto = (x_max - x_min) % passo
-        precisa_fim = self._rotulos_visiveis and not (resto < 1e-6 or abs(resto - passo) < 1e-6)
-        _GAP_MIN_PX = 40
-
-        inicio = math.ceil(x_min / passo) * passo
-        t = inicio
-        while t <= x_max + 1e-6:
-            x = px(t)
+        # Marcas de -5 s até o fim: regulares a cada `passo` (t0 destacado) e a final sempre no
+        # tempo total exato da faixa (x_max). A grade da marca final é omitida (coincide com a
+        # borda direita/ponteiro); seu rótulo é ancorado à direita p/ não vazar da área.
+        marcas = _marcas_eixo_x(x_min, x_max, passo)
+        for i, t in enumerate(marcas):
+            eh_final = (i == len(marcas) - 1)
             destaque = abs(t) < 1e-6   # início da música (0:00) destacado
-            if self._grade_visivel:
+            x = px(t)
+            if self._grade_visivel and not eh_final:
                 painter.setPen(QPen(cor_zero if destaque else cor_grade, 1))
                 painter.drawLine(QPointF(x, y0), QPointF(x, y1))
             if self._rotulos_visiveis:
-                perto_do_fim = precisa_fim and (xpx_fim - x) < _GAP_MIN_PX and abs(t - x_max) > 1e-6
-                if not perto_do_fim:
-                    painter.setPen(QPen(cor_zero if destaque else cor_texto))
+                painter.setPen(QPen(cor_zero if destaque else cor_texto))
+                if eh_final:
+                    painter.drawText(QRectF(x - 48, y1 + 4, 48, 16),
+                                     Qt.AlignRight | Qt.AlignTop, self._formatar_tempo(t))
+                else:
                     painter.drawText(QRectF(x - 24, y1 + 4, 48, 16),
                                      Qt.AlignHCenter | Qt.AlignTop, self._formatar_tempo(t))
-            t += passo
-
-        # rótulo final com o comprimento da faixa (ancorado à direita p/ não vazar da área).
-        if precisa_fim:
-            painter.setPen(QPen(cor_texto))
-            painter.drawText(QRectF(xpx_fim - 48, y1 + 4, 48, 16),
-                             Qt.AlignRight | Qt.AlignTop, self._formatar_tempo(x_max))
 
     @staticmethod
     def _formatar_tempo(segundos):

@@ -18,13 +18,14 @@ Window {
     property bool maximizado: false
     property rect geomAnterior: Qt.rect(x, y, width, height)
 
+    // Transicao de maximizar/restaurar mais fluida (ver Main.qml): duracao maior + InOutQuart.
     ParallelAnimation {
         id: animGeom
         property real nx; property real ny; property real nw; property real nh
-        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: 190; easing.type: Easing.OutCubic }
-        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: 190; easing.type: Easing.OutCubic }
+        NumberAnimation { target: win; property: "x"; to: animGeom.nx; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "y"; to: animGeom.ny; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "width"; to: animGeom.nw; duration: 320; easing.type: Easing.InOutQuart }
+        NumberAnimation { target: win; property: "height"; to: animGeom.nh; duration: 320; easing.type: Easing.InOutQuart }
     }
     function _animarGeom(nx, ny, nw, nh) {
         animGeom.stop()
@@ -42,29 +43,8 @@ Window {
                         Screen.desktopAvailableWidth, Screen.desktopAvailableHeight)
         }
     }
-    SequentialAnimation {
-        id: animMinimizar
-        ParallelAnimation {
-            NumberAnimation { target: quadro; property: "opacity"; to: 0.0; duration: 150; easing.type: Easing.InQuad }
-            NumberAnimation { target: quadro; property: "scale"; to: 0.90; duration: 150; easing.type: Easing.InQuad }
-        }
-        ScriptAction { script: win.showMinimized() }
-    }
-    SequentialAnimation {
-        id: animRestaurar
-        PropertyAction { target: quadro; property: "scale"; value: 0.94 }
-        ParallelAnimation {
-            NumberAnimation { target: quadro; property: "opacity"; to: 1.0; duration: 190; easing.type: Easing.OutQuad }
-            NumberAnimation { target: quadro; property: "scale"; to: 1.0; duration: 190; easing.type: Easing.OutCubic }
-        }
-    }
-    function minimizarSuave() { animMinimizar.restart() }
-    onVisibilityChanged: {
-        // usa win.visibility em vez do parâmetro injetado (injeção é depreciada no QML).
-        if (win.visibility !== Window.Minimized && win.visibility !== Window.Hidden
-                && quadro.opacity < 1)
-            animRestaurar.restart()
-    }
+    // Minimizar: sem animacao (vai direto para a barra de tarefas).
+    function minimizarSuave() { win.showMinimized() }
 
     Rectangle {
         id: quadro

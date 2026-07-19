@@ -75,3 +75,17 @@ def test_media_movel_suaviza(_app):
     assert g._media_movel([0, 10, 0, 10, 0], 3) != [0, 10, 0, 10, 0]
     # janela 1 (ou desativada) não altera os valores.
     assert g._media_movel([0, 10, 0], 1) == [0, 10, 0]
+
+
+@pytest.mark.parametrize("dur, esperado", [
+    (20, [-5, 0, 5, 10, 15, 20]),          # fim exato num múltiplo: sem duplicar
+    (23, [-5, 0, 5, 10, 15, 20, 23]),      # penúltima (20) longe do fim: mantida
+    (26, [-5, 0, 5, 10, 15, 20, 26]),      # 25 perto demais de 26: omitida
+    (27, [-5, 0, 5, 10, 15, 20, 25, 27]),  # 25 a 2 s do fim: mantida
+    (30, [-5, 0, 5, 10, 15, 20, 25, 30]),  # múltiplo exato como marca final
+    (32, [-5, 0, 5, 10, 15, 20, 25, 30, 32]),
+])
+def test_marcas_eixo_x_marca_final_e_o_tempo_total(dur, esperado):
+    """A última marca é sempre o tempo total exato; a penúltima some se colar no fim."""
+    from compasso.gui_qt.signal_chart import _marcas_eixo_x
+    assert _marcas_eixo_x(-5, dur, 5) == esperado
