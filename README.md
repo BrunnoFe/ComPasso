@@ -78,7 +78,8 @@ dependência:
 
 Prefere rodar a partir do código-fonte, ou compilar você mesmo? Veja
 [docs/getting-started.md](docs/getting-started.md) (fluxo com [`uv`](https://docs.astral.sh/uv/))
-e [BUILD.md](BUILD.md).
+e [BUILD.md](BUILD.md). O executável pode ser gerado com **PyInstaller** (padrão) ou, para um
+binário bem menor (~71 MB), com **Nuitka** (`scripts/build_nuitka.py`) — detalhes no BUILD.md.
 
 ---
 

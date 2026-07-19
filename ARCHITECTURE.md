@@ -23,6 +23,10 @@ src/compasso/utils/
   version.py                  ← get_app_version(): lê a versão do app via importlib.metadata
                                 (pyproject.toml é a fonte única — ver "Versionamento e release"
                                 no CLAUDE.md); usado por main.py no lugar do antigo hardcode
+  resources.py                ← base_recursos(): raiz dos data-files empacotados, AGNÓSTICA de
+                                empacotador (PyInstaller via _MEIPASS, Nuitka via __file__/
+                                __compiled__, dev via árvore do repo). Consumido por gui_qt/
+                                assets.py e gui_qt/app.py (nunca usar _MEIPASS direto — ver CLAUDE.md)
   __init__.py                ← chama bootstrap() AUTOMATICAMENTE na importação; exporta tudo
 src/compasso/core/  (__init__ instancia os loggers e exporta a API — INTOCADO pela migração de GUI)
   constants.py                ← constantes de domínio: MARKER_* (eventos), CONDITION_*/RUIDO_KEYWORDS,
@@ -143,6 +147,9 @@ scripts/
                                 desenvolvimento" abaixo)
   generate_version_info.py     ← gera version_info.txt a partir de pyproject.toml antes do build
                                 (ver BUILD.md e RELEASE.md, seção "Versionamento e release")
+  build_nuitka.py              ← build alternativo com Nuitka (onefile ~71 MB, 3x menor que o
+                                PyInstaller); invoca o Nuitka direto com os --include-* que a
+                                análise estática não descobre (ver BUILD.md, "Build alternativo")
 ```
 
 ## Context — o hub (src/compasso/gui_qt/context.py)

@@ -36,6 +36,7 @@ from .signal_chart import GraficoSinal
 from compasso.core import config_manager, set_system_volume, app_prefs
 from compasso.core.constants import SENSOR_TYPES
 from compasso.utils import get_logs_dir
+from compasso.utils.resources import base_recursos
 
 # Volume principal do sistema aplicado uma única vez no arranque (como no app antigo).
 _INIT_VOLUME = 50
@@ -48,16 +49,22 @@ _FAKE_ENV = "COMPASSO_FAKE_BITALINO"
 def _fake_bitalino_habilitado() -> bool:
     return os.environ.get(_FAKE_ENV, "").strip().lower() not in ("", "0", "false", "no")
 
-# Diretório dos arquivos .qml (ao lado deste módulo; resolve em dev e empacotado).
+# Diretório dos arquivos .qml em desenvolvimento (ao lado deste módulo).
 QML_DIR = Path(__file__).resolve().parent / "qml"
 
 
 def _resolver_qml_dir() -> Path:
-    """Retorna o diretório dos .qml, considerando execução congelada (PyInstaller)."""
-    if getattr(sys, "frozen", False):
-        base = Path(getattr(sys, "_MEIPASS", ".")) / "compasso" / "gui_qt" / "qml"
-        if base.exists():
-            return base
+    """Retorna o diretório dos .qml, agnóstico de empacotador (dev/PyInstaller/Nuitka).
+
+    Empacotado, os .qml ficam em ``<raiz do bundle>/compasso/gui_qt/qml`` (ver a regra de
+    layout em ``compasso.utils.resources``). Cai no ``QML_DIR`` do código-fonte em dev, ou se
+    a pasta empacotada não existir por algum motivo.
+    """
+    base = base_recursos()
+    if base is not None:
+        empacotado = base / "compasso" / "gui_qt" / "qml"
+        if empacotado.exists():
+            return empacotado
     return QML_DIR
 
 

@@ -48,9 +48,18 @@ CLAUDE.md
 CONVENCOES.md
 RELEASE.md
 
-#pastas de screnchots
+#pastas e arquivos internos
 files/
 release_notes/
 graphify-out/
 .idea/
+
+# Artefatos de empacotamento (Nuitka / pyside6-deploy) — não versionar.
+# O build oficial do Nuitka é scripts/build_nuitka.py (ESSE é versionado); a saída vai para
+# build/nuitka e dist/nuitka (já cobertos por /build e /dist acima).
 deployment/
+deploy_main.py
+pysidedeploy.spec
+*.build/
+*.dist/
+*.onefile-build/

@@ -8,8 +8,9 @@ cross-compilação**: o `.exe` é gerado no Windows e o `.app` no macOS.
 
 - Python 3.12+ (o projeto foi validado em 3.14).
 - [`uv`](https://docs.astral.sh/uv/) instalado.
-- (Opcional) **UPX** no `PATH` para comprimir os binários. Sem UPX, o build funciona
-  normalmente — a compressão é apenas ignorada.
+- (Opcional) **UPX** para comprimir os binários (PyInstaller). Aponte com `--upx-dir` se não
+  estiver no `PATH`. Ver a nota de tamanho abaixo — no onefile o ganho é pequeno.
+- (Opcional) **Nuitka** para o build enxuto — ver "Build alternativo com Nuitka".
 - OpenSignals/`liblsl` **não** são necessários para *buildar*, apenas para usar o app.
 
 ## Preparar o ambiente
@@ -53,33 +54,88 @@ Teste rápido no Windows: `dist\ComPasso-win\ComPasso.exe`
 
 ### onefile (variante de arquivo único)
 
-Defina a variável `COMPASSO_ONEFILE` antes de buildar:
+Defina `COMPASSO_ONEFILE` antes de buildar. Além dela, o `compasso.spec` aceita toggles por env
+var para **enxugar** o bundle (o PySide6 tem ~634 MB e o `collect_all` puxava tudo, inclusive o
+WebEngine de ~278 MB que o app nunca usa):
 
-```bash
-# Windows (PowerShell)
-$env:COMPASSO_ONEFILE = "1"; uv run pyinstaller compasso.spec; Remove-Item Env:\COMPASSO_ONEFILE
-# Windows (cmd)
-set COMPASSO_ONEFILE=1 && uv run pyinstaller compasso.spec
-# macOS/Linux
-COMPASSO_ONEFILE=1 uv run pyinstaller compasso.spec
+| Env var | Efeito | Padrão |
+| --- | --- | --- |
+| `COMPASSO_ONEFILE=1` | Arquivo único auto-extraível (em vez de onedir) | onedir |
+| `COMPASSO_TRIM=subtract` | `collect_all` **menos** peças pesadas inúteis (WebEngine, Quick3D, Designer, Pdf, estilos não-Basic, dev tools) — **seguro** | `none` |
+| `COMPASSO_TRIM=minimal` | Mantém só o que é sabidamente necessário — menor, **valide bem** (diálogos/janelas) | `none` |
+| `COMPASSO_UPX=1` | Comprime as DLLs com UPX (precisa do `upx.exe`; ver abaixo) | off |
+| `COMPASSO_STRIP=1` | `strip=True` no EXE/COLLECT (quase no-op no Windows) | off |
+
+```powershell
+# Windows (PowerShell) — onefile enxuto e seguro (recomendado):
+$env:COMPASSO_ONEFILE = "1"; $env:COMPASSO_TRIM = "minimal"
+uv run pyinstaller compasso.spec
+Remove-Item Env:\COMPASSO_ONEFILE, Env:\COMPASSO_TRIM
+
+# onefile minimal + UPX (menor ainda; UPX não vem no PATH, aponte com --upx-dir):
+$env:COMPASSO_ONEFILE = "1"; $env:COMPASSO_TRIM = "minimal"; $env:COMPASSO_UPX = "1"
+uv run pyinstaller compasso.spec --upx-dir "C:\caminho\para\upx"
+Remove-Item Env:\COMPASSO_ONEFILE, Env:\COMPASSO_TRIM, Env:\COMPASSO_UPX
 ```
 
-Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (macOS).
+Tamanhos medidos (onefile, Windows, Python 3.14): baseline `none` ~450 MB · `subtract` ~252 MB ·
+`minimal` ~191 MB · `minimal`+UPX ~179 MB. Saída em `dist/ComPasso.exe` (ou o `--distpath` que
+você passar). **Nota:** o onefile do PyInstaller já comprime o arquivo, então o UPX rende pouco
+(191→179 MB, ~6%) e ainda aumenta o risco de antivírus — geralmente **não compensa**. Para um
+executável realmente menor, veja o build com Nuitka abaixo (~71 MB).
 
 **Caveats do onefile** (por que o onedir é o alvo primário):
 
-- O EXE se **auto-extrai num diretório TEMP** (`sys._MEIPASS`) a cada execução →
-  **startup mais lento** que o onedir.
-- **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do
-  ComPasso já vão para pastas do usuário (Documentos/ComPasso, app-data) via
-  `src/compasso/utils/paths.py` — independentes do `_MEIPASS`, então funciona normalmente.
-- Recursos lidos (imagens, `lsl.dll`, arquivos `.qml`) são resolvidos a partir de `sys._MEIPASS`
-  (`src/compasso/gui_qt/assets.py` resolve `ASSETS_DIR`; `src/compasso/gui_qt/app.py` resolve a
-  pasta `qml/` em `sys._MEIPASS/compasso/gui_qt/qml`) — não dependa de caminhos relativos ao `.exe`.
-- Maior chance de **falso-positivo de antivírus** e de o `lsl.dll` ser bloqueado.
-- As saídas têm nomes distintos (`ComPasso-win/` vs `ComPasso.exe`), então coexistem em
-  `dist/`. Atenção: `--clean` limpa o cache e o `build/`, mas **não remove a saída da outra
-  variante** — apague `dist/` manualmente entre builds de release se quiser um diretório limpo.
+- O EXE se **auto-extrai num diretório TEMP** a cada execução → **startup mais lento** que o onedir.
+- **Nunca grave dados dentro do bundle**: ele é descartado ao fechar. Os dados/logs do ComPasso já
+  vão para pastas do usuário via `src/compasso/utils/paths.py`, independentes do bundle.
+- Recursos (imagens, `lsl.dll`, `.qml`) são resolvidos de forma **agnóstica de empacotador** por
+  `src/compasso/utils/resources.py` (PyInstaller via `sys._MEIPASS`; Nuitka via `__file__`) —
+  ver o gotcha em `CLAUDE.md`. Não dependa de caminhos relativos ao `.exe`.
+- **UPX** aumenta a chance de **falso-positivo de antivírus** e deixa o startup um pouco mais lento
+  (descompressão); por isso o padrão é **sem UPX**. Use só se o tamanho for crítico.
+- `--strip` no Windows é quase no-op (depende do `strip.exe` do binutils, ausente no Python de
+  MSVC) e pode corromper DLLs Qt — deixe desligado no Windows.
+- As saídas onedir/onefile coexistem em `dist/`; use `--distpath` distinto por variante.
+
+## Build alternativo com Nuitka (executável bem menor)
+
+O **Nuitka** compila o Python para C e gera um onefile **muito menor** que o PyInstaller
+(medido: **~71 MB** contra ~252 MB do `subtract` / ~191 MB do `minimal`), com startup tipicamente
+mais rápido. É o caminho oficial da Qt (`pyside6-deploy` usa Nuitka por baixo), mas exige mais
+cuidado — por isso o PyInstaller segue como alvo primário e o Nuitka é a alternativa "enxuta".
+
+O build é feito por **`scripts/build_nuitka.py`** (invoca o Nuitka direto, com todos os `--include-*`
+que a análise estática não descobre sozinha). **Não** use o `pyside6-deploy`: ele renomeia
+`main.py`→`deploy_main.py`, depois procura `main.exe` e falha ao finalizar (bug de naming), além de
+varrer lixo (`.pytest_cache`) para o bundle.
+
+```powershell
+# 1. Ferramentas do Nuitka — instale NO VENV, fora do uv.lock (não são deps do projeto):
+uv pip install nuitka ordered_set zstandard
+
+# 2. Build (use o python do venv direto; `uv run` re-sincroniza e REMOVERIA o nuitka do venv):
+.venv\Scripts\python.exe scripts\build_nuitka.py            # onefile (padrão)
+.venv\Scripts\python.exe scripts\build_nuitka.py --standalone   # pasta (onedir)
+```
+
+Saída: **`dist/nuitka/ComPasso.exe`**. O Nuitka baixa o próprio compilador (zig) na 1ª execução —
+não precisa de MSVC nem MinGW (aliás, em Python 3.13+ o Nuitka **não aceita** `--mingw64`).
+
+**Gotchas do Nuitka já resolvidos no script** (não regredir):
+
+- **`lsl.dll` do pylsl** — o Nuitka **não** copia DLLs via `--include-data-dir` nem
+  `--include-package-data` (ambos pulam `.dll`); só `--include-data-files` (arquivo explícito)
+  copia. Sem ela, o app aborta no import do pylsl. O script inclui `pylsl/lib/lsl.dll` file-a-file.
+- **Plugins QML/multimídia** — o auto-detector do Nuitka inclui plugins por *import Python*; os
+  `.qml` são **dado**, então `qml`/`qmltooling` e o backend `multimedia` (áudio/beep) precisam de
+  `--include-qt-plugins=qml,qmltooling,multimedia` explícito.
+- **Peso morto do Qt** — o category `qml` arrasta o QML inteiro (WebEngine ~195 MB, Quick3D,
+  Charts, Pdf, estilos não-Basic...). O script corta tudo isso com `--noinclude-dlls=...`.
+- **Assets e versão** — `--include-data-dir=assets=assets` (ícone/beep) e
+  `--include-distribution-metadata=compasso` (para `get_app_version()` achar a versão no bundle).
+- **Python 3.14 é "experimental"** no Nuitka 4.1.3 (ele avisa). Funciona (validado: abre, renderiza
+  o QML, toca áudio), mas para um release de máxima estabilidade considere Python 3.12.
 
 ## macOS
 
@@ -114,12 +170,11 @@ Saída: **`dist/ComPasso.exe`** (Windows, ~47 MB) ou **`dist/ComPasso.app`** (ma
 - Se o app empacotado acusar erro de `liblsl`/`lsl`, confirme que a biblioteca nativa do
   `pylsl` foi copiada para `dist/ComPasso-win/_internal/` (o `compasso.spec` já faz isso via
   `collect_dynamic_libs("pylsl")`).
-- **GUI em PySide6/QML** (desde a migração do CustomTkinter): `compasso.spec` usa
-  `collect_all("PySide6")` para trazer as libs Qt, os plugins (`platforms`/`imageformats`/
-  `qmltooling`) e os módulos QML (`QtQuick`/`QtQuick.Controls`/`QtQuick.Dialogs`) necessários
-  para o `QQmlApplicationEngine` carregar a UI em runtime — sem isso o app abre e falha ao
-  resolver os imports QML. Os arquivos `.qml` (`src/compasso/gui_qt/qml/`) são copiados via
-  `datas` preservando a árvore do pacote (`compasso/gui_qt/qml/...`), pois a análise estática do
-  PyInstaller não os enxerga (não são importados como módulo Python). Se o app empacotado abrir e
-  fechar sem erro visível, rode-o **sem** `console=False` temporariamente (ou capture stderr) para
-  ver se é uma falha de import QML.
+- **GUI em PySide6/QML** (desde a migração do CustomTkinter): `compasso.spec` parte de
+  `collect_all("PySide6")` (traz libs Qt, plugins e os módulos QML necessários ao
+  `QQmlApplicationEngine`) e, quando `COMPASSO_TRIM` está setado, **filtra** a saída para remover o
+  peso morto (WebEngine etc.) — ver a função `_filtrar_pyside` e as listas `_TRIM_BLACKLIST`/
+  `_TRIM_WHITELIST` no topo do spec. Os `.qml` são copiados via `datas` preservando a árvore do
+  pacote (`compasso/gui_qt/qml/...`), pois a análise estática não os enxerga. Se o app empacotado
+  abrir e fechar sem janela, **capture o stderr** (`Start-Process -RedirectStandardError`) para ver
+  o traceback — foi assim que diagnosticamos os erros de empacotamento do Nuitka.

@@ -26,6 +26,14 @@ ONEFILE = bool(os.environ.get("COMPASSO_ONEFILE"))
 is_win = sys.platform.startswith("win")
 is_mac = sys.platform == "darwin"
 
+# UPX/strip são OPT-IN por env var (padrão desligado). O padrão de release é SEM UPX (reduz
+# falso-positivo de antivírus) e SEM strip (no Windows o strip depende do binutils e costuma
+# ser no-op/arriscado). Para experimentar:
+#   $env:COMPASSO_UPX = "1"     -> comprime com UPX (precisa do upx.exe no PATH)
+#   $env:COMPASSO_STRIP = "1"   -> passa strip=True para EXE/COLLECT
+USE_UPX = bool(os.environ.get("COMPASSO_UPX"))
+USE_STRIP = bool(os.environ.get("COMPASSO_STRIP"))
+
 # --- enxugamento do PySide6 (COMPASSO_TRIM) ----------------------------------
 # `collect_all("PySide6")` empacota o PySide6 INTEIRO (~634 MB de venv), inclusive
 # subsistemas que o ComPasso nunca usa (WebEngine ~278 MB, Quick3D, Designer, Pdf, estilos
@@ -214,8 +222,8 @@ if ONEFILE:
         name="ComPasso",
         debug=False,
         bootloader_ignore_signals=False,
-        strip=False,
-        upx=False,               # sem UPX: reduz falso-positivo de antivírus (decisão de projeto)
+        strip=USE_STRIP,
+        upx=USE_UPX,             # opt-in via COMPASSO_UPX (padrão OFF: menos falso-positivo de AV)
         upx_exclude=[],
         runtime_tmpdir=None,      # usa o TEMP padrão do SO para a auto-extração
         console=False,            # app GUI: sem janela de console
@@ -244,8 +252,8 @@ else:
         name="ComPasso",
         debug=False,
         bootloader_ignore_signals=False,
-        strip=False,
-        upx=False,               # sem UPX: reduz falso-positivo de antivírus (decisão de projeto)
+        strip=USE_STRIP,
+        upx=USE_UPX,             # opt-in via COMPASSO_UPX (padrão OFF: menos falso-positivo de AV)
         console=False,
         disable_windowed_traceback=False,
         argv_emulation=False,
@@ -259,8 +267,8 @@ else:
         exe,
         a.binaries,
         a.datas,
-        strip=False,
-        upx=False,               # sem UPX: reduz falso-positivo de antivírus (decisão de projeto)
+        strip=USE_STRIP,
+        upx=USE_UPX,             # opt-in via COMPASSO_UPX (padrão OFF: menos falso-positivo de AV)
         upx_exclude=[],
         name=collect_name,
     )
