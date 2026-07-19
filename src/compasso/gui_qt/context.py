@@ -21,7 +21,7 @@ import threading
 from PySide6.QtCore import QObject, Property, Signal, Slot, Qt
 
 from . import gui_logger
-from compasso.core.player import Player
+from compasso.core.player import Player, SondaDuracao
 from compasso.core.constants import SENSOR_DEFAULT
 
 
@@ -90,6 +90,12 @@ class Context(QObject):
         # --- serviços / estado (não reativos; acessados pelo Python) ---
         self.player: Player = Player()
         self.beep_caminho: str = ""       # resolvido no bootstrap (assets/)
+        # sonda de duração dos áudios (vive na GUI) e o mapa `caminho -> segundos` que ela
+        # preenche. Pré-varrer as durações no scan permite que o eixo X do gráfico já nasça
+        # correto em `begin()`, sem depender da carga da faixa dentro da janela cronometrada
+        # do experimento — ver core/player.py:SondaDuracao.
+        self.sonda_duracao: SondaDuracao = SondaDuracao()
+        self.duracoes_audio: dict = {}
         self.bitalino = None              # StreamInlet | None
         self.mac_addr: str | None = None
         self.signal_channel: int = 0

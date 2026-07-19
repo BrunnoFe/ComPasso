@@ -56,8 +56,13 @@ def build_track_filename(order: int, total: int, music_name: str) -> str:
 class LSLRecorder:
     """Aquisição contínua de amostras do BITalino via LSL, gravadas em CSV em tempo real.
 
-    Todas as marcas de tempo de amostras e de eventos vêm do mesmo relógio
-    (`pylsl.local_clock()`, mesmo domínio do timestamp retornado por `pull_sample`).
+    Todas as marcas de tempo — de amostras e de eventos — acabam no relógio local
+    (`pylsl.local_clock()`), mas o timestamp devolvido por `pull_sample` **não** nasce nesse
+    domínio: ele vem do relógio de quem envia (o host do OpenSignals). Os dois são cristais
+    independentes e derivam entre si, então cada amostra é convertida somando
+    `inlet.time_correction()`, reconsultado periodicamente — ver `_atualizar_correcao_tempo`.
+    Tratar os dois domínios como um só era a causa do deslocamento cumulativo dos marcadores
+    ao longo de uma sessão.
 
     Uso típico:
         rec = LSLRecorder(inlet, channel, csv_path)
@@ -74,6 +79,14 @@ class LSLRecorder:
     PULL_TIMEOUT = 1.0       # s — espera por amostra no loop de aquisição
     FSYNC_INTERVAL = 0.5     # s — intervalo entre fsyncs (durabilidade)
     DRAIN_AFTER_STOP = 2.0   # s — janela para capturar marcadores pendentes após o stop
+    # s — com que frequência a correção de relógio é reconsultada durante a aquisição.
+    # A deriva entre os dois cristais é da ordem de centenas de ppm (~0.3 ms/s medido no
+    # hardware real), então reconsultar a cada 5 s mantém o erro bem abaixo de um intervalo
+    # de amostragem.
+    INTERVALO_CORRECAO_S = 5.0
+    # s — teto para a consulta de `time_correction` (ela troca mensagens com o emissor e
+    # poderia travar o loop de aquisição).
+    TIMEOUT_CORRECAO_S = 2.0
 
     def __init__(self, inlet, channel: int, csv_path: str, on_sample=None):
         self.inlet = inlet
@@ -86,6 +99,10 @@ class LSLRecorder:
         self._on_sample = on_sample
 
         self.t0 = None
+        # deslocamento (s) a somar aos timestamps das amostras para levá-los ao domínio do
+        # `local_clock()` local — ver `_atualizar_correcao_tempo`.
+        self._correcao_tempo = 0.0
+        self._ultima_correcao_monotonic = None
         # instante (time.monotonic) da última amostra recebida; lido pelo watchdog de conexão
         self.last_sample_monotonic = None
         self._pending = []           # lista de marcadores ordenada por lsl_time
@@ -94,12 +111,41 @@ class LSLRecorder:
         self._thread = None
         self._first_sample_logged = False
 
+    def _atualizar_correcao_tempo(self) -> None:
+        """Reconsulta o deslocamento entre o relógio do emissor e o `local_clock()` local.
+
+        ``pull_sample`` devolve o timestamp no relógio de **quem envia** (o host do
+        OpenSignals), que é um cristal diferente do que alimenta ``local_clock()``. Os dois
+        derivam um em relação ao outro — medido no hardware real: ~0.17 s acumulados ao longo
+        de uma sessão de 12 faixas (~300 ppm). Sem esta correção, todos os marcadores de uma
+        faixa aparecem deslocados por igual e o deslocamento cresce faixa a faixa: era esse o
+        bug de dessincronização cumulativa.
+
+        ``time_correction()`` é o mecanismo que o próprio LSL oferece para isso. Precisa ser
+        **reconsultado periodicamente**, não só uma vez: é a deriva, não o offset inicial, que
+        causa o acúmulo.
+        """
+        consultar = getattr(self.inlet, "time_correction", None)
+        if consultar is None:
+            return   # inlets de teste não implementam a chamada; a correção fica em 0.
+        try:
+            self._correcao_tempo = float(consultar(self.TIMEOUT_CORRECAO_S))
+        except Exception as e:
+            # manter a última correção conhecida é melhor que zerá-la: um zero repentino
+            # reintroduziria de uma vez todo o deslocamento que já havia sido compensado.
+            recorder_logger.logger.warning(
+                f"Falha ao consultar a correção de relógio do LSL "
+                f"(mantendo {self._correcao_tempo:.6f}s): {e}")
+        else:
+            self._ultima_correcao_monotonic = time.monotonic()
+
     def start(self) -> float:
         """Drena o buffer do inlet, captura `t0` e inicia a thread de aquisição.
 
         :return: `t0` (instante LSL do início da captura) — use como marca
             `countdown_start`.
         """
+        self._atualizar_correcao_tempo()
         self._drain_inlet()
         self.t0 = local_clock()
         self.last_sample_monotonic = time.monotonic()
@@ -166,7 +212,19 @@ class LSLRecorder:
                     if self._stop_event.is_set() and stop_requested_at is None:
                         stop_requested_at = time.time()
 
+                    # reconsulta periódica da correção: é a deriva ao longo da sessão que
+                    # precisa ser acompanhada, não apenas o offset inicial.
+                    if (self._ultima_correcao_monotonic is None
+                            or time.monotonic() - self._ultima_correcao_monotonic
+                            >= self.INTERVALO_CORRECAO_S):
+                        self._atualizar_correcao_tempo()
+
                     if sample:
+                        # traz o timestamp do relógio do emissor para o `local_clock()` local,
+                        # domínio em que os marcadores são carimbados. Sem isto os dois
+                        # domínios divergem ao longo da sessão e todos os marcadores de uma
+                        # faixa saem deslocados por igual (ver `_atualizar_correcao_tempo`).
+                        ts = ts + self._correcao_tempo
                         last_sample = (sample, ts)
                         self.last_sample_monotonic = time.monotonic()
                         if not self._first_sample_logged:

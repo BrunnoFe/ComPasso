@@ -31,6 +31,7 @@ class FilesController(QObject):
         super().__init__()
         self._ctx = ctx
         self._scan_em_curso = False
+        self._ctx.sonda_duracao.concluida.connect(self._on_duracoes_prontas)
 
     # ------------------------------------------------------------ propriedades
     def _texto(self, caminho, hint):
@@ -166,12 +167,28 @@ class FilesController(QObject):
 
         self._ctx.music_condition_mapping = mapping
         self._scan_em_curso = False
+        self._sondar_duracoes(list(mapping.keys()))
         self._ctx.run_after(lambda: self._ctx.status_text.set(
             "Mapeamento de músicas para condições realizado com sucesso!"))
         self._ctx.run_after(self.estadoChanged.emit)
         self._atualizar_contadores()
         self._ctx.notify_stepper()
         gui_logger.logger.info("Mapeamento de músicas e condições realizado com sucesso.")
+
+    def _sondar_duracoes(self, caminhos: list) -> None:
+        """Pré-varre a duração das faixas casadas (assíncrono, na thread da GUI).
+
+        O resultado alimenta ``ctx.duracoes_audio``, de onde o ``ExperimentRunner`` monta o eixo
+        X do gráfico antes de a faixa começar. Roda muito antes do experimento e ninguém espera
+        por ela: se não terminar a tempo, o runner cai no ``player.get_length()`` da carga.
+        """
+        self._ctx.run_after(lambda: self._ctx.sonda_duracao.sondar(caminhos))
+
+    def _on_duracoes_prontas(self) -> None:
+        """(Thread GUI) Publica no contexto o mapa de durações que a sonda terminou de ler."""
+        self._ctx.duracoes_audio = self._ctx.sonda_duracao.duracoes()
+        gui_logger.logger.info(
+            f"Durações pré-varridas: {len(self._ctx.duracoes_audio)} arquivo(s).")
 
     def _atualizar_contadores(self) -> None:
         """Atualiza os contadores do rodapé a partir do mapeamento e da ``noise_quantity``."""

@@ -27,6 +27,7 @@ from .controllers.app_controller import AppController
 from .controllers.graph_settings_controller import GraphSettingsController
 from .controllers.calibration_controller import CalibrationController
 from .controllers.config_controller import ConfigController
+from .controllers.updates_controller import UpdatesController
 from .signal_chart import GraficoSinal
 from compasso.core import config_manager, set_system_volume
 from compasso.core.constants import SENSOR_TYPES
@@ -75,9 +76,9 @@ def executar_app(versao: str = "") -> int:
     # Estado + tema, expostos ao QML como propriedades de contexto globais.
     ctx = Context()
     ctx.beep_caminho = str(ASSETS_DIR / BEEP_FILENAME)
-    # pré-carrega o QSoundEffect do beep aqui (arranque do app) para pagar o custo de
-    # inicialização do backend de áudio (~250ms na 1ª carga de um caminho, medido) fora da
-    # contagem regressiva do experimento — ver Player.preload_beep.
+    # carrega o beep aqui (arranque do app) para pagar o custo de inicialização do backend de
+    # áudio fora da contagem regressiva do experimento: durante o experimento, tocar o beep
+    # precisa ser só um play(), sem latência variável — ver Player.preload_beep.
     ctx.player.preload_beep(ctx.beep_caminho)
     try:
         ctx.graph_settings = config_manager.get_graph_prefs()
@@ -118,6 +119,7 @@ def executar_app(versao: str = "") -> int:
     graph_settings_controller = GraphSettingsController(ctx)
     calibration_controller = CalibrationController(ctx)
     config_controller = ConfigController(ctx, files_controller)
+    updates_controller = UpdatesController(ctx, versao_atual=versao)
     # O gráfico (GraficoSinal) é instanciado pelo QML e se registra em ctx.signal_plot ao
     # receber o `contexto` — não é criado aqui.
 
@@ -145,6 +147,7 @@ def executar_app(versao: str = "") -> int:
     ctx_qml.setContextProperty("graphSettingsController", graph_settings_controller)
     ctx_qml.setContextProperty("calibController", calibration_controller)
     ctx_qml.setContextProperty("configController", config_controller)
+    ctx_qml.setContextProperty("updatesController", updates_controller)
     ctx_qml.setContextProperty("appVersion", versao)
     ctx_qml.setContextProperty("assetsDir", QUrl.fromLocalFile(str(ASSETS_DIR)).toString())
     ctx_qml.setContextProperty("sensoresDisponiveis", list(SENSOR_TYPES))
@@ -159,6 +162,10 @@ def executar_app(versao: str = "") -> int:
         return 1
 
     gui_logger.logger.info("Interface QML carregada com sucesso.")
+
+    # Verificação silenciosa de nova versão, uma vez por execução. Roda em thread de trabalho
+    # e cabe folgada na splash; se a rede falhar, ninguém é incomodado.
+    updates_controller.verificar_automatico()
     # Mantém referências vivas enquanto o app roda (evita coleta pelo GC).
     app._compasso_ctx = ctx                       # type: ignore[attr-defined]
     app._compasso_theme = theme                   # type: ignore[attr-defined]
@@ -166,5 +173,6 @@ def executar_app(versao: str = "") -> int:
         conn_controller, part_controller, files_controller,
         player_controller, experiment_controller, app_controller,
         graph_settings_controller, calibration_controller, config_controller,
+        updates_controller,
     ]
     return app.exec()

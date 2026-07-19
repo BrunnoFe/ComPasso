@@ -1,13 +1,15 @@
 """Reprodução de áudio via PySide6 QtMultimedia (substitui o antigo backend pygame.mixer).
 
-A faixa é tocada por ``QMediaPlayer`` + ``QAudioOutput`` e o beep de aviso por ``QSoundEffect``
-(canal independente, toca em paralelo, numa thread própria — ver ``_BeepWorker`` abaixo). A
-duração vem de ``QMediaPlayer.duration()`` — do mesmo motor que reproduz o áudio —, então
-``get_length()`` bate com a reprodução real (o eixo X do gráfico deixa de sobrar espaço no fim,
-ver ``gui_qt/signal_chart.py``).
+Faixa e beep são tocados pelo **mesmo backend**: dois pares ``QMediaPlayer`` + ``QAudioOutput``
+independentes (canais paralelos — o beep nunca interrompe a faixa). Usar o mesmo motor nos dois
+é deliberado: a latência entre chamar ``play()`` e o som sair é da ordem de dezenas de ms e
+varia por backend; com backends iguais essa latência se **cancela** no intervalo beep→áudio,
+que é a grandeza que o experimento precisa ter exata. A duração vem de
+``QMediaPlayer.duration()``, do mesmo motor que reproduz, então ``get_length()`` bate com a
+reprodução real.
 
-**Threading (faixa).** ``QMediaPlayer``/``QAudioOutput`` são QObjects orientados a sinais que
-precisam viver na thread com event loop (a da GUI). O ``Player`` é criado nessa thread (em
+**Threading.** ``QMediaPlayer``/``QAudioOutput`` são QObjects orientados a sinais que precisam
+viver na thread com event loop (a da GUI). O ``Player`` é criado nessa thread (em
 ``Context.__init__``), então os objetos herdam a afinidade correta. O ``ExperimentRunner``,
 porém, chama ``load``/``play``/``stop`` de uma **thread worker**; essas chamadas são encaminhadas
 à thread da GUI via ``QMetaObject.invokeMethod`` (chamada direta quando já se está na GUI —
@@ -15,58 +17,130 @@ invocar ``BlockingQueuedConnection`` da própria thread travaria). O estado cons
 (``is_busy``/``get_pos``/``get_length``) é mantido em atributos cacheados, escritos apenas nos
 handlers de sinal (thread da GUI) sob ``Lock`` e lidos de forma barata pela worker.
 
-**Threading (beep).** O beep tem sua **própria** ``QThread`` com event loop dedicado (não a da
-GUI). ``QSoundEffect.setSource()`` faz, na primeira vez que um caminho é carregado, uma
-inicialização síncrona do backend de áudio que trava a thread onde roda por ~250 ms (medido) — um
-travamento perceptível se fosse a thread da GUI, no meio da contagem regressiva do experimento.
-Rodando numa thread separada, esse custo nunca é sentido pela UI, não importa quando o primeiro
-beep aconteça. `preload_beep`/`play_beep` disparam via **sinais Qt** (``Signal``) em vez de
-``invokeMethod``: a emissão de sinal entre threads é resolvida para ``QueuedConnection``
-automaticamente pelo Qt (a decisão é tomada na emissão, não na conexão), então funciona
-corretamente seja chamado da thread da GUI ou da worker — e não bloqueia nenhuma das duas.
+``play_beep`` é a exceção: despacha em ``QueuedConnection`` (não bloqueante) porque é chamado
+dentro da janela cronometrada do experimento, onde bloquear a worker esperando a GUI
+introduziria justamente a variação que a refatoração elimina. A source do beep é carregada uma
+única vez no arranque (``preload_beep``), então o trabalho restante na GUI é só o ``play()``.
 
-API pública (idêntica ao backend antigo): ``load(path)->bool``, ``play()``, ``stop()``,
-``is_busy()->bool``, ``get_pos()->float`` (s), ``get_length()->float`` (s), ``play_beep(path)->bool``.
+O fim da faixa é sinalizado por ``_fim_faixa`` (``threading.Event``), setado no ``EndOfMedia`` —
+a worker espera nele com ``aguardar_fim`` em vez de fazer polling, o que dava um erro de até
+200 ms no marcador ``music_end`` e na âncora do eixo X do gráfico.
+
+API pública: ``load(path)->bool``, ``play()``, ``stop()``, ``aguardar_fim(timeout)->bool``,
+``is_busy()->bool``, ``get_pos()->float`` (s), ``get_length()->float`` (s),
+``preload_beep(path)``, ``play_beep()->bool``.
 """
 
+import os
 import threading
 
-from PySide6.QtCore import QObject, Signal, Slot, QThread, QUrl, QMetaObject, Qt, QCoreApplication
-from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput, QSoundEffect
+from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer, QUrl, QMetaObject, Qt
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from . import player_logger
 
 # Tempo máximo (s) de espera pela carga assíncrona de uma faixa antes de desistir.
 _LOAD_TIMEOUT_S = 10.0
+# Tempo máximo (s) de espera pela duração de um arquivo durante a pré-varredura. Curto de
+# propósito: um arquivo problemático não pode segurar a fila inteira.
+_SONDA_TIMEOUT_MS = 5000
 
 
-class _BeepWorker(QObject):
-    """Dono do ``QSoundEffect`` do beep; vive na thread dedicada de ``Player._beep_thread``.
+class SondaDuracao(QObject):
+    """Lê a duração de uma lista de arquivos de áudio sem bloquear a thread da GUI.
 
-    Mantém o mesmo cache por caminho que a faixa não tem motivo para repetir (``beep_caminho``
-    é fixo pela sessão) — ``carregar`` só chama ``setSource`` quando o caminho muda.
+    Usa um ``QMediaPlayer`` **sem** ``QAudioOutput`` (nunca emite som) que percorre os caminhos
+    um a um, encadeado por sinais: cada ``LoadedMedia``/``InvalidMedia`` dispara o próximo. Roda
+    na thread da GUI, mas cada passo é só o despacho de um sinal — o custo por quadro é
+    desprezível.
+
+    Existe para que o eixo X do gráfico já nasça com a duração correta em ``begin()``, em vez de
+    ser reancorado no fim da faixa; e para tirar o ``load()`` bloqueante da janela cronometrada
+    do experimento.
     """
 
-    def __init__(self):
-        super().__init__()
-        self._beep = QSoundEffect()
-        self._beep.setVolume(1.0)
-        self._beep_path = None
+    concluida = Signal()
 
-    @Slot(str)
-    def carregar(self, path: str) -> None:
-        if self._beep_path != path:
-            self._beep.setSource(QUrl.fromLocalFile(path))
-            self._beep_path = path
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._sonda = QMediaPlayer()
+        self._sonda.mediaStatusChanged.connect(self._on_status)
+        self._sonda.durationChanged.connect(self._on_duration)
+        self._fila = []
+        self._atual = None
+        self._duracoes = {}
+        self._trava = threading.Lock()
+        # um arquivo que carregue mas nunca anuncie duração > 0 travaria a fila inteira; o
+        # watchdog o descarta e segue para o próximo.
+        self._watchdog = QTimer(self)
+        self._watchdog.setSingleShot(True)
+        self._watchdog.setInterval(_SONDA_TIMEOUT_MS)
+        self._watchdog.timeout.connect(self._on_timeout)
 
-    @Slot(str)
-    def tocar(self, path: str) -> None:
-        try:
-            self.carregar(path)
-            self._beep.play()
-            player_logger.logger.info(f"Beep tocado: {path}")
-        except Exception as e:
-            player_logger.logger.error(f"Erro ao tocar beep: {e}")
+    def duracoes(self) -> dict:
+        """Cópia do mapa ``caminho -> duração (s)`` conhecido até agora."""
+        with self._trava:
+            return dict(self._duracoes)
+
+    def sondar(self, caminhos) -> None:
+        """Enfileira os caminhos ainda desconhecidos e inicia a varredura (idempotente)."""
+        with self._trava:
+            conhecidos = set(self._duracoes)
+        novos = [c for c in caminhos if c not in conhecidos and c not in self._fila]
+        if not novos:
+            self.concluida.emit()
+            return
+        self._fila.extend(novos)
+        if self._atual is None:
+            self._proximo()
+
+    def _agendar_proximo(self) -> None:
+        """Sai do handler de sinal antes de trocar a source.
+
+        Chamar ``setSource`` de dentro de ``durationChanged``/``mediaStatusChanged`` reentra no
+        ``QMediaPlayer`` enquanto ele ainda está emitindo — o que derruba o processo com
+        access violation (reproduzido: o crash acontecia no 2º arquivo da fila). O
+        ``singleShot(0)`` devolve o controle ao laço de eventos primeiro.
+        """
+        self._watchdog.stop()
+        self._atual = None
+        QTimer.singleShot(0, self._proximo)
+
+    def _proximo(self) -> None:
+        if not self._fila:
+            self._sonda.setSource(QUrl())
+            player_logger.logger.info(
+                f"Pré-varredura de durações concluída ({len(self._duracoes)} arquivo(s)).")
+            self.concluida.emit()
+            return
+        self._atual = self._fila.pop(0)
+        self._sonda.setSource(QUrl.fromLocalFile(self._atual))
+        self._watchdog.start()
+
+    def _descartar(self, motivo: str) -> None:
+        """Abandona o arquivo corrente e segue a fila; a duração cai no fallback do runner."""
+        player_logger.logger.warning(
+            f"Duração de '{os.path.basename(self._atual or '')}' não pôde ser lida ({motivo}); "
+            "o eixo do gráfico usará a duração informada na carga da faixa.")
+        self._agendar_proximo()
+
+    @Slot("qint64")
+    def _on_duration(self, ms) -> None:
+        # setSource(QUrl()) e as trocas de faixa emitem 0; só um valor real conclui a sondagem.
+        if ms > 0 and self._atual is not None:
+            with self._trava:
+                self._duracoes[self._atual] = ms / 1000.0
+            self._agendar_proximo()
+
+    @Slot(QMediaPlayer.MediaStatus)
+    def _on_status(self, status) -> None:
+        if status == QMediaPlayer.MediaStatus.InvalidMedia and self._atual is not None:
+            self._descartar("mídia inválida")
+
+    @Slot()
+    def _on_timeout(self) -> None:
+        if self._atual is not None:
+            self._descartar("tempo esgotado")
 
 
 class Player(QObject):
@@ -76,11 +150,6 @@ class Player(QObject):
     mídia rodam sempre na thread da GUI (diretamente ou via ``invokeMethod``); os getters de
     estado leem atributos cacheados sob ``self._lock``.
     """
-
-    # sinais que disparam o worker do beep (thread própria); a emissão cross-thread é
-    # resolvida para QueuedConnection automaticamente pelo Qt — ver docstring do módulo.
-    _pedirCarregarBeep = Signal(str)
-    _pedirTocarBeep = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -98,18 +167,14 @@ class Player(QObject):
         self._qplayer.durationChanged.connect(self._on_duration)
         self._qplayer.positionChanged.connect(self._on_position)
 
-        # beep de aviso: thread própria com event loop dedicado (ver _BeepWorker/docstring do
-        # módulo) para que a inicialização do QSoundEffect nunca trave a thread da GUI.
-        self._beep_thread = QThread()
-        self._beep_thread.setObjectName("ComPassoBeepThread")
-        self._beep_worker = _BeepWorker()
-        self._beep_worker.moveToThread(self._beep_thread)
-        self._pedirCarregarBeep.connect(self._beep_worker.carregar)
-        self._pedirTocarBeep.connect(self._beep_worker.tocar)
-        self._beep_thread.start()
-        app = QCoreApplication.instance()
-        if app is not None:
-            app.aboutToQuit.connect(self._encerrar_beep_thread)
+        # --- beep de aviso: par independente, mesmo backend (ver docstring do módulo) ---
+        # canal separado para que o beep toque em paralelo com a faixa sem interrompê-la;
+        # mesmo motor para que as latências de saída se cancelem no intervalo beep->áudio.
+        self._beep_out = QAudioOutput()
+        self._beep_out.setVolume(1.0)
+        self._beep_player = QMediaPlayer()
+        self._beep_player.setAudioOutput(self._beep_out)
+        self._beep_path = None
 
         # --- estado cacheado (escrito nos handlers de sinal na GUI, lido pela worker) ---
         self._lock = threading.Lock()
@@ -117,6 +182,11 @@ class Player(QObject):
         self._duration_s = 0.0
         self._position_s = 0.0
         self._loaded = False
+
+        # fim da faixa: setado no EndOfMedia/stop, aguardado por `aguardar_fim` na worker.
+        # Substitui o antigo polling de is_busy() a cada 200 ms, que atrasava o marcador
+        # `music_end` e a âncora do eixo X do gráfico na mesma medida.
+        self._fim_faixa = threading.Event()
 
         # sincronização da carga assíncrona de faixa. A carga só é dada por concluída quando
         # a faixa chega a LoadedMedia E uma nova duração (>0) é anunciada — ver _do_load.
@@ -193,6 +263,7 @@ class Player(QObject):
         if not self._loaded:
             player_logger.logger.warning("Nenhum áudio carregado")
             return
+        self._fim_faixa.clear()
         self._qplayer.setPosition(0)
         self._qplayer.play()
         # marca _busy imediatamente para fechar a corrida com o sinal PlayingState (a worker
@@ -211,35 +282,65 @@ class Player(QObject):
         self._qplayer.stop()
         with self._lock:
             self._busy = False
+        # libera quem estiver em aguardar_fim(): um stop manual encerra a faixa tanto quanto
+        # o fim natural.
+        self._fim_faixa.set()
         player_logger.logger.info("Reprodução parada")
 
     def preload_beep(self, path: str) -> None:
-        """Prepara o beep com antecedência, na thread própria do beep (não bloqueia nada).
+        """Carrega o beep uma única vez, no arranque do app (``beep_caminho`` é fixo na sessão).
 
-        Chamado uma vez no arranque do app (``beep_caminho`` é fixo pela sessão) para que a
-        inicialização do ``QSoundEffect`` (~250 ms medido) aconteça cedo; como roda numa thread
-        separada da GUI (ver docstring do módulo), isso é só uma otimização de latência — sem
-        preload, o primeiro ``play_beep`` funcionaria igual, só que com um leve atraso na thread
-        do beep (nunca na da GUI).
+        Deixar a source pronta com antecedência é o que permite que ``play_beep`` seja apenas um
+        ``play()`` durante a contagem regressiva, sem a inicialização de backend que atrasaria o
+        primeiro beep do experimento.
         """
-        self._pedirCarregarBeep.emit(path)
+        self._beep_path = path
+        self._invocar("_do_preload_beep")
 
-    def play_beep(self, path: str) -> bool:
-        """Toca um beep curto em canal separado (não interfere na faixa).
+    @Slot()
+    def _do_preload_beep(self) -> None:
+        """(Thread GUI) Aponta o player do beep para o arquivo e o deixa pronto."""
+        if not self._beep_path:
+            return
+        self._beep_player.setSource(QUrl.fromLocalFile(self._beep_path))
+        player_logger.logger.info(f"Beep pré-carregado: {self._beep_path}")
 
-        Fica inteiramente na thread do beep, então este método nunca bloqueia a chamadora. O
-        retorno indica apenas que o pedido foi despachado (nenhum chamador atual usa o valor
-        para decidir algo — ver ``ExperimentRunner``).
+    def play_beep(self) -> bool:
+        """Toca o beep pré-carregado em canal separado (não interfere na faixa).
+
+        Despacha em ``QueuedConnection`` e retorna imediatamente: é chamado dentro da janela
+        cronometrada do experimento, onde bloquear a worker esperando a GUI reintroduziria a
+        variação que o agendamento por instantes absolutos elimina. O retorno indica só que o
+        pedido foi despachado.
         """
-        self._pedirTocarBeep.emit(path)
+        if not self._beep_path:
+            player_logger.logger.warning("play_beep sem beep pré-carregado; nada a tocar.")
+            return False
+        if self._na_thread_gui():
+            self._do_play_beep()
+        else:
+            QMetaObject.invokeMethod(self, "_do_play_beep", Qt.QueuedConnection)
         return True
 
-    def _encerrar_beep_thread(self) -> None:
-        """Encerra a thread do beep de forma limpa ao fechar o app (evita warning do Qt)."""
-        self._beep_thread.quit()
-        self._beep_thread.wait(2000)
+    @Slot()
+    def _do_play_beep(self) -> None:
+        """(Thread GUI) Rebobina e toca o beep."""
+        try:
+            self._beep_player.setPosition(0)
+            self._beep_player.play()
+        except Exception as e:
+            player_logger.logger.error(f"Erro ao tocar beep: {e}")
 
     # ---------------------------------------------- leituras cacheadas (worker)
+    def aguardar_fim(self, timeout: float) -> bool:
+        """Bloqueia até o fim natural da faixa (ou ``stop``). True se o fim chegou a tempo.
+
+        O `timeout` é uma rede de segurança (duração conhecida + folga): se o ``EndOfMedia``
+        nunca vier — backend travado, arquivo corrompido —, a sessão segue em vez de ficar
+        pendurada para sempre.
+        """
+        return self._fim_faixa.wait(timeout)
+
     def is_busy(self) -> bool:
         """True enquanto a faixa está tocando; vira False sozinho ao terminar (EndOfMedia)."""
         with self._lock:
@@ -280,9 +381,11 @@ class Player(QObject):
             with self._lock:
                 self._loaded = False
         elif status == QMediaPlayer.MediaStatus.EndOfMedia:
-            # fim natural da faixa: libera o polling de _wait_track_end no runner.
+            # fim natural da faixa: acorda `aguardar_fim` no runner no instante real do fim,
+            # que é quando o marcador `music_end` é carimbado.
             with self._lock:
                 self._busy = False
+            self._fim_faixa.set()
 
     @Slot(QMediaPlayer.PlaybackState)
     def _on_playback_state(self, state) -> None:

@@ -5,6 +5,9 @@ import QtQuick.Controls.Basic
 TextField {
     id: campo
     property bool mono: false
+    // Entrada inválida: contorna o campo de vermelho. Acompanha o `ErroCampo` que descreve o
+    // problema logo abaixo — a borda chama atenção, o texto explica.
+    property bool erro: false
     implicitHeight: Theme.metrics.inputH
     color: Theme.colors.text
     placeholderTextColor: Theme.colors.faint
@@ -18,6 +21,8 @@ TextField {
         radius: Theme.metrics.cornerSm
         color: Theme.colors.input_bg
         border.width: 1
-        border.color: campo.activeFocus ? Theme.colors.accent : Theme.colors.border
+        // o erro vence o foco: um campo inválido em foco continua sinalizando o problema.
+        border.color: campo.erro ? Theme.colors.danger
+                    : campo.activeFocus ? Theme.colors.accent : Theme.colors.border
     }
 }

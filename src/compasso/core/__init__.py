@@ -6,6 +6,7 @@ experiment_logger = SetLogger(category='experiment', namelogger='experimentLogge
 recorder_logger = SetLogger(category='recorder', namelogger='recorderLogger')
 musics_logger = SetLogger(category='musics', namelogger='musicsLogger')
 config_logger = SetLogger(category='config', namelogger='configLogger')
+updates_logger = SetLogger(category='updates', namelogger='updatesLogger')
 
 from .bitalino_connect import connectar_bitalino, ConnectionWatchdog
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename

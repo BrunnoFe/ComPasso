@@ -4,6 +4,8 @@ import QtQuick.Controls.Basic
 
 ComboBox {
     id: combo
+    // Seleção inválida: contorna o combo de vermelho (ver AppTextField.erro).
+    property bool erro: false
     implicitHeight: Theme.metrics.inputH
     font.family: Theme.fonts.mono
     font.pixelSize: Theme.fonts.s13
@@ -15,7 +17,8 @@ ComboBox {
         radius: Theme.metrics.cornerSm
         color: Theme.colors.input_bg
         border.width: 1
-        border.color: combo.activeFocus ? Theme.colors.accent : Theme.colors.border
+        border.color: combo.erro ? Theme.colors.danger
+                    : combo.activeFocus ? Theme.colors.accent : Theme.colors.border
     }
 
     contentItem: Text {

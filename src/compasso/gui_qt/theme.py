@@ -35,6 +35,12 @@ class Theme(QObject):
         if escolhido not in palettes.PALETTES:
             escolhido = palettes.PALETTE_PADRAO
         self._nome = escolhido
+        # Último tema usado de cada família, para o botão sol/lua ser um atalho que não anula
+        # a escolha feita no menu Tema: saindo de Iris para o claro e voltando, volta-se a
+        # Iris — não a um padrão. A família oposta começa no padrão de cada uma.
+        claro = self._nome in palettes.PALETAS_CLARAS
+        self._ultimo_claro = self._nome if claro else palettes.TEMA_CLARO_PADRAO
+        self._ultimo_escuro = palettes.TEMA_ESCURO_PADRAO if claro else self._nome
         gui_logger.logger.info(f"Tema inicial: {self._nome}")
 
     # ------------------------------------------------------------------ nome
@@ -79,6 +85,10 @@ class Theme(QObject):
         if nome == self._nome:
             return True
         self._nome = nome
+        if nome in palettes.PALETAS_CLARAS:
+            self._ultimo_claro = nome
+        else:
+            self._ultimo_escuro = nome
         try:
             config_manager.set_theme_pref(nome)
         except Exception as e:
@@ -86,3 +96,13 @@ class Theme(QObject):
         self.changed.emit()
         gui_logger.logger.info(f"Tema alterado para: {nome}")
         return True
+
+    @Slot(result=bool)
+    def alternarClaroEscuro(self) -> bool:
+        """Alterna entre a família clara e a escura, retomando o último tema usado em cada.
+
+        É o botão sol/lua da barra de menus: um atalho para as duas famílias, sem substituir o
+        menu Tema (que segue dando acesso às seis paletas).
+        """
+        alvo = self._ultimo_escuro if self._get_eh_claro() else self._ultimo_claro
+        return self.setTheme(alvo)

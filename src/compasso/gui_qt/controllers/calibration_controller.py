@@ -110,6 +110,23 @@ class CalibrationController(QObject):
         self._vol_max = str(v); self._validar(); self.mudou.emit()
     volMax = Property(str, _get_vol_max, _set_vol_max, notify=mudou)
 
+    def _get_erro_volumes(self):
+        """Mensagem sobre a faixa de volume ("" se válida) — usada sob os dois campos.
+
+        Traz para a tela a validação que já existia em ``calibration.validar_parametros`` e
+        que, até aqui, só se manifestava indiretamente como um botão desabilitado, sem dizer
+        ao usuário o que estava errado. As regras seguem no core; aqui só se escolhe quais
+        mensagens pertencem a este par de campos.
+        """
+        erros = calibration.validar_parametros(self._vol_min, self._vol_max,
+                                               int(self._step_pct_v), int(self._step_seg_v))
+        for erro in erros:
+            if "olume" in erro or "diferenca" in erro or "diferença" in erro:
+                return erro
+        return ""
+
+    erroVolumes = Property(str, _get_erro_volumes, notify=mudou)
+
     def _get_step_pct(self):
         return self._step_pct_v
     def _set_step_pct(self, v):

@@ -104,7 +104,18 @@ Window {
     }
     Connections {
         target: configController
+        // enquanto o editor (modal) está aberto, ele mesmo exibe as mensagens — ver
+        // ExperimentConfigWindow. Aqui só chegam as de fora do editor (ex.: "Abrir .config").
+        enabled: !janelaConfig.visible
         function onMensagem(titulo, texto, tipo) { dialogoMensagem.abrir(titulo, texto, tipo) }
+    }
+
+    // Verificação de atualizações: a janelinha só aparece na verificação MANUAL; a automática
+    // do arranque é silenciosa e apenas acende o ponto vermelho no menu.
+    UpdateDialog { id: dialogoAtualizacao }
+    Connections {
+        target: updatesController
+        function onPedirAbrirJanela() { dialogoAtualizacao.abrir() }
     }
 
     // Diálogo para abrir um .config existente (menu Experimento → Abrir).

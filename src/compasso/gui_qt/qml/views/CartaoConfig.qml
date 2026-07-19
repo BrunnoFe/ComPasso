@@ -153,35 +153,47 @@ Rectangle {
         width: parent.width - 2 * Theme.metrics.padMd
         spacing: Theme.metrics.padMd
 
-        // ---- cabeçalho: dois títulos flush à esquerda de cada seção (só no modo largo;
-        // no compacto cada título vai para dentro da sua seção empilhada) ----
-        RowLayout {
+        // ---- cabeçalho: cada título flush à esquerda da SUA coluna do corpo (só no modo
+        // largo; no compacto cada título vai para dentro da sua seção empilhada) ----
+        //
+        // As posições seguem o divisor do corpo em vez de um layout próprio. Um RowLayout
+        // independente, mesmo com os mesmos pesos 3:2, distribui a largura de outro jeito: o
+        // corpo alarga a coluna de arquivos por causa do conteúdo (botões + caminhos em mono),
+        // e o cabeçalho não. Medido antes: divisor do cabeçalho em x=795 contra x=414 do corpo
+        // — o título de "Arquivos & Dados" ficava solto no meio do card em vez de encabeçar a
+        // coluna. Como `corpo` conserva a largura mesmo recolhido (só a altura vai a zero), o
+        // alinhamento se mantém com o card colapsado.
+        Item {
+            id: cabecalho
             visible: !card.compacto
             width: parent.width
-            spacing: Theme.metrics.padLg
+            height: tituloArquivos.implicitHeight
 
             TituloCard {
                 text: "Participante"
-                Layout.fillWidth: true
-                Layout.horizontalStretchFactor: card._pesoPart
+                x: 0
+                y: (parent.height - implicitHeight) / 2
+                width: Math.max(0, divisorCabecalho.x)
+                elide: Text.ElideRight
             }
-            // divisor curto, alinhado ao divisor do corpo — separa os títulos mesmo colapsado.
+            // divisor curto, na mesma vertical do divisor do corpo.
             Rectangle {
-                Layout.preferredWidth: 1
-                Layout.preferredHeight: 20
-                Layout.alignment: Qt.AlignVCenter
+                id: divisorCabecalho
+                x: divisorCorpo.x
+                y: (parent.height - height) / 2
+                width: 1
+                height: 20
                 color: Theme.colors.border
             }
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.horizontalStretchFactor: card._pesoArq
-                spacing: 0
-                TituloCard {
-                    text: "Arquivos & Dados"
-                    Layout.fillWidth: true
-                }
-                // espaço reservado p/ o chevron (ancorado no canto) não cobrir o título.
-                Item { Layout.preferredWidth: 34 }
+            TituloCard {
+                id: tituloArquivos
+                text: "Arquivos & Dados"
+                // início exato da 3ª coluna do corpo (divisor + espaçamento entre colunas).
+                x: divisorCorpo.x + divisorCorpo.width + corpo.columnSpacing
+                y: (parent.height - implicitHeight) / 2
+                // reserva o canto do chevron, que é ancorado ao card e passaria por cima.
+                width: Math.max(0, parent.width - x - 34)
+                elide: Text.ElideRight
             }
         }
 
@@ -306,7 +318,9 @@ Rectangle {
                 }
 
                 // ==================== DIVISOR discreto (vertical no largo, horizontal no compacto) ====================
+                // `id` usado pelo cabeçalho para alinhar os títulos às colunas — ver acima.
                 Rectangle {
+                    id: divisorCorpo
                     Layout.fillWidth: card.compacto
                     Layout.fillHeight: !card.compacto
                     Layout.preferredWidth: card.compacto ? 0 : 1

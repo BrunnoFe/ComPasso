@@ -19,6 +19,7 @@ os demais tocam o item e são agendados pelo runner na thread da GUI.
 import math
 import time
 import threading
+from bisect import bisect_right
 from collections import deque
 
 from PySide6.QtCore import Qt, QObject, QPointF, QRectF, Property, Signal, Slot, QTimer
@@ -33,27 +34,59 @@ _JANELA_SUAVIZACAO = 5
 _ATRASO_MAXIMO_EXIBICAO_S = 0.4
 _ESCALA_Y_PADRAO = 30.0
 
-# Passos "bonitos" (s) para as marcas do eixo X; escolhe-se o menor que caiba sem aglomerar.
-_PASSOS_MARCA_X = (1, 2, 5, 10, 15, 20, 30, 60, 120, 300, 600)
-_ALVO_MARCAS_X = 8
-# A última marca do eixo X é sempre o tempo total exato da faixa; uma marca regular a menos de
-# tantos segundos do fim é omitida para não sobrepor esse rótulo final (ex.: 0:25 e faixa 0:26).
-_MARGEM_MARCA_FINAL_S = 2.0
+# Taxa de quadros fixa. Não é configurável de propósito: 30 fps já entrega uma linha contínua
+# para qualquer taxa de amostragem do BITalino (a decimação garante custo por quadro constante),
+# e deixar o usuário elevá-la só aumentava o consumo sem ganho visual perceptível.
+_FPS = 30
+_INTERVALO_QUADRO_MS = max(1, int(round(1000.0 / _FPS)))
+
+# Limite (nº de amostras) da fila entre a thread de aquisição e a da GUI. Se a GUI estagnar, é
+# melhor descartar as amostras mais antigas do que crescer sem limite — o CSV é o dado primário,
+# o gráfico é só exibição.
+_MAX_PENDENTES = 20000
+
+# Hierarquia de marcas do eixo X: linha a cada 1 s (mais apagada), a cada 5 s (peso médio) e em
+# t0 (destaque). Os rótulos usam um passo próprio, escolhido pela largura disponível.
+_PASSO_MARCA_MENOR_S = 1
+_PASSO_MARCA_MEDIA_S = 5
+# Passos "bonitos" (s) candidatos para os RÓTULOS, do mais denso ao mais esparso. Começa em 5 —
+# nunca de 1 em 1 — por dois motivos: rotular cada segundo faz o eixo mudar de aparência conforme
+# a duração da faixa (faixa curta ganhava rótulo a cada 1 s, faixa longa a cada 5 s, sem que nada
+# no experimento tivesse mudado), e 5 s é o mesmo intervalo das linhas de destaque médio, então
+# texto e grade passam a contar a mesma história. As linhas de 1 s continuam desenhadas, só que
+# sem texto.
+_PASSOS_ROTULO_X = (5, 10, 15, 30, 60, 120, 300, 600)
+# Folga (px) exigida entre rótulos vizinhos, além da largura do próprio texto.
+_FOLGA_ROTULO_PX = 14
+# Abaixo deste espaçamento (px) uma família de linhas verticais vira ruído visual e é omitida.
+_ESPACO_MINIMO_LINHA_PX = 5
+# Opacidade (0-255) da grade nos temas claros. Baixa de propósito: sobre fundo branco a grade
+# precisa apenas orientar a leitura, nunca competir com a linha do sinal. Com `faint2` do
+# Sereno resulta em ~#EFF1F3 — presente, mas atrás do traço.
+_ALFA_GRADE_CLARA = 55
+# Quanto da opacidade da grade sobra para as linhas de 1 s (o menor dos três destaques).
+_FATOR_ALFA_GRADE_MENOR = 0.55
 
 
-def _marcas_eixo_x(x_min, x_max, passo):
-    """Tempos (s) das marcas do eixo X, em ordem; a última é sempre ``x_max`` (fim da faixa).
+def _passo_rotulo_x(x_min, x_max, largura_px, largura_texto_px=34):
+    """Menor passo (s) de `_PASSOS_ROTULO_X` cujos rótulos cabem sem se sobrepor."""
+    faixa = x_max - x_min
+    if faixa <= 0 or largura_px <= 0:
+        return _PASSOS_ROTULO_X[0]
+    minimo = largura_texto_px + _FOLGA_ROTULO_PX
+    for passo in _PASSOS_ROTULO_X:
+        if passo / faixa * largura_px >= minimo:
+            return passo
+    return _PASSOS_ROTULO_X[-1]
 
-    Marcas regulares a cada ``passo`` a partir de 0 (cobrindo ``x_min``), omitindo a que ficaria
-    a menos de ``_MARGEM_MARCA_FINAL_S`` do fim para não colidir com a marca final — que é o
-    tempo total exato do áudio. Ex.: faixa de 26 s → [..., 20, 26]; de 27 s → [..., 25, 27].
-    """
+
+def _marcas_multiplas(x_min, x_max, passo):
+    """Múltiplos de ``passo`` dentro de ``[x_min, x_max]``, ancorados em 0 (t0 sempre incluído)."""
     marcas = []
     t = math.ceil(x_min / passo) * passo
-    while t < x_max - _MARGEM_MARCA_FINAL_S + 1e-6:
+    while t <= x_max + 1e-6:
         marcas.append(t)
         t += passo
-    marcas.append(x_max)
     return marcas
 
 # Margens (px) da área de plotagem dentro do item.
@@ -66,30 +99,9 @@ _PALETA_RESERVA = {
 }
 
 
-def _intervalo_ms_para_fps(fps) -> int:
-    """Converte FPS no intervalo (ms) entre quadros, limitado a uma faixa sensata."""
-    try:
-        q = float(fps)
-    except (TypeError, ValueError):
-        q = 30.0
-    q = min(max(q, 1.0), 120.0)
-    return max(1, int(round(1000.0 / q)))
-
-
 def _params_sensor(sensor):
     """Parâmetros de exibição (unidade/escala/passo) do sensor (cai no default se desconhecido)."""
     return SENSOR_GRAPH_PARAMS.get(sensor, SENSOR_GRAPH_PARAMS[SENSOR_DEFAULT])
-
-
-def _escolher_passo_marca_x(duracao_total):
-    """Escolhe o passo (s) entre marcas de tempo do eixo X para caber ~_ALVO_MARCAS_X marcas."""
-    if duracao_total <= 0:
-        return 1
-    ideal = duracao_total / _ALVO_MARCAS_X
-    for passo in _PASSOS_MARCA_X:
-        if passo >= ideal:
-            return passo
-    return _PASSOS_MARCA_X[-1]
 
 
 class GraficoSinal(QQuickPaintedItem):
@@ -120,13 +132,16 @@ class GraficoSinal(QQuickPaintedItem):
         self._grade_visivel = True
         self._rotulos_visiveis = True
         self._value_mode = "raw"
-        self._intervalo_ms = _intervalo_ms_para_fps(30)
 
         # estado da faixa.
-        self._pendentes = deque()
+        self._pendentes = deque(maxlen=_MAX_PENDENTES)
         self._trava = threading.Lock()
-        self._tempos = []
-        self._valores = []
+        # as amostras cruas NÃO são acumuladas: alimentam os baldes de decimação diretamente e
+        # são descartadas. Guardá-las custava ~10^6 floats numa faixa longa a 1000 Hz, sem
+        # utilidade — o eixo X já nasce correto em `begin()` graças à duração pré-varrida.
+        # Destas só o último par é útil (relógio de exibição e leitura numérica).
+        self._ultimo_tempo = None
+        self._ultimo_valor = None
         self._duracao = 0.0
         self._antecedencia = 0.0
         self._gravando = False
@@ -139,11 +154,12 @@ class GraficoSinal(QQuickPaintedItem):
         self._leitura = "—"
         self._canal = "SINAL DO BITALINO"
 
-        # timer de quadro: drena a fila, decima, avança o relógio e agenda o repintar.
+        # timer de quadro: drena a fila, decima, avança o relógio e agenda o repintar. Só roda
+        # entre `begin()` e `end()` — antes girava 30x/s durante toda a vida do app, inclusive
+        # com a aplicação ociosa.
         self._timer = QTimer(self)
-        self._timer.setInterval(self._intervalo_ms)
+        self._timer.setInterval(_INTERVALO_QUADRO_MS)
         self._timer.timeout.connect(self._quadro)
-        self._timer.start()
 
     # =============================================================== QML props
     def _get_contexto(self):
@@ -222,7 +238,7 @@ class GraficoSinal(QQuickPaintedItem):
         """Inicia a exibição de uma nova faixa: fixa o eixo X e limpa os dados anteriores."""
         with self._trava:
             self._pendentes.clear()
-        self._tempos, self._valores = [], []
+        self._ultimo_tempo = self._ultimo_valor = None
         self._duracao = float(duration_s) if duration_s and duration_s > 0 else 1.0
         self._antecedencia = float(lead_s) if lead_s and lead_s > 0 else 0.0
         self._gravando = True
@@ -233,18 +249,16 @@ class GraficoSinal(QQuickPaintedItem):
         self._reiniciar_estatisticas()
         self._canal = self._texto_canal()
         self.canalChanged.emit()
+        self._timer.start()
         self.update()
 
     def end(self, duracao_real=None) -> None:
         """Encerra a faixa: o relógio salta para o fim, revelando o registro completo.
 
-        Se ``duracao_real`` (duração real da faixa em segundos, medida pela reprodução) for
-        informada, o eixo X é reajustado para terminar exatamente onde a música terminou.
-        O eixo é fixado antes da reprodução com uma estimativa (``player.get_length()``) que
-        pode divergir da reprodução real; sem este ajuste a linha do sinal termina antes do
-        fim do eixo (espaço vazio) ou é comprimida contra a borda direita. Como a decimação
-        mapeia tempo→coluna por fração da duração, mudar a duração exige reprocessar as
-        amostras cruas com a nova referência.
+        ``duracao_real`` é uma correção fina do eixo X. Com a duração pré-varrida no scan e o
+        fim da faixa detectado pelo sinal ``EndOfMedia`` (não mais por polling de 200 ms), a
+        divergência para a duração usada em ``begin()`` é de milissegundos — a reancoragem
+        deixou de ser o caso comum e virou rede de segurança.
         """
         self._drenar_pendentes()
         if duracao_real is not None:
@@ -253,17 +267,21 @@ class GraficoSinal(QQuickPaintedItem):
             except (TypeError, ValueError):
                 nova_dur = 0.0
             if nova_dur > 0 and abs(nova_dur - self._duracao) > 1e-6:
-                self._duracao = nova_dur
-                self._reiniciar_decimacao()
-        self._decimar_novas()
+                self._remapear_baldes(nova_dur)
         self._gravando = False
         self._finalizado = True
+        self._timer.stop()
+        # último quadro: o relógio salta para o fim e revela o traço completo.
+        self._avancar_relogio()
+        self._atualizar_leitura()
+        self.update()
 
     def reset_idle(self) -> None:
         """Volta ao estado ocioso (sem dados, "Aguardando gravação…")."""
+        self._timer.stop()
         with self._trava:
             self._pendentes.clear()
-        self._tempos, self._valores = [], []
+        self._ultimo_tempo = self._ultimo_valor = None
         self._gravando = False
         self._finalizado = False
         self._tempo_exibicao = 0.0
@@ -323,9 +341,6 @@ class GraficoSinal(QQuickPaintedItem):
             self._suavizacao_ativa = bool(settings["smoothing_enabled"])
         if "smoothing_window" in settings:
             self._janela_suavizacao = max(1, int(settings["smoothing_window"]))
-        if "fps" in settings:
-            self._intervalo_ms = _intervalo_ms_para_fps(settings["fps"])
-            self._timer.setInterval(self._intervalo_ms)
         if "line_width" in settings:
             self._largura_linha = float(settings["line_width"])
         if "grid_visible" in settings:
@@ -334,6 +349,10 @@ class GraficoSinal(QQuickPaintedItem):
             self._rotulos_visiveis = bool(settings["axis_labels_visible"])
         if "value_mode" in settings:
             self._value_mode = settings["value_mode"]
+        # a suavização entra no cálculo dos pontos cacheados: mudá-la exige recalculá-los, ou a
+        # pré-visualização ao vivo da janela de configurações não teria efeito visível.
+        if "smoothing_enabled" in settings or "smoothing_window" in settings:
+            self._cache_sujo = True
         # escala/unidade podem ter mudado — atualiza os botões +/- do gráfico.
         self.escalaChanged.emit()
         self.update()
@@ -370,8 +389,34 @@ class GraficoSinal(QQuickPaintedItem):
 
     def _reiniciar_decimacao(self) -> None:
         self._baldes = {}
-        self._ordem_baldes = []
-        self._processadas = 0
+        self._colunas = []          # colunas ocupadas, mantidas ordenadas
+        self._pontos_cache = []     # [(t, valor_suavizado)] reaproveitado entre quadros
+        self._cache_sujo = True
+
+    def _remapear_baldes(self, nova_duracao: float) -> None:
+        """Reancora os baldes numa nova duração total, sem as amostras cruas.
+
+        Cada balde é a média de uma janela de tempo; reposicioná-lo é reescalar sua coluna pela
+        razão entre as durações. É uma aproximação (dois baldes podem cair na mesma coluna e são
+        combinados pela média ponderada), aceitável porque a correção é de milissegundos — e
+        muito mais barata que guardar todas as amostras cruas só para este caso.
+        """
+        dur_antiga = self._duracao if self._duracao > 0 else 1.0
+        razao = dur_antiga / nova_duracao
+        novos = {}
+        for col, (soma, cont) in self._baldes.items():
+            nova_col = int(round(col * razao))
+            nova_col = max(0, min(_COLUNAS_DECIMACAO - 1, nova_col))
+            alvo = novos.get(nova_col)
+            if alvo is None:
+                novos[nova_col] = [soma, cont]
+            else:
+                alvo[0] += soma
+                alvo[1] += cont
+        self._duracao = nova_duracao
+        self._baldes = novos
+        self._colunas = sorted(novos)
+        self._cache_sujo = True
 
     def _reiniciar_estatisticas(self) -> None:
         self._est_n = 0
@@ -399,26 +444,11 @@ class GraficoSinal(QQuickPaintedItem):
         if self._finalizado:
             novo = self._duracao
         else:
-            ult = self._tempos[-1] if self._tempos else 0.0
+            ult = self._ultimo_tempo if self._ultimo_tempo is not None else 0.0
             novo = min(self._tempo_exibicao + dt, ult)
             if ult - novo > _ATRASO_MAXIMO_EXIBICAO_S:
                 novo = ult - _ATRASO_MAXIMO_EXIBICAO_S
         self._tempo_exibicao = min(max(novo, 0.0), self._duracao)
-
-    def _decimar_novas(self) -> None:
-        dur = self._duracao if self._duracao > 0 else 1.0
-        for i in range(self._processadas, len(self._tempos)):
-            fracao = self._tempos[i] / dur
-            fracao = 0.0 if fracao < 0.0 else 1.0 if fracao > 1.0 else fracao
-            col = int(fracao * (_COLUNAS_DECIMACAO - 1))
-            balde = self._baldes.get(col)
-            if balde is None:
-                self._baldes[col] = [self._valores[i], 1]
-                self._ordem_baldes.append(col)
-            else:
-                balde[0] += self._valores[i]
-                balde[1] += 1
-        self._processadas = len(self._tempos)
 
     @staticmethod
     def _media_movel(valores, janela):
@@ -436,34 +466,73 @@ class GraficoSinal(QQuickPaintedItem):
             saida.append((prefixo[fim] - prefixo[ini]) / (fim - ini))
         return saida
 
-    def _pontos_decimados(self):
-        """Lista ``(tempo_relativo_s, valor)`` até o corte do relógio de exibição (já suavizada)."""
+    def _recalcular_pontos(self):
+        """Recalcula a lista ``(tempo_relativo_s, valor_suavizado)`` de todas as colunas.
+
+        Só roda quando chegaram amostras novas (``_cache_sujo``), não a cada quadro: o conjunto
+        de colunas cresce monotonicamente, então entre dois quadros sem dados novos o resultado
+        é idêntico. Antes isto era refeito 30x/s — ordenação, média por balde, média móvel e a
+        materialização de até 1400 pontos — mesmo com o traço parado.
+        """
         dur = self._duracao if self._duracao > 0 else 1.0
-        corte_col = int(min(max(self._tempo_exibicao / dur, 0.0), 1.0) * (_COLUNAS_DECIMACAO - 1))
-        cols = sorted(c for c in self._ordem_baldes if c <= corte_col)
-        valores = [self._baldes[c][0] / self._baldes[c][1] for c in cols]
+        valores = [self._baldes[c][0] / self._baldes[c][1] for c in self._colunas]
         janela = self._janela_suavizacao if self._suavizacao_ativa else 1
         valores = self._media_movel(valores, janela)
-        return [((c / (_COLUNAS_DECIMACAO - 1)) * dur - self._antecedencia, valores[i])
-                for i, c in enumerate(cols)]
+        escala_t = dur / (_COLUNAS_DECIMACAO - 1)
+        self._pontos_cache = [(c * escala_t - self._antecedencia, valores[i])
+                              for i, c in enumerate(self._colunas)]
+        self._cache_sujo = False
+
+    def _pontos_decimados(self):
+        """Pontos visíveis: o cache truncado no corte do relógio de exibição."""
+        if self._cache_sujo:
+            self._recalcular_pontos()
+        dur = self._duracao if self._duracao > 0 else 1.0
+        fracao = min(max(self._tempo_exibicao / dur, 0.0), 1.0)
+        corte_col = int(fracao * (_COLUNAS_DECIMACAO - 1))
+        # `_colunas` é uma lista ordenada de inteiros alinhada com `_pontos_cache`: a busca
+        # binária dá o corte em O(log n), sem materializar nada.
+        return self._pontos_cache[:bisect_right(self._colunas, corte_col)]
 
     def _drenar_pendentes(self) -> None:
-        """Move as amostras enfileiradas (thread de aquisição) para os vetores de exibição."""
+        """Consome as amostras enfileiradas direto nos baldes de decimação.
+
+        As amostras cruas não são guardadas (ver ``__init__``): cada uma entra na média do seu
+        balde e é descartada, mantendo o uso de memória constante ao longo da faixa,
+        independentemente da duração e da taxa de amostragem.
+        """
         with self._trava:
-            novas = list(self._pendentes) if self._pendentes else None
-            if novas:
-                self._pendentes.clear()
-        if novas:
-            for t, v in novas:
-                self._tempos.append(t)
-                self._valores.append(v)
-                if t >= self._antecedencia:
-                    self._acumular_estatistica(v)
+            if not self._pendentes:
+                return
+            novas = list(self._pendentes)
+            self._pendentes.clear()
+
+        dur = self._duracao if self._duracao > 0 else 1.0
+        novas_colunas = False
+        for t, v in novas:
+            if t >= self._antecedencia:
+                self._acumular_estatistica(v)
+            fracao = t / dur
+            fracao = 0.0 if fracao < 0.0 else 1.0 if fracao > 1.0 else fracao
+            col = int(fracao * (_COLUNAS_DECIMACAO - 1))
+            balde = self._baldes.get(col)
+            if balde is None:
+                self._baldes[col] = [v, 1]
+                novas_colunas = True
+            else:
+                balde[0] += v
+                balde[1] += 1
+        self._ultimo_tempo, self._ultimo_valor = novas[-1]
+        if novas_colunas:
+            # as amostras chegam em ordem cronológica, então as colunas novas são as maiores;
+            # reordenar o conjunto todo seria desnecessário na prática, mas sorted() sobre
+            # uma lista quase ordenada é linear (Timsort) e blinda contra amostras fora de ordem.
+            self._colunas = sorted(self._baldes)
+        self._cache_sujo = True
 
     def _quadro(self) -> None:
-        """Um quadro: drena a fila, decima, avança o relógio, atualiza leitura e repinta."""
+        """Um quadro: drena a fila, avança o relógio, atualiza leitura e repinta."""
         self._drenar_pendentes()
-        self._decimar_novas()
         self._avancar_relogio()
         self._atualizar_leitura()
         if self._gravando or self._finalizado:
@@ -484,9 +553,9 @@ class GraficoSinal(QQuickPaintedItem):
             if self._est_n > 1:
                 texto += f" ({math.sqrt(self._est_m2 / (self._est_n - 1)):.2f} {u})"
             return texto
-        if not self._valores:
+        if self._ultimo_valor is None:
             return "—"
-        texto = f"Valor: {self._valores[-1]:.2f} {u}"
+        texto = f"Valor: {self._ultimo_valor:.2f} {u}"
         if self._est_min is not None and self._est_max is not None:
             texto += f" ({self._est_min:.2f} - {self._est_max:.2f})"
         return texto
@@ -502,12 +571,25 @@ class GraficoSinal(QQuickPaintedItem):
         return lum > 140
 
     def _cor_grade(self):
-        """Cor das linhas de grade (exceto a de t0). Nos temas claros usa um cinza neutro bem
-        claro (a borda cheia ficava escura demais e atrapalhava a leitura do sinal em Sereno/
-        Aurora); nos temas escuros mantém a cor de borda da paleta."""
+        """Cor base da grade (grade Y e linhas de 5 s do eixo X; t0 tem cor própria).
+
+        Nos temas claros a borda cheia da paleta é escura demais sobre o fundo branco e disputa
+        atenção com a linha do sinal. Usa-se o cinza mais claro da própria paleta (``faint2``),
+        bem transparente: além de discreto, ele já acompanha a temperatura do tema — frio no
+        Sereno, quente no Aurora —, o que um cinza neutro fixo não fazia.
+        """
         if self._eh_tema_claro():
-            return QColor(150, 156, 165, 70)   # cinza claro translúcido
+            cor = QColor(self._paleta.get("faint2", "#B4BCC7"))
+            cor.setAlpha(_ALFA_GRADE_CLARA)
+            return cor
         return self._cor("border", "#21262d")
+
+    @staticmethod
+    def _cor_grade_menor(cor_grade):
+        """Variante mais apagada da grade, para as linhas de 1 s (menor destaque)."""
+        cor = QColor(cor_grade)
+        cor.setAlpha(max(1, int(cor_grade.alpha() * _FATOR_ALFA_GRADE_MENOR)))
+        return cor
 
     def paint(self, painter: QPainter) -> None:
         """Desenha grade, eixos, a linha do sinal e o ponteiro (chamado pelo scene-graph)."""
@@ -522,7 +604,7 @@ class GraficoSinal(QQuickPaintedItem):
         if x1 <= x0 or y1 <= y0:
             return
 
-        ativo = self._gravando or self._finalizado or bool(self._tempos)
+        ativo = self._gravando or self._finalizado or bool(self._baldes)
         if not ativo:
             self._pintar_ocioso(painter, x0, y0, x1, y1)
             return
@@ -583,30 +665,74 @@ class GraficoSinal(QQuickPaintedItem):
                                  Qt.AlignRight | Qt.AlignVCenter, rot)
 
     def _pintar_grade_x(self, painter, y0, y1, x_min, x_max, px):
+        """Grade e rótulos do eixo X, em três pesos visuais.
+
+        Linhas a cada 1 s (mais apagadas), a cada 5 s (peso médio) e em t0 (destaque). Cada
+        família só é desenhada se suas linhas ficarem a pelo menos ``_ESPACO_MINIMO_LINHA_PX``
+        umas das outras — numa faixa de 5 minutos as linhas de 1 s seriam centenas, virando uma
+        mancha. Os rótulos usam um passo próprio, calculado da largura disponível, porque é a
+        colisão de textos (não de linhas) que limita a densidade legível.
+        """
         cor_grade = self._cor_grade()
         cor_texto = self._cor("faint", "#6E7681")
         cor_zero = self._cor("muted", "#8B949E")   # linha de t0 mantém-se forte
-        passo = _escolher_passo_marca_x(self._duracao)
+        largura_px = px(x_max) - px(x_min)
+        faixa = max(x_max - x_min, 1e-6)
 
-        # Marcas de -5 s até o fim: regulares a cada `passo` (t0 destacado) e a final sempre no
-        # tempo total exato da faixa (x_max). A grade da marca final é omitida (coincide com a
-        # borda direita/ponteiro); seu rótulo é ancorado à direita p/ não vazar da área.
-        marcas = _marcas_eixo_x(x_min, x_max, passo)
-        for i, t in enumerate(marcas):
-            eh_final = (i == len(marcas) - 1)
-            destaque = abs(t) < 1e-6   # início da música (0:00) destacado
-            x = px(t)
-            if self._grade_visivel and not eh_final:
-                painter.setPen(QPen(cor_zero if destaque else cor_grade, 1))
+        def espacamento_px(passo):
+            return passo / faixa * largura_px
+
+        if self._grade_visivel:
+            # cada instante recebe UMA linha só, da família de maior destaque a que pertence.
+            # Desenhar as duas famílias inteiras sobrepunha os múltiplos de 5 s (que também são
+            # múltiplos de 1 s): as duas transparências se compunham e a linha saía bem mais
+            # escura que o pretendido, achatando a hierarquia de destaques.
+            for passo, cor in ((_PASSO_MARCA_MENOR_S, self._cor_grade_menor(cor_grade)),
+                               (_PASSO_MARCA_MEDIA_S, cor_grade)):
+                if espacamento_px(passo) < _ESPACO_MINIMO_LINHA_PX:
+                    continue
+                painter.setPen(QPen(cor, 1))
+                for t in _marcas_multiplas(x_min, x_max, passo):
+                    if abs(t) < 1e-6:
+                        continue   # t0 é desenhado à parte, com destaque
+                    if passo == _PASSO_MARCA_MENOR_S and abs(t % _PASSO_MARCA_MEDIA_S) < 1e-6:
+                        continue   # pertence à família de 5 s, que o desenha com mais peso
+                    x = px(t)
+                    painter.drawLine(QPointF(x, y0), QPointF(x, y1))
+            # t0: o instante de início do áudio, a referência de leitura do gráfico.
+            if x_min <= 0.0 <= x_max:
+                pen_zero = QPen(cor_zero)
+                pen_zero.setWidthF(1.6)
+                painter.setPen(pen_zero)
+                x = px(0.0)
                 painter.drawLine(QPointF(x, y0), QPointF(x, y1))
-            if self._rotulos_visiveis:
-                painter.setPen(QPen(cor_zero if destaque else cor_texto))
-                if eh_final:
-                    painter.drawText(QRectF(x - 48, y1 + 4, 48, 16),
-                                     Qt.AlignRight | Qt.AlignTop, self._formatar_tempo(t))
-                else:
-                    painter.drawText(QRectF(x - 24, y1 + 4, 48, 16),
-                                     Qt.AlignHCenter | Qt.AlignTop, self._formatar_tempo(t))
+
+        if not self._rotulos_visiveis:
+            return
+
+        # Rótulos regulares (múltiplos do passo, sempre >= 5 s) + o final, que é o tempo total
+        # exato da faixa e fica ancorado à direita para não vazar da área de plotagem.
+        metricas = painter.fontMetrics()
+        texto_final = self._formatar_tempo(x_max)
+        largura_final = metricas.horizontalAdvance(texto_final)
+        passo_rotulo = _passo_rotulo_x(x_min, x_max, largura_px,
+                                       metricas.horizontalAdvance("-00:00"))
+        x_final = px(x_max)
+        for t in _marcas_multiplas(x_min, x_max, passo_rotulo):
+            texto = self._formatar_tempo(t)
+            x = px(t)
+            # só omite quando os dois textos realmente se tocariam — antes uma margem fixa e
+            # generosa apagava um rótulo legítimo (o "0:19" que sumia com a faixa de 20 s).
+            meia_largura = metricas.horizontalAdvance(texto) / 2.0
+            if x + meia_largura > x_final - largura_final - _FOLGA_ROTULO_PX:
+                continue
+            destaque = abs(t) < 1e-6
+            painter.setPen(QPen(cor_zero if destaque else cor_texto))
+            painter.drawText(QRectF(x - 24, y1 + 4, 48, 16),
+                             Qt.AlignHCenter | Qt.AlignTop, texto)
+        painter.setPen(QPen(cor_texto))
+        painter.drawText(QRectF(x_final - 48, y1 + 4, 48, 16),
+                         Qt.AlignRight | Qt.AlignTop, texto_final)
 
     @staticmethod
     def _formatar_tempo(segundos):
@@ -615,7 +741,23 @@ class GraficoSinal(QQuickPaintedItem):
         return f"{sinal}{s // 60}:{s % 60:02d}"
 
     def _pintar_ocioso(self, painter, x0, y0, x1, y1):
-        """Estado ocioso: apenas a mensagem 'Aguardando gravação…' (sem linha de base)."""
+        """Estado ocioso: a grade do eixo Y e a mensagem 'Aguardando gravação…'.
+
+        A grade é desenhada mesmo sem dados para que a janela de configurações tenha um
+        preview ao vivo real: antes o item ocioso pintava só a mensagem, então mexer em escala
+        Y, grade ou rótulos parecia "não fazer nada" enquanto não houvesse uma gravação na
+        tela — a origem da impressão de que os ajustes só às vezes reagiam. O eixo X fica de
+        fora porque sem faixa carregada ele não tem duração para representar.
+        """
+        esc = self._escala_y if self._escala_y > 0 else _ESCALA_Y_PADRAO
+
+        def py(v):
+            return y0 + (esc - v) / (2 * esc) * (y1 - y0)
+
+        painter.setFont(QFont(self._paleta.get("_display", "Segoe UI"), 8))
+        if self._grade_visivel or self._rotulos_visiveis:
+            self._pintar_grade_y(painter, x0, x1, esc, py)
+
         painter.setPen(QPen(self._cor("faint", "#6E7681")))
         painter.setFont(QFont(self._paleta.get("_display", "Segoe UI"), 10))
         painter.drawText(QRectF(x0, y0, x1 - x0, y1 - y0),

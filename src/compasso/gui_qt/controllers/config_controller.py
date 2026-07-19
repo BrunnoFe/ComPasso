@@ -20,6 +20,9 @@ from compasso.core.config_manager import (
     MUSIC_COLUMN_DEFAULT, FACTOR_COLUMN_DEFAULT, BEEP_ENABLED_DEFAULT,
     BEEP_LEAD_MIN, BEEP_LEAD_MAX, BEEP_LEAD_DEFAULT, CALIBRATION_ENABLED_DEFAULT)
 from compasso.core.constants import SENSOR_TYPES, SENSOR_DEFAULT
+# mesma regra usada na conexão real: o campo aceita exatamente o que `connectar_bitalino`
+# aceita, então um MAC aprovado aqui nunca é recusado depois pelo botão Conectar.
+from compasso.core.bitalino_connect import MAC_RE
 
 _CAMPOS_PADRAO = {
     "music_folder": "", "music_quantity": "", "noise_quantity": "", "factors_file": "",
@@ -76,6 +79,59 @@ class ConfigController(QObject):
         return int(self._d.get("beep_lead_seconds", 1)) >= int(self._d.get("pre_stimulus_seconds", 5))
 
     beepInvalido = Property(bool, _get_beep_invalido, notify=mudou)
+
+    # -------------------------------------------------------------- validação de campos
+    # Cada propriedade abaixo devolve a mensagem a exibir sob o campo ("" quando está tudo
+    # certo), para que a view não precise repetir nenhuma regra: a borda vermelha é apenas
+    # `texto !== ""`. As regras em si continuam vindo do core (`MAC_RE`, `validate_values`).
+    def _get_erro_beep(self):
+        if not self._get_beep_invalido():
+            return ""
+        return (f"O beep deve tocar antes do áudio: use um valor menor que o tempo "
+                f"pré-estímulo ({self._d.get('pre_stimulus_seconds')} s).")
+
+    erroBeep = Property(str, _get_erro_beep, notify=mudou)
+
+    def _get_erro_colunas(self):
+        musica = str(self._d.get("music_column", "")).strip()
+        fator = str(self._d.get("factor_column", "")).strip()
+        if not musica or not fator or musica != fator:
+            return ""
+        return "As colunas de áudios e de fatores não podem ser a mesma."
+
+    erroColunas = Property(str, _get_erro_colunas, notify=mudou)
+
+    def _get_erro_mac(self):
+        mac = str(self._d.get("bitalino_mac", "")).strip()
+        if not mac or MAC_RE.match(mac):
+            return ""   # vazio não é "inválido": é só um campo ainda não preenchido.
+        return "Formato inválido. Use XX:XX:XX:XX:XX:XX (ou com espaço/hífen)."
+
+    erroMac = Property(str, _get_erro_mac, notify=mudou)
+
+    @staticmethod
+    def _erro_quantidade(valor, minimo, rotulo):
+        """Mensagem para um campo de quantidade (inteiro >= mínimo); "" se válido ou vazio."""
+        texto = str(valor).strip()
+        if not texto:
+            return ""
+        try:
+            quantidade = int(texto)
+        except ValueError:
+            return f"{rotulo} deve ser um número inteiro."
+        if quantidade < minimo:
+            return f"{rotulo} deve ser no mínimo {minimo}."
+        return ""
+
+    def _get_erro_musicas(self):
+        return self._erro_quantidade(self._d.get("music_quantity", ""), 1, "A quantidade de músicas")
+
+    erroMusicQuantity = Property(str, _get_erro_musicas, notify=mudou)
+
+    def _get_erro_ruido(self):
+        return self._erro_quantidade(self._d.get("noise_quantity", ""), 0, "A quantidade de ruído")
+
+    erroNoiseQuantity = Property(str, _get_erro_ruido, notify=mudou)
 
     # ------------------------------------------------- propriedades dos campos
     def _mk(chave, tipo):

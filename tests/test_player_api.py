@@ -20,9 +20,11 @@ API_ESPERADA = {
     "play": [],
     "stop": [],
     "is_busy": [],
+    "aguardar_fim": ["timeout"],
     "get_pos": [],
     "get_length": [],
-    "play_beep": ["path"],
+    # o beep é carregado uma vez no arranque; tocar não recebe caminho.
+    "play_beep": [],
     "preload_beep": ["path"],
 }
 

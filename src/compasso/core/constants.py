@@ -10,6 +10,7 @@ qualquer módulo de `compasso.core` sem risco de ciclo.
 # Marcadores de evento gravados na coluna 'markers' do CSV/XLSX.
 # ---------------------------------------------------------------------------
 MARKER_COUNTDOWN_START = "INICIO_CONTAGEM"
+MARKER_BEEP = "BEEP"
 MARKER_MUSIC_START = "INICIO_MUSICA"
 MARKER_MUSIC_END = "FIM_MUSICA"
 MARKER_STOP = "PARADA_FORCADA"

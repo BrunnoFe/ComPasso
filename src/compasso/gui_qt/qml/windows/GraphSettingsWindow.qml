@@ -138,16 +138,6 @@ AppWindow {
                         Layout.fillWidth: true; spacing: Theme.metrics.padLg
                         ColumnLayout {
                             spacing: 2
-                            Caption { texto: "Atualização (FPS)" }
-                            AppComboBox {
-                                Layout.preferredWidth: 130
-                                model: [10, 15, 30, 60]
-                                currentIndex: [10, 15, 30, 60].indexOf(graphSettingsController.fps)
-                                onActivated: graphSettingsController.fps = parseInt(currentText)
-                            }
-                        }
-                        ColumnLayout {
-                            spacing: 2
                             Caption { texto: "Rótulo de valor" }
                             AppComboBox {
                                 Layout.preferredWidth: 160

@@ -18,7 +18,23 @@ AppWindow {
     minimumHeight: 600
     modality: Qt.ApplicationModal
 
-    function abrir() { win.show(); win.raise(); win.requestActivate() }
+    // Erros de campo só aparecem depois que o usuário saiu do campo ou tentou salvar — assim
+    // digitar o primeiro caractere de um MAC não pinta tudo de vermelho no meio da digitação.
+    property bool tentouSalvar: false
+
+    function abrir() {
+        win.tentouSalvar = false
+        win.show(); win.raise(); win.requestActivate()
+    }
+
+    // Mensagens do configController pertencem a ESTA janela enquanto ela está aberta: sendo
+    // modal, um diálogo aberto na janela principal ficaria bloqueado e inalcançável.
+    MessageDialog { id: dlgMsg }
+    Connections {
+        target: configController
+        enabled: win.visible
+        function onMensagem(titulo, texto, tipo) { dlgMsg.abrir(titulo, texto, tipo) }
+    }
 
     // Diálogos de arquivo/pasta e de salvamento.
     FolderDialog { id: dlgMusicas; title: "Pasta de músicas"; onAccepted: configController.definir_musicas(selectedFolder) }
@@ -58,12 +74,18 @@ AppWindow {
         GhostButton { text: "Procurar"; Layout.preferredWidth: 96; onClicked: parent.procurar() }
     }
 
-    // Campo de texto rotulado (rótulo + AppTextField), reutilizado nas várias seções.
+    // Campo de texto rotulado (rótulo + AppTextField + aviso de validação), reutilizado nas
+    // várias seções. `erro` é a mensagem vinda do controller; ela só é exibida depois que o
+    // campo perdeu o foco uma vez (`tocado`) ou após uma tentativa de salvar.
     component CampoTexto: ColumnLayout {
+        id: bloco
         property alias rotulo: cap.texto
         property alias placeholder: campo.placeholderText
         property alias valor: campo.text
         property alias mono: campo.mono
+        property string erro: ""
+        property bool tocado: false
+        readonly property bool mostrarErro: erro !== "" && (tocado || win.tentouSalvar)
         signal editado(string texto)
         Layout.fillWidth: true
         spacing: 2
@@ -71,8 +93,11 @@ AppWindow {
         AppTextField {
             id: campo
             Layout.fillWidth: true
-            onTextEdited: parent.editado(text)
+            erro: bloco.mostrarErro
+            onTextEdited: bloco.editado(text)
+            onActiveFocusChanged: if (!activeFocus) bloco.tocado = true
         }
+        ErroCampo { texto: bloco.mostrarErro ? bloco.erro : "" }
     }
 
     ColumnLayout {
@@ -107,40 +132,50 @@ AppWindow {
                         CampoTexto {
                             rotulo: "Quantidade de músicas"; placeholder: "Mín. 1"
                             valor: configController.musicQuantity
+                            erro: configController.erroMusicQuantity
                             onEditado: (texto) => configController.musicQuantity = texto
                         }
                         CampoTexto {
                             rotulo: "Quantidade de ruído"; placeholder: "Mín. 0"
                             valor: configController.noiseQuantity
+                            erro: configController.erroNoiseQuantity
                             onEditado: (texto) => configController.noiseQuantity = texto
                         }
                     }
 
                     LinhaCaminho { rotulo: "Arquivo de fatores (.xlsx)"; caminho: configController.factorsFile; onProcurar: dlgFatores.open() }
 
-                    // colunas (só quando há um arquivo de fatores lido)
-                    RowLayout {
+                    // colunas (só quando há um arquivo de fatores lido). O aviso é imediato:
+                    // são seleções discretas, não há digitação em curso para atrapalhar.
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: Theme.metrics.padLg
+                        spacing: 2
                         visible: configController.colunas.length > 0
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 2
-                            Caption { texto: "Coluna do nome dos áudios" }
-                            AppComboBox {
-                                Layout.fillWidth: true; model: configController.colunas
-                                currentIndex: configController.colunas.indexOf(configController.musicColumn)
-                                onActivated: configController.musicColumn = currentText
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.metrics.padLg
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 2
+                                Caption { texto: "Coluna do nome dos áudios" }
+                                AppComboBox {
+                                    Layout.fillWidth: true; model: configController.colunas
+                                    erro: configController.erroColunas !== ""
+                                    currentIndex: configController.colunas.indexOf(configController.musicColumn)
+                                    onActivated: configController.musicColumn = currentText
+                                }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 2
+                                Caption { texto: "Coluna dos fatores" }
+                                AppComboBox {
+                                    Layout.fillWidth: true; model: configController.colunas
+                                    erro: configController.erroColunas !== ""
+                                    currentIndex: configController.colunas.indexOf(configController.factorColumn)
+                                    onActivated: configController.factorColumn = currentText
+                                }
                             }
                         }
-                        ColumnLayout {
-                            Layout.fillWidth: true; spacing: 2
-                            Caption { texto: "Coluna dos fatores" }
-                            AppComboBox {
-                                Layout.fillWidth: true; model: configController.colunas
-                                currentIndex: configController.colunas.indexOf(configController.factorColumn)
-                                onActivated: configController.factorColumn = currentText
-                            }
-                        }
+                        ErroCampo { texto: configController.erroColunas }
                     }
                 }
 
@@ -176,6 +211,7 @@ AppWindow {
                     CampoTexto {
                         rotulo: "Endereço MAC do BITalino"; placeholder: "XX:XX:XX:XX:XX:XX"; mono: true
                         valor: configController.bitalinoMac
+                        erro: configController.erroMac
                         onEditado: (texto) => configController.bitalinoMac = texto
                     }
                 }
@@ -205,19 +241,23 @@ AppWindow {
                         Text { text: "Tocar um beep antes de cada faixa"; color: Theme.colors.text
                             font.family: Theme.fonts.display; font.pixelSize: Theme.fonts.s13 }
                     }
-                    RowLayout {
-                        Layout.fillWidth: true; spacing: Theme.metrics.padSm
+                    ColumnLayout {
+                        Layout.fillWidth: true; spacing: 2
                         enabled: configController.beepEnabled
                         opacity: enabled ? 1 : 0.5
-                        Text { text: "Tocar em t-"; color: Theme.colors.muted
-                            font.family: Theme.fonts.display; font.pixelSize: Theme.fonts.s12 }
-                        AppSlider { Layout.fillWidth: true
-                            from: configController.beepLeadMin; to: configController.beepLeadMax; stepSize: 1
-                            value: configController.beepLead
-                            onMovido: configController.beepLead = Math.round(valor) }
-                        Text { text: configController.beepLead + " s"
-                            color: configController.beepInvalido ? Theme.colors.danger : Theme.colors.muted
-                            font.family: Theme.fonts.mono; font.pixelSize: Theme.fonts.s12; Layout.preferredWidth: 40 }
+                        RowLayout {
+                            Layout.fillWidth: true; spacing: Theme.metrics.padSm
+                            Text { text: "Tocar em t-"; color: Theme.colors.muted
+                                font.family: Theme.fonts.display; font.pixelSize: Theme.fonts.s12 }
+                            AppSlider { Layout.fillWidth: true
+                                from: configController.beepLeadMin; to: configController.beepLeadMax; stepSize: 1
+                                value: configController.beepLead
+                                onMovido: configController.beepLead = Math.round(valor) }
+                            Text { text: configController.beepLead + " s"
+                                color: configController.beepInvalido ? Theme.colors.danger : Theme.colors.muted
+                                font.family: Theme.fonts.mono; font.pixelSize: Theme.fonts.s12; Layout.preferredWidth: 40 }
+                        }
+                        ErroCampo { texto: configController.erroBeep }
                     }
                 }
 
@@ -246,7 +286,11 @@ AppWindow {
             Layout.alignment: Qt.AlignRight
             spacing: Theme.metrics.padSm
             GhostButton { text: "Cancelar"; onClicked: win.close() }
-            AppButton { text: "Salvar"; onClicked: configController.salvar() }
+            AppButton {
+                text: "Salvar"
+                // revela os avisos de campos que o usuário ainda nem chegou a visitar.
+                onClicked: { win.tentouSalvar = true; configController.salvar() }
+            }
         }
     }
 }

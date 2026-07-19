@@ -80,8 +80,6 @@ class GraphSettingsController(QObject):
     smoothingEnabled = Property(bool, _g, _s, notify=mudou)
     _g, _s = _mk("smoothing_window", int)
     smoothingWindow = Property(int, _g, _s, notify=mudou)
-    _g, _s = _mk("fps", int)
-    fps = Property(int, _g, _s, notify=mudou)
     _g, _s = _mk("line_width", float)
     lineWidth = Property(float, _g, _s, notify=mudou)
     _g, _s = _mk("grid_visible", bool)
@@ -122,11 +120,19 @@ class GraphSettingsController(QObject):
         self._snapshot = dict(atual)
         self.sensorChanged.emit()
         self.mudou.emit()
+        # garante que o gráfico comece de acordo com o que a janela mostra (o zoom ao vivo do
+        # eixo Y pode ter mexido na escala desde a última abertura).
+        self._preview()
 
     @Slot()
     def salvar(self) -> None:
         config_manager.set_graph_prefs(self._s)
         self._ctx.graph_settings = dict(self._s)
+        # o estado salvo passa a ser a nova linha de base. Sem isto, o `cancelar()` disparado
+        # pelo `onClosing` logo após o clique em Salvar (o botão fecha a janela) revertia o
+        # gráfico para o snapshot de abertura: as preferências ficavam gravadas em disco, mas
+        # o gráfico voltava ao estado anterior — e só "reapareciam" ao reabrir a janela.
+        self._snapshot = dict(self._s)
         self._preview()
         gui_logger.logger.info(f"Configurações do gráfico salvas: {self._s}")
 

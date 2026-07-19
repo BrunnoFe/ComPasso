@@ -43,6 +43,95 @@ def _read_rows(csv_path):
 
 
 # --------------------------------------------------------------------------- #
+# Deriva entre o relógio do emissor e o local (regressão do bug de dessincronização
+# cumulativa observado em hardware real: os marcadores da 1ª faixa saíam em 0.01/4.00/5.00 e
+# os da 12ª em 0.18/4.15/5.15 — deslocamento constante por faixa, crescendo com a sessão).
+# --------------------------------------------------------------------------- #
+class _InletComDeriva:
+    """Inlet falso cujo relógio está atrasado `atraso` s em relação ao local.
+
+    Modela o caso real: ``pull_sample`` devolve timestamps no relógio de quem envia, e
+    ``time_correction()`` informa quanto somar para chegar ao relógio local.
+    """
+
+    def __init__(self, amostras_locais, atraso):
+        # `amostras_locais` são instantes no relógio LOCAL; o emissor os reporta atrasados.
+        self.stream = [([v], t - atraso) for v, t in amostras_locais]
+        self.buffered = []
+        self.on_exhausted = None
+        self._atraso = atraso
+        self.correcoes = 0
+
+    def time_correction(self, timeout=None):
+        self.correcoes += 1
+        return self._atraso
+
+    def pull_sample(self, timeout=0.0):
+        if timeout == 0.0:
+            return (None, None)
+        if self.stream:
+            return self.stream.pop(0)
+        if self.on_exhausted is not None:
+            self.on_exhausted()
+            self.on_exhausted = None
+        return (None, None)
+
+    def info(self):
+        raise NotImplementedError
+
+
+@pytest.mark.parametrize("atraso", [0.0, 0.17, -0.17])
+def test_deriva_do_relogio_do_emissor_e_compensada(patch_clock, tmp_path, atraso):
+    """O timestamp gravado segue o relógio local, mesmo com o emissor deslocado.
+
+    Sem a correção, um emissor atrasado 0.17 s empurrava todas as linhas (e com elas todos os
+    marcadores) em 0.17 s — exatamente o que se via na 12ª faixa da sessão real.
+    """
+    # amostras em instantes locais conhecidos: t0, t0+0.01, t0+0.02
+    locais = [(1.0, T0), (2.0, T0 + 0.01), (3.0, T0 + 0.02)]
+    inlet = _InletComDeriva(locais, atraso)
+    rec = LSLRecorder(inlet, channel=0, csv_path=str(tmp_path / "f.csv"))
+    _drive(rec, inlet)
+
+    tempos = [float(r[0]) for r in _read_rows(rec.csv_path)[1:]]
+    assert tempos == pytest.approx([0.0, 0.01, 0.02], abs=1e-9)
+
+
+def test_marcador_cai_no_instante_certo_apesar_da_deriva(patch_clock, tmp_path):
+    """Um marcador carimbado com o relógio local casa com a amostra local correspondente."""
+    locais = [(1.0, T0), (2.0, T0 + 0.01), (3.0, T0 + 0.02), (4.0, T0 + 0.03)]
+    inlet = _InletComDeriva(locais, atraso=0.17)
+    rec = LSLRecorder(inlet, channel=0, csv_path=str(tmp_path / "f.csv"))
+    inlet.on_exhausted = rec._stop_event.set
+    rec.start()
+    # marcador no instante local T0+0.02 -> deve cair na 3ª amostra, em timestamp 0.02
+    rec.add_marker("INICIO_MUSICA", T0 + 0.02, music_file="a.wav", fator="x")
+    rec._thread.join(timeout=5.0)
+
+    linhas = [r for r in _read_rows(rec.csv_path)[1:] if r[2] == "INICIO_MUSICA"]
+    assert len(linhas) == 1, "marcador não foi gravado exatamente uma vez"
+    assert float(linhas[0][0]) == pytest.approx(0.02, abs=1e-9)
+
+
+def test_correcao_de_relogio_e_reconsultada_durante_a_aquisicao(patch_clock, tmp_path, mocker):
+    """A correção é reconsultada periodicamente: é a deriva que acumula, não o offset."""
+    mocker.patch.object(LSLRecorder, "INTERVALO_CORRECAO_S", 0.0)   # reconsulta a cada volta
+    locais = [(float(i), T0 + i * 0.01) for i in range(5)]
+    inlet = _InletComDeriva(locais, atraso=0.17)
+    rec = LSLRecorder(inlet, channel=0, csv_path=str(tmp_path / "f.csv"))
+    _drive(rec, inlet)
+    assert inlet.correcoes > 1, "time_correction() só foi consultado uma vez"
+
+
+def test_inlet_sem_time_correction_nao_quebra(patch_clock, make_inlet, tmp_path):
+    """O FakeInlet da suíte (e qualquer inlet antigo) segue funcionando, com correção zero."""
+    inlet = make_inlet(stream=[([1.0], T0), ([2.0], T0 + 0.01)])
+    rec = LSLRecorder(inlet, channel=0, csv_path=str(tmp_path / "f.csv"))
+    _drive(rec, inlet)
+    tempos = [float(r[0]) for r in _read_rows(rec.csv_path)[1:]]
+    assert tempos == pytest.approx([0.0, 0.01], abs=1e-9)
+
+
 def test_start_returns_t0(patch_clock, make_inlet, tmp_path):
     inlet = make_inlet(stream=[([1.0], T0)])
     rec = LSLRecorder(inlet, channel=0, csv_path=str(tmp_path / "f.csv"))

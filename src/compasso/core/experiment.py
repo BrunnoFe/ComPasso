@@ -1,5 +1,4 @@
 import os
-import time
 import random
 import threading
 
@@ -8,8 +7,9 @@ from pylsl import local_clock
 
 from . import experiment_logger
 from .audio import get_system_volume
-from .constants import (MARKER_COUNTDOWN_START, MARKER_MUSIC_START, MARKER_MUSIC_END,
-                       MARKER_STOP, CONDITION_MUSICA, CONDITION_RUIDO, RUIDO_KEYWORDS)
+from .constants import (MARKER_COUNTDOWN_START, MARKER_BEEP, MARKER_MUSIC_START,
+                       MARKER_MUSIC_END, MARKER_STOP, CONDITION_MUSICA, CONDITION_RUIDO,
+                       RUIDO_KEYWORDS)
 from .recorder import LSLRecorder, build_session_dirname, build_track_filename
 
 # Planilha (uma por sessão) com o resumo de cada faixa executada: ordem, arquivo, fator,
@@ -140,9 +140,20 @@ class ExperimentRunner:
     # já aparecem no traço antes da música começar (eixo X total = lead + duração). O lead
     # efetivo é clampado ao tempo pré-estímulo (não pode ser maior que a própria contagem).
     PLOT_LEAD_SECONDS = 5
+    # folga (s) somada à duração da faixa antes de desistir de esperar o sinal de fim.
+    MARGEM_FIM_FAIXA_S = 5.0
+    # granularidade (s) da espera em `_esperar_ate`: curta o bastante para o botão "parar"
+    # responder rápido, longa o bastante para não girar a CPU à toa.
+    _PASSO_ESPERA_S = 0.05
+    # nos últimos (s) antes de um alvo, nenhum status é postado (ver `_esperar_ate`).
+    _MARGEM_STATUS_S = 0.15
 
     def __init__(self, ctx):
         self.ctx = ctx
+        # faixa corrente; inicializados aqui porque `stop()` pode ser chamado antes do
+        # primeiro `_run_track` (o botão existe desde o início da sessão).
+        self.music_name = ""
+        self.music_fator = ""
         # tempo pré-estímulo configurável (menu Experimento / .config); cai no fallback da classe.
         self.countdown_seconds = int(getattr(ctx, "pre_stimulus_seconds", self.COUNTDOWN_SECONDS))
         # beep de aviso na contagem regressiva (opcional): toca a `beep_antecedencia_segundos`
@@ -241,6 +252,37 @@ class ExperimentRunner:
 
     # ------------------------------------------------------------------ #
     def _run_experiment(self) -> None:
+        """Corpo da sessão, na thread daemon. Nenhuma exceção pode escapar daqui.
+
+        Esta thread não tem quem a supervisione: uma exceção que escapasse a mataria em
+        silêncio, deixando `_running=True` e a UI travada (campos do participante desabilitados,
+        botão recusando reiniciar) — sem nenhum sinal para o usuário além do app parecer morto.
+        """
+        try:
+            self._executar_sessao()
+        except Exception as e:
+            experiment_logger.logger.error(
+                f"Erro não tratado na sessão do experimento: {e}", exc_info=True)
+            self._post_status(f"Erro inesperado no experimento: {e}. Sessão encerrada.")
+            self._encerrar_recorder_em_erro()
+        finally:
+            self._finish()
+
+    def _encerrar_recorder_em_erro(self) -> None:
+        """Fecha o arquivo da faixa corrente após uma falha, para não perder o já gravado."""
+        rec = self._recorder
+        if rec is None:
+            return
+        try:
+            rec.stop()
+            rec.finalize()
+        except Exception as e:
+            experiment_logger.logger.error(f"Falha ao finalizar o arquivo após erro: {e}")
+        finally:
+            self._recorder = None
+            self._plot_active = False
+
+    def _executar_sessao(self) -> None:
         # pasta única da sessão de coleta (criada uma vez, antes da primeira faixa)
         session_name = build_session_dirname(self.ctx)
         self._session_dir = os.path.join(self.ctx.save_dir, session_name)
@@ -249,7 +291,6 @@ class ExperimentRunner:
         except OSError as e:
             experiment_logger.logger.error(f"Não foi possível criar a pasta da sessão '{self._session_dir}': {e}")
             self._post_status("Erro ao criar a pasta de salvamento. Experimento abortado.")
-            self._finish()
             return
         experiment_logger.logger.info(f"Pasta da sessão criada: {self._session_dir}")
 
@@ -278,8 +319,6 @@ class ExperimentRunner:
             if self._stop_event.is_set():
                 break
 
-        self._finish()
-
     def _run_track(self, order: int, path: str, totals: dict) -> None:
         self.music_name = os.path.basename(path)
         self.music_fator = self.ctx.music_condition_mapping.get(path, "")
@@ -291,9 +330,18 @@ class ExperimentRunner:
         self._set_button("rodando")
         self._post_current_music(f"Preparando: {self.music_name}")
 
-        # 1) aquisição + captura de t0 (drena buffer -> t0 -> primeira linha, sem lacuna)
-        filename = build_track_filename(order, len(self._order), self.music_name)
+        # 1) carga do áudio ANTES da aquisição. `load()` bloqueia (até 10 s) e tem latência
+        # variável; rodá-lo depois de t0 jogaria essa variação para dentro da janela
+        # cronometrada, deslocando a contagem regressiva de forma diferente a cada faixa.
+        if not self.ctx.player.load(path):
+            experiment_logger.logger.error(f"Falha ao carregar áudio; pulando faixa: {path}")
+            self._post_status(f"Falha ao carregar '{self.music_name}'; pulando faixa.")
+            return
+        # duração pré-varrida no scan (SondaDuracao); o valor da carga é o fallback.
+        duration = self.ctx.duracoes_audio.get(path) or self.ctx.player.get_length()
 
+        # 2) aquisição + captura de t0 (drena buffer -> t0 -> primeira linha, sem lacuna)
+        filename = build_track_filename(order, len(self._order), self.music_name)
         csv_path = os.path.join(self._session_dir, filename + ".csv") #type: ignore
         experiment_logger.logger.info(f"Preparando aquisição LSL para '{self.music_name}' (fator: '{self.music_fator}') -> {csv_path}")
         recorder = LSLRecorder(self.ctx.bitalino, self.ctx.signal_channel, csv_path,
@@ -302,51 +350,55 @@ class ExperimentRunner:
         t0 = recorder.start()
         recorder.add_marker(MARKER_COUNTDOWN_START, t0, music_file=self.music_name, fator=self.music_fator)
 
-        # carrega o áudio já aqui (não apenas após a contagem) para conhecer a duração da
-        # faixa com antecedência — necessária para fixar o eixo X do gráfico antes do início
-        # da janela de exibição (ver PLOT_LEAD_SECONDS abaixo). Não inicia a reprodução.
-        if not self.ctx.player.load(path):
-            experiment_logger.logger.error(f"Falha ao carregar áudio; pulando faixa: {path}")
-            self._post_status(f"Falha ao carregar '{self.music_name}'; pulando faixa.")
-            self._plot_active = False
-            self._plot_reset()
-            recorder.stop()
-            recorder.finalize()
-            self._recorder = None
-            return
-        duration = self.ctx.player.get_length()
+        # 3) alvos absolutos da faixa, todos derivados de t_audio (o início do estímulo é a
+        # referência do experimento). Como cada espera é recalculada do relógio em
+        # `_esperar_ate`, o erro de despertar do SO não acumula: o intervalo beep->áudio vale o
+        # configurado em toda faixa, do início ao fim da sessão.
+        t_audio = t0 + self.countdown_seconds
+        t_beep = t_audio - self.beep_antecedencia_segundos
+        t_grafico = t_audio - self.PLOT_LEAD_SECONDS
+        if t_grafico < t0:
+            # contagem menor que a janela do gráfico: o traço só pode começar em t0. O eixo
+            # continua indo de -PLOT_LEAD_SECONDS, então a região anterior fica sem traço.
+            experiment_logger.logger.warning(
+                f"Tempo pré-estímulo ({self.countdown_seconds}s) menor que a janela do gráfico "
+                f"({self.PLOT_LEAD_SECONDS}s): o traço começará em t0.")
+            t_grafico = t0
 
-        # 2) contagem regressiva (tempo pré-estímulo configurável)
-        # lead do gráfico nunca maior que a própria contagem (evita não disparar quando
-        # countdown < PLOT_LEAD_SECONDS).
-        lead = min(self.PLOT_LEAD_SECONDS, self.countdown_seconds)
-        beep_tocado = False
-        for remaining in range(self.countdown_seconds, 0, -1):
-            if self._stop_event.is_set():
+        eventos = [(t_grafico, "grafico"), (t_audio, "audio")]
+        if self.beep_habilitado:
+            eventos.append((t_beep, "beep"))
+        eventos.sort(key=lambda e: e[0])
+
+        ts_start = None
+        for instante, evento in eventos:
+            if not self._esperar_ate(instante, t_audio):
                 return
-            # nos últimos `lead` s da contagem: limpa o traço da faixa anterior e começa a
-            # exibir o sinal já recebido; eixo X = janela de espera + duração da música.
-            if remaining == lead:
+            # nada entre a espera e o disparo: qualquer trabalho aqui (postar status, ler o
+            # volume do SO) vira atraso direto sobre o instante alvo.
+            if evento == "grafico":
+                # origem do eixo na mesma base dos timestamps do recorder (relativos a t0).
+                self._plot_origin = t_grafico - t0
                 self._plot_active = True
-                self._plot_origin = None
-                self._plot_begin(lead + duration, lead)
-            # beep de aviso no t-X: toca uma vez, ao alcançar `beep_antecedencia_segundos`
-            # restantes. Se a antecedência for maior que a própria contagem, toca no 1º tique.
-            if self.beep_habilitado and not beep_tocado and remaining <= self.beep_antecedencia_segundos:
-                self.ctx.player.play_beep(self.ctx.beep_caminho)
-                beep_tocado = True
-            self._post_status(f"Preparando '{self.music_name}' — iniciando em {remaining}s")
-            time.sleep(1.0)
-        if self._stop_event.is_set():
+                self._plot_begin(self.PLOT_LEAD_SECONDS + duration, self.PLOT_LEAD_SECONDS)
+            elif evento == "beep":
+                ts_beep = local_clock()
+                self.ctx.player.play_beep()
+                recorder.add_marker(MARKER_BEEP, ts_beep,
+                                    music_file=self.music_name, fator=self.music_fator)
+            else:
+                ts_start = local_clock()
+                self.ctx.player.play()
+                recorder.add_marker(MARKER_MUSIC_START, ts_start,
+                                    music_file=self.music_name, fator=self.music_fator)
+
+        if ts_start is None or self._stop_event.is_set():
             return
 
-        # 3) início da música
-        ts_start = local_clock()
-        recorder.add_marker(MARKER_MUSIC_START, ts_start, music_file=self.music_name, fator=self.music_fator)
-        # volume do sistema no instante da reprodução (lido direto do SO — o slider pode
-        # nunca ter sido tocado nesta sessão).
+        # trabalho não cronometrado, deliberadamente depois do play(): `get_system_volume()` é
+        # uma chamada COM (pycaw) e ficava entre o marcador e o play(), injetando latência não
+        # medida no instante mais sensível da faixa.
         self._volume_faixa = int(round(get_system_volume()))
-        self.ctx.player.play()
         self._post_current_music(self.music_name)
         if cat == CONDITION_MUSICA:
             self._post_condition(f" {str(self.music_fator).strip().lower()} ")
@@ -354,8 +406,14 @@ class ExperimentRunner:
             self._post_condition(" ruído ")
         self._post_status(f"Reproduzindo: {self.music_name}")
 
-        # 4) aguarda o fim da faixa (ou stop)
-        self._wait_track_end()
+        # 4) aguarda o fim da faixa pelo sinal EndOfMedia (o timeout é só rede de segurança
+        # para o caso de o sinal nunca chegar). O polling anterior atrasava o `music_end` — e,
+        # com ele, a âncora do eixo X — em até 200 ms.
+        if not self.ctx.player.aguardar_fim(duration + self.MARGEM_FIM_FAIXA_S):
+            experiment_logger.logger.warning(
+                f"Fim de '{self.music_name}' não sinalizado em {duration:.1f}s + margem; "
+                "encerrando a faixa por tempo esgotado.")
+            self.ctx.player.stop()
         if self._stop_event.is_set():
             return
 
@@ -363,14 +421,15 @@ class ExperimentRunner:
         ts_end = local_clock()
         self._ts_fim_faixa = ts_end
         recorder.add_marker(MARKER_MUSIC_END, ts_end, music_file=self.music_name, fator=self.music_fator)
-        # congela o traço completo no gráfico e bloqueia pushes tardios. A duração real da
-        # faixa (do play() ao fim da reprodução, mesmo relógio das amostras) reajusta o eixo X
-        # para terminar exatamente onde a música terminou — a estimativa `get_length()` usada
-        # para fixar o eixo antes da reprodução pode divergir da reprodução real e deixaria um
-        # espaço vazio no fim do gráfico.
-        self._plot_active = False
-        self._plot_end(ts_end - ts_start)
+        # `stop()` faz join na thread de aquisição: quando retorna, TODAS as amostras da faixa
+        # já foram entregues e encaminhadas ao gráfico. Fechar o portão (`_plot_active`) antes
+        # disso descartava a cauda de amostras que o LSL ainda não tinha entregado — o traço
+        # parava antes do fim do eixo e o ponteiro saltava, deixando um vão visível no fim.
         recorder.stop()
+        self._plot_active = False
+        # a duração real da faixa (do play() ao fim da reprodução, mesmo relógio das amostras)
+        # reajusta o eixo X para terminar exatamente onde a música terminou.
+        self._plot_end(ts_end - ts_start)
         recorder.finalize()
         self._recorder = None
 
@@ -384,9 +443,12 @@ class ExperimentRunner:
         Reescreve o arquivo inteiro (padrão de `LSLRecorder.finalize`); o volume de linhas
         (uma por faixa) é pequeno. Falha de escrita é registrada mas não aborta a sessão.
         """
+        # a chave precisa bater com EXECUCAO_COLUNAS (sem acento): `pd.DataFrame(...,
+        # columns=...)` não casa "áudio" com "audio" e emitiria uma coluna inteira de NaN,
+        # perdendo silenciosamente o nome de todas as faixas da sessão.
         self._linhas_execucao.append({
             "n": order,
-            "áudio": self.music_name,
+            "audio": self.music_name,
             "fator": self.music_fator,
             "volume": volume,
             "intervalo": intervalo,
@@ -396,18 +458,37 @@ class ExperimentRunner:
             try:
                 df = pd.DataFrame(self._linhas_execucao, columns=EXECUCAO_COLUNAS)
                 df.to_excel(caminho, index=False)
-            except OSError as e:
+            # amplo de propósito: nem toda falha do openpyxl é OSError, e uma planilha que não
+            # grava não pode derrubar a sessão inteira (os CSVs, que são o dado primário, já
+            # foram salvos).
+            except Exception as e:
                 experiment_logger.logger.error(
                     f"Não foi possível gravar a planilha de execução '{caminho}': {e}")
 
-    def _wait_track_end(self) -> None:
-        """Aguarda enquanto o mixer estiver tocando, abortando se houver stop."""
-        # pequena folga para o player reportar is_busy()=True após o play()
-        time.sleep(0.3)
-        while self.ctx.player.is_busy():
-            if self._stop_event.is_set():
-                return
-            time.sleep(0.2)
+    def _esperar_ate(self, alvo: float, t_audio: float | None = None) -> bool:
+        """Espera até o instante `alvo` (local_clock). False se houve pedido de parada.
+
+        Recalcula o restante a partir do relógio a cada volta, então o erro de despertar do SO
+        se corrige sozinho em vez de acumular — ao contrário de um laço de `sleep` de duração
+        fixa, onde cada volta custa `1.0 s + ε` e o desvio cresce com o número de voltas.
+
+        `t_audio`, quando informado, habilita a atualização do status ("iniciando em Ns"). O
+        texto nunca é postado perto do alvo: postar é um `emit` cross-thread, e no último
+        instante ele viraria atraso direto sobre o disparo do evento.
+        """
+        ultimo_segundo_postado = None
+        while True:
+            restante = alvo - local_clock()
+            if restante <= 0:
+                return not self._stop_event.is_set()
+            if t_audio is not None and restante > self._MARGEM_STATUS_S:
+                segundos = int(round(t_audio - local_clock()))
+                if segundos > 0 and segundos != ultimo_segundo_postado:
+                    ultimo_segundo_postado = segundos
+                    self._post_status(
+                        f"Preparando '{self.music_name}' — iniciando em {segundos}s")
+            if self._stop_event.wait(min(restante, self._PASSO_ESPERA_S)):
+                return False
 
     def _finish(self) -> None:
         self._running = False
@@ -441,10 +522,12 @@ class ExperimentRunner:
     def _plot_push(self, t, v) -> None:
         """Encaminha uma amostra ao gráfico (chamado da thread de aquisição).
 
-        `t` vem do `LSLRecorder` relativo ao início da gravação (antes da contagem),
-        mas o eixo X do gráfico começa em 0 na abertura da janela (`_plot_begin`). Por
-        isso a primeira amostra aceita após a janela abrir define `_plot_origin`, e as
-        amostras seguintes são reposicionadas em relação a ela.
+        `t` vem do `LSLRecorder` relativo ao início da gravação (antes da contagem), mas o eixo
+        X do gráfico começa em 0 na abertura da janela (`_plot_begin`). `_plot_origin` é o
+        instante dessa abertura na mesma base de `t` — definido em `_run_track` a partir do
+        alvo calculado, não da primeira amostra que chegar: ancorar na primeira amostra
+        deslocava o traço por até um intervalo de amostragem, variando conforme o momento em
+        que a janela abria em relação ao fluxo do BITalino.
         """
         if not self._plot_active:
             return

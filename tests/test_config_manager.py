@@ -270,7 +270,7 @@ def test_graph_prefs_round_trip(tmp_path, mocker):
     prefs_path = tmp_path / "prefs.json"
     mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
     settings = dict(cm.DEFAULT_GRAPH_SETTINGS)
-    settings.update({"y_scale": 50, "smoothing_enabled": False, "fps": 30, "line_width": 2.5})
+    settings.update({"y_scale": 50, "smoothing_enabled": False, "line_width": 2.5})
     cm.set_graph_prefs(settings)
     assert cm.get_graph_prefs() == settings
 
@@ -284,7 +284,17 @@ def test_graph_prefs_merges_missing_and_ignores_invalid(tmp_path, mocker):
     result = cm.get_graph_prefs()
     assert result["y_scale"] == 20                                   # respeitada
     assert result["grid_visible"] == cm.DEFAULT_GRAPH_SETTINGS["grid_visible"]  # tipo errado -> default
-    assert result["fps"] == cm.DEFAULT_GRAPH_SETTINGS["fps"]         # ausente -> default
+    assert result["line_width"] == cm.DEFAULT_GRAPH_SETTINGS["line_width"]      # ausente -> default
+
+
+def test_graph_prefs_ignora_fps_de_versoes_antigas(tmp_path, mocker):
+    """Um prefs.json gravado antes de a taxa de quadros virar fixa não quebra a leitura."""
+    prefs_path = tmp_path / "prefs.json"
+    prefs_path.write_text(json.dumps({"graph": {"y_scale": 20, "fps": 60}}), encoding="utf-8")
+    mocker.patch("compasso.core.config_manager.get_prefs_path", return_value=prefs_path)
+    result = cm.get_graph_prefs()
+    assert result["y_scale"] == 20
+    assert "fps" not in result
 
 
 def test_graph_prefs_preserves_theme_and_last_config(tmp_path, mocker):

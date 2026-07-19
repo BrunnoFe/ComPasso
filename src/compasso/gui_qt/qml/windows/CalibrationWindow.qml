@@ -59,9 +59,15 @@ AppWindow {
         }
 
         FormSection {
+            id: secaoParams
             titulo: "Parâmetros"
             enabled: calibController.estado === "idle"
             opacity: enabled ? 1 : 0.5
+
+            // Os dois campos de volume compartilham um aviso: a regra que costuma falhar é a
+            // relação ENTRE eles (a diferença máxima), não cada um isoladamente.
+            property bool volumesTocados: false
+            readonly property bool mostrarErroVolumes: calibController.erroVolumes !== "" && volumesTocados
 
             RowLayout {
                 Layout.fillWidth: true
@@ -73,8 +79,10 @@ AppWindow {
                     AppTextField {
                         Layout.preferredWidth: 78
                         horizontalAlignment: TextInput.AlignHCenter
+                        erro: secaoParams.mostrarErroVolumes
                         text: calibController.volMin
                         onTextEdited: calibController.volMin = text
+                        onActiveFocusChanged: if (!activeFocus) secaoParams.volumesTocados = true
                     }
                 }
                 ColumnLayout {
@@ -83,8 +91,10 @@ AppWindow {
                     AppTextField {
                         Layout.preferredWidth: 78
                         horizontalAlignment: TextInput.AlignHCenter
+                        erro: secaoParams.mostrarErroVolumes
                         text: calibController.volMax
                         onTextEdited: calibController.volMax = text
+                        onActiveFocusChanged: if (!activeFocus) secaoParams.volumesTocados = true
                     }
                 }
                 ColumnLayout {
@@ -113,6 +123,8 @@ AppWindow {
                     }
                 }
             }
+
+            ErroCampo { texto: secaoParams.mostrarErroVolumes ? calibController.erroVolumes : "" }
         }
 
         FormSection {

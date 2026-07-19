@@ -351,7 +351,9 @@ DEFAULT_GRAPH_SETTINGS = {
     "y_scale": 30,               # escala Y simétrica (µV): ±20/±30/±40/±50
     "smoothing_enabled": True,   # média móvel de exibição ligada?
     "smoothing_window": 5,       # janela da média móvel (colunas de exibição, 1–15)
-    "fps": 30,                   # quadros por segundo do gráfico: 10/15/30/60
+    # a taxa de quadros do gráfico é fixa (30 fps, em gui_qt/signal_chart.py) e deixou de ser
+    # configurável; um "fps" remanescente num prefs.json antigo é ignorado por get_graph_prefs,
+    # que só lê as chaves presentes aqui.
     "line_width": 1.5,           # espessura da linha do sinal (px)
     "grid_visible": True,        # mostrar linhas de grade?
     "axis_labels_visible": True, # mostrar rótulos dos eixos?

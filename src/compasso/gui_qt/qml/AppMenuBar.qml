@@ -3,6 +3,7 @@
 // (ctx.experimentUiLocked), como no app antigo. Ações delegadas a appController/Theme.
 import QtQuick
 import QtQuick.Controls.Basic
+import "components"
 
 Rectangle {
     id: barra
@@ -38,6 +39,8 @@ Rectangle {
     component BotaoMenu: Item {
         id: bm
         property string titulo: ""
+        // ponto vermelho de notificação sobre o título (ex.: atualização disponível).
+        property bool notificar: false
         default property alias itens: menu.contentData
         width: rotulo.implicitWidth + 2 * Theme.metrics.padMd
         height: barra.height
@@ -52,6 +55,12 @@ Rectangle {
                 color: Theme.colors.text
                 font.family: Theme.fonts.display
                 font.pixelSize: Theme.fonts.s13
+            }
+            Rectangle {
+                visible: bm.notificar
+                width: 7; height: 7; radius: 3.5
+                color: Theme.colors.danger
+                anchors { left: rotulo.right; leftMargin: 3; top: rotulo.top; topMargin: -1 }
             }
         }
         HoverHandler { id: hover }
@@ -103,10 +112,27 @@ Rectangle {
         }
 
         BotaoMenu {
+            titulo: "Atualizações"
+            notificar: updatesController.temAtualizacao
+            // o item vira "Baixar atualização!" quando já se sabe que há versão nova.
+            ItemMenu {
+                text: updatesController.rotuloItem
+                onTriggered: updatesController.acionar_item()
+            }
+        }
+
+        BotaoMenu {
             titulo: "Ajuda"
             ItemMenu { text: "Abrir pasta de logs"; onTriggered: appController.abrir_pasta_logs() }
             ItemMenu { text: "Página do projeto"; onTriggered: appController.abrir_pagina_projeto() }
             ItemMenu { text: "Site do projeto"; onTriggered: appController.abrir_site_projeto() }
         }
+    }
+
+    // Atalho claro/escuro, discreto, na ponta oposta aos menus.
+    ThemeToggle {
+        anchors.right: parent.right
+        anchors.rightMargin: Theme.metrics.padSm
+        anchors.verticalCenter: parent.verticalCenter
     }
 }

@@ -82,6 +82,11 @@ PALETTE_PADRAO = "Teal"
 # Quais paletas são claras (o QML pode ajustar sombras/realces conforme luminosidade).
 PALETAS_CLARAS = {"Sereno", "Aurora"}
 
+# Padrões de cada família para o botão sol/lua da barra de menus, usados quando ainda não há
+# um "último tema usado" daquela família nesta sessão (ver Theme.alternarClaroEscuro).
+TEMA_CLARO_PADRAO = "Aurora"
+TEMA_ESCURO_PADRAO = "Teal"
+
 # ---------------------------------------------------------------------------
 # Dimensões / layout (nomes camelCase p/ exposição direta ao QML)
 # ---------------------------------------------------------------------------
