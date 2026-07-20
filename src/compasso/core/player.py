@@ -34,7 +34,8 @@ API pública: ``load(path)->bool``, ``play()``, ``stop()``, ``aguardar_fim(timeo
 import os
 import threading
 
-from PySide6.QtCore import QObject, Signal, Slot, QThread, QTimer, QUrl, QMetaObject, Qt
+from PySide6.QtCore import (QObject, Signal, Slot, QThread, QTimer, QUrl, QMetaObject, Qt,
+                            QEventLoop)
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 from . import player_logger
@@ -151,6 +152,13 @@ class Player(QObject):
     estado leem atributos cacheados sob ``self._lock``.
     """
 
+    # Emitido (thread da GUI) quando uma carga termina — sucesso ou InvalidMedia. Existe para
+    # que a espera na própria thread da GUI use um QEventLoop aninhado em vez de bloquear:
+    # bloquear a thread da GUI dentro de load() impediria os sinais mediaStatusChanged/
+    # durationChanged (entregues por ESSE mesmo event loop) de chegarem — a carga nunca
+    # concluiria e ainda deixaria a sessão do QtMultimedia num estado inconsistente.
+    _cargaTerminou = Signal()
+
     def __init__(self):
         super().__init__()
 
@@ -226,11 +234,35 @@ class Player(QObject):
         self._got_duration = False
         self._load_event.clear()
         if self._na_thread_gui():
-            self._do_load()
-        else:
-            QMetaObject.invokeMethod(self, "_do_load", Qt.QueuedConnection)
+            # Na thread da GUI não se pode bloquear em _load_event.wait(): isso travaria o
+            # event loop que entrega mediaStatusChanged/durationChanged, garantindo o timeout
+            # (e corrompendo a sessão do QtMultimedia). Roda-se um QEventLoop aninhado, que
+            # segue processando esses sinais até a carga concluir ou o timeout disparar.
+            return self._load_na_gui()
+        QMetaObject.invokeMethod(self, "_do_load", Qt.QueuedConnection)
         if not self._load_event.wait(_LOAD_TIMEOUT_S):
             player_logger.logger.error(f"Timeout ao carregar áudio: {path}")
+            return False
+        return self._load_ok
+
+    def _load_na_gui(self) -> bool:
+        """(Thread GUI) Carrega a faixa sem bloquear o event loop, via QEventLoop aninhado."""
+        loop = QEventLoop()
+        self._cargaTerminou.connect(loop.quit)
+        temporizador = QTimer()
+        temporizador.setSingleShot(True)
+        temporizador.timeout.connect(loop.quit)
+        try:
+            self._do_load()
+            # a carga é assíncrona; só entra no loop se ainda não concluiu de imediato.
+            if not self._load_event.is_set():
+                temporizador.start(int(_LOAD_TIMEOUT_S * 1000))
+                loop.exec()
+        finally:
+            temporizador.stop()
+            self._cargaTerminou.disconnect(loop.quit)
+        if not self._load_event.is_set():
+            player_logger.logger.error(f"Timeout ao carregar áudio: {self._pending_path}")
             return False
         return self._load_ok
 
@@ -375,6 +407,7 @@ class Player(QObject):
                 self._loaded = False
             self._load_ok = False
             self._load_event.set()
+            self._cargaTerminou.emit()
             player_logger.logger.error(f"Falha ao carregar áudio: {self._pending_path}")
         elif status == QMediaPlayer.MediaStatus.NoMedia:
             # transitório: limpeza da source em _do_load (setSource(QUrl())). Não é falha.
@@ -411,6 +444,7 @@ class Player(QObject):
             dur = self._duration_s
         if pronto:
             self._load_event.set()
+            self._cargaTerminou.emit()
             player_logger.logger.info(f"Áudio carregado ({dur:.2f}s): {self._pending_path}")
 
     @Slot("qint64")
